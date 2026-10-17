@@ -1,8 +1,8 @@
 {
   "name": "W1 Harness",
-  "version": "0.1.0-alpha.1",
+  "version": "0.1.0-alpha.2",
   "appId": "local.w1.harness",
   "protocol": "w1-harness",
-  "upstreamTag": "dsh-v0.2.1-alpha.4",
-  "upstreamPublishedAt": "2026-10-15T13:40:02Z"
+  "upstreamTag": "dsh-v0.2.1-rc.1",
+  "upstreamPublishedAt": "2026-10-17T05:22:10Z"
 }

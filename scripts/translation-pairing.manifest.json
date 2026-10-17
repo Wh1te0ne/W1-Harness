@@ -17,6 +17,7 @@
     "docs/i18n/translation-prompt.md",
     "docs/W1-Harness.md",
     "docs/首版构建与验收.md",
-    "scripts/w1/AGENTS.default.md"
+    "scripts/w1/AGENTS.default.md",
+    "docs/上游同步-0.2.1-rc.1.md"
   ]
 }
