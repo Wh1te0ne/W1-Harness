@@ -1,10 +1,20 @@
 /** Main-owned update confirmations; closing or replacing a dialog never grants installation permission. */
-import { ipcMain, type BrowserWindow, type IpcMainInvokeEvent, type MessageBoxOptions, type MessageBoxReturnValue } from 'electron'
+import { ipcMain, shell, type BrowserWindow, type IpcMainInvokeEvent, type MessageBoxOptions, type MessageBoxReturnValue } from 'electron'
 import type { DesktopLocale } from './locale.ts'
 import type { DesktopUpdateOverlays } from './update-overlay.ts'
+import type { ReleaseNotes } from './release-notes.ts'
 
 /** Channels available only to the isolated update-dialog document. */
-export const UPDATE_DIALOG_IPC = { status: 'dsh-update-dialog:status', changed: 'dsh-update-dialog:changed', respond: 'dsh-update-dialog:respond' } as const
+export const UPDATE_DIALOG_IPC = { status: 'dsh-update-dialog:status', changed: 'dsh-update-dialog:changed',
+  respond: 'dsh-update-dialog:respond', openLink: 'dsh-update-dialog:open-link' } as const
+
+/** Main-owned version comparison and sanitized release notes. */
+export interface UpdateDialogRelease {
+  readonly versions: readonly { readonly label: string; readonly value: string }[]
+  readonly facts: readonly { readonly label: string; readonly value: string }[]
+  readonly notes?: ReleaseNotes & { readonly label: string }
+  readonly notice: string
+}
 
 /** Text and choices supplied by the main process, never by product documents. */
 export interface UpdateDialogView {
@@ -19,17 +29,21 @@ export interface UpdateDialogView {
   readonly closeLabel: string
   readonly technicalDetails: string
   readonly technicalDetailsLabel: string
+  readonly release?: UpdateDialogRelease
 }
 
 /** Electron message options with separately expandable, main-owned diagnostics. */
 export interface UpdateDialogOptions extends MessageBoxOptions {
   readonly technicalDetails?: string
+  readonly release?: UpdateDialogRelease
 }
 
 /** The document can select only a displayed response index. */
 export interface UpdateDialogApi {
   status(): Promise<UpdateDialogView | null>
   respond(revision: number, index: number): Promise<void>
+  /** Open only an external link belonging to the currently displayed release notes. */
+  openLink(revision: number, url: string): Promise<void>
   subscribe(listener: (view: UpdateDialogView | null) => void): () => void
 }
 
@@ -69,6 +83,13 @@ export class DesktopUpdateDialog {
       }
       active.finish(index)
     })
+    ipcMain.handle(UPDATE_DIALOG_IPC.openLink, async (event, revision: unknown, url: unknown) => {
+      this.owned(event)
+      const view = this.active?.view
+      if (view === undefined || revision !== view.revision || typeof url !== 'string'
+        || !view.release?.notes?.links.includes(url)) throw new Error('desktop update: rejected release link')
+      await shell.openExternal(url)
+    })
   }
 
   /**
@@ -93,7 +114,8 @@ export class DesktopUpdateDialog {
     this.parent = parent
     const view: UpdateDialogView = { revision: ++this.revision, locale: locale.id, title: options.title ?? '', message: options.message,
       detail: options.detail ?? '', buttons, cancelId, closeLabel: locale.messages.updateClose,
-      technicalDetails: options.technicalDetails ?? '', technicalDetailsLabel: locale.messages.updateTechnicalDetails }
+      technicalDetails: options.technicalDetails ?? '', technicalDetailsLabel: locale.messages.updateTechnicalDetails,
+      ...(options.release === undefined ? {} : { release: options.release }) }
     return new Promise((resolve) => {
       const abort = (): void => { finish(cancelId) }
       const finish = (response: number, retain = false): void => {
@@ -128,6 +150,7 @@ export class DesktopUpdateDialog {
     this.close()
     ipcMain.removeHandler(UPDATE_DIALOG_IPC.status)
     ipcMain.removeHandler(UPDATE_DIALOG_IPC.respond)
+    ipcMain.removeHandler(UPDATE_DIALOG_IPC.openLink)
   }
 
   private close(): void {

@@ -60,7 +60,16 @@ $launchLog = Join-Path $localLogs ('desktop-' + (Get-Date -Format 'yyyyMMdd-HHmm
 Push-Location -LiteralPath $root
 try {
   $launchArgs = @('--import','tsx/esm','apps/desktop/scripts/dev.ts','--skip-build','--reuse-runtime')
-  if (-not $RefreshProject -and (Test-Path -LiteralPath (Join-Path $root 'apps/desktop/.desktop-build/development/project/desktop-runtime.json'))) { $launchArgs += '--reuse-project' }
+  $projectRuntime = Join-Path $root 'apps/desktop/.desktop-build/development/project/desktop-runtime.json'
+  if (-not $RefreshProject -and (Test-Path -LiteralPath $projectRuntime)) {
+    $cachedVersion = (Get-Content -LiteralPath $projectRuntime -Raw | ConvertFrom-Json).release.version
+    $sourceVersion = (Get-Content -LiteralPath (Join-Path $root 'apps/desktop/package.json') -Raw | ConvertFrom-Json).version
+    if ($cachedVersion -eq $sourceVersion) { $launchArgs += '--reuse-project' }
+    else {
+      $activeW1 = Get-CimInstance Win32_Process -Filter "Name='electron.exe' OR Name='W1 Harness.exe'" | Where-Object { $_.ExecutablePath -and ($_.ExecutablePath.StartsWith($root + '\', [StringComparison]::OrdinalIgnoreCase) -or $_.ExecutablePath.StartsWith((Join-Path $w1App 'shell') + '\', [StringComparison]::OrdinalIgnoreCase)) }
+      if ($activeW1) { throw 'Exit W1 Harness from its application menu, then open W1 again to finish the development update.' }
+    }
+  }
   & $node @launchArgs *> $launchLog
   if ($LASTEXITCODE -ne 0) { throw "W1 failed to start. See $launchLog" }
 } finally { Pop-Location }

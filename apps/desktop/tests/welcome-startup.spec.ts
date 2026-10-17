@@ -172,7 +172,10 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-vi.mock('../src/w1-identity.ts', () => ({ configureW1Identity: () => ({ name: 'W1 Harness', version: '0.1.0-alpha.1', protocol: 'w1-harness', upstreamTag: 'dsh-v0.2.1-alpha.4' }) }))
+vi.mock('../src/w1-identity.ts', () => ({
+  configureW1Identity: () => ({ name: 'W1 Harness', version: '0.1.0-alpha.3', protocol: 'w1-harness', upstreamTag: 'dsh-v0.2.1-rc.2' }),
+  isW1Development: () => true, configureW1Taskbar: vi.fn(), configureW1StartMenu: vi.fn(),
+}))
 vi.mock('../src/w1-upstream.ts', () => ({ W1UpstreamUpdates: class {
   state = { releases: [], checking: false, error: null }
   start = vi.fn(async () => {})

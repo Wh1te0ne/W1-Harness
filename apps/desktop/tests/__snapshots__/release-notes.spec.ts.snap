@@ -1,0 +1,20 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`upstream release-note rendering > renders mixed Markdown and HTML headings, lists, anchors and changelog links 1`] = `
+{
+  "html": "<p><a href="#w1-release-cn">中文</a> | <a href="#w1-release-en">English</a></p>
+<h3 id="w1-release-cn">新增功能</h3>
+
+<ul>
+<li>支持 <strong>新模型</strong></li>
+<li>支持 <code>Search API</code></li>
+</ul>
+<h3 id="w1-release-en">New features</h3>
+
+<p><a href="https://github.com/deepseek-ai/deepseek-harness/compare/rc.1...rc.2">Full changelog</a></p>
+",
+  "links": [
+    "https://github.com/deepseek-ai/deepseek-harness/compare/rc.1...rc.2",
+  ],
+}
+`;

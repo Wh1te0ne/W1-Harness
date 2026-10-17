@@ -1,0 +1,96 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`separates current baseline, new release, and local publication time with an explicit offset 1`] = `
+{
+  "buttons": [
+    "复制升级任务",
+    "查看发布说明",
+    "重新检查",
+    "稍后跟进",
+  ],
+  "cancelId": 3,
+  "defaultId": 3,
+  "detail": "",
+  "message": "发现上游新版本 · 待开发跟进",
+  "release": {
+    "facts": [
+      {
+        "label": "W1 版本",
+        "value": "0.1.0-alpha.2",
+      },
+      {
+        "label": "新版本发布时间",
+        "value": "2026/10/17 16:16:33 (GMT+08:00)",
+      },
+      {
+        "label": "上次成功检查",
+        "value": "2026/10/17 21:22:24 (GMT+08:00)",
+      },
+    ],
+    "notes": {
+      "html": "<h3>新增功能</h3>
+<ul>
+<li>Search API</li>
+</ul>
+",
+      "label": "发布说明",
+      "links": [],
+    },
+    "notice": "仅提醒上游源码变化。由你在开发聊天中发起合并、验证和发布。",
+    "versions": [
+      {
+        "label": "当前基线 · 已整合",
+        "value": "dsh-v0.2.1-rc.1",
+      },
+      {
+        "label": "新版本 · 待跟进",
+        "value": "dsh-v0.2.1-rc.2 · 预发布",
+      },
+    ],
+  },
+  "title": "DSH 上游更新",
+  "type": "info",
+}
+`;
+
+exports[`shows no pending release after integration and retains the baseline publication time 1`] = `
+{
+  "buttons": [
+    "重新检查",
+    "关闭",
+  ],
+  "cancelId": 1,
+  "defaultId": 1,
+  "detail": "",
+  "message": "上游检查完成，暂无待跟进版本",
+  "release": {
+    "facts": [
+      {
+        "label": "W1 版本",
+        "value": "0.1.0-alpha.3",
+      },
+      {
+        "label": "基线发布时间",
+        "value": "2026/10/17 16:16:33 (GMT+08:00)",
+      },
+      {
+        "label": "上次成功检查",
+        "value": "2026/10/17 21:22:24 (GMT+08:00)",
+      },
+    ],
+    "notice": "仅提醒上游源码变化。由你在开发聊天中发起合并、验证和发布。",
+    "versions": [
+      {
+        "label": "当前基线 · 已整合",
+        "value": "dsh-v0.2.1-rc.2",
+      },
+      {
+        "label": "新版本 · 待跟进",
+        "value": "暂无待跟进版本",
+      },
+    ],
+  },
+  "title": "DSH 上游更新",
+  "type": "info",
+}
+`;

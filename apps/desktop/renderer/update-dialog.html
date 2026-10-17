@@ -11,6 +11,15 @@
     <main id="dialog" role="dialog" tabindex="-1" aria-modal="true" aria-labelledby="title" aria-describedby="detail" hidden>
       <header><h1 id="title"></h1><button id="close" class="close" type="button"><img src="update-close.svg" alt=""></button></header>
       <p id="detail"></p>
+      <section id="release" hidden>
+        <dl id="release-versions"></dl>
+        <dl id="release-facts"></dl>
+        <section id="release-notes-section" hidden>
+          <h2 id="release-notes-label"></h2>
+          <div id="release-notes" role="region" aria-labelledby="release-notes-label" tabindex="0"></div>
+        </section>
+        <p id="release-notice"></p>
+      </section>
       <details id="technical-details" hidden>
         <summary id="technical-details-label"></summary>
         <pre id="technical-details-content" tabindex="0"></pre>

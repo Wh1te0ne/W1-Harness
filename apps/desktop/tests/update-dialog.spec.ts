@@ -1,6 +1,6 @@
 import { afterEach, expect, it, vi } from 'vitest'
-import type { BrowserWindow } from 'electron'
-import { DesktopUpdateDialog, UPDATE_DIALOG_IPC } from '../src/update-dialog.ts'
+import { shell, type BrowserWindow } from 'electron'
+import { DesktopUpdateDialog, UPDATE_DIALOG_IPC, type UpdateDialogRelease } from '../src/update-dialog.ts'
 import { DesktopUpdateOverlays } from '../src/update-overlay.ts'
 import { resolveDesktopLocale, type DesktopLocale } from '../src/locale.ts'
 
@@ -31,7 +31,7 @@ const fixture = await vi.hoisted(async () => {
   }
   return { handlers, windows, FakeWindow }
 })
-vi.mock('electron', () => ({ BrowserWindow: fixture.FakeWindow, ipcMain: {
+vi.mock('electron', () => ({ BrowserWindow: fixture.FakeWindow, shell: { openExternal: vi.fn(async () => {}) }, ipcMain: {
   handle: (name: string, fn: (...args: unknown[]) => unknown) => fixture.handlers.set(name, fn),
   removeHandler: (name: string) => fixture.handlers.delete(name),
 } }))
@@ -46,17 +46,19 @@ afterEach(() => {
   fixture.handlers.clear()
 })
 
-function setup(locale: DesktopLocale | (() => DesktopLocale) = resolveDesktopLocale('zh-CN')) {
+function setup(locale: DesktopLocale | (() => DesktopLocale) = resolveDesktopLocale('zh-CN'), release?: UpdateDialogRelease) {
   const parent = new fixture.FakeWindow({})
   dialogs = new DesktopUpdateDialog('preload-update-dialog.cjs', locale, new DesktopUpdateOverlays())
   const show = (signal?: AbortSignal) => dialogs!.show(parent as unknown as BrowserWindow, {
     message: '下载完成', buttons: ['安装并重启'], cancelId: 1, ...(signal === undefined ? {} : { signal }),
+    ...(release === undefined ? {} : { release }),
   })
   const invoke = (channel: string, ...args: unknown[]) => {
     const window = fixture.windows.at(-1)!
     const event = { sender: window.webContents, senderFrame: window.webContents.mainFrame }
     const view = fixture.handlers.get(UPDATE_DIALOG_IPC.status)!(event) as { revision: number }
-    return fixture.handlers.get(channel)!(event, ...(channel === UPDATE_DIALOG_IPC.respond ? [view.revision, ...args] : args))
+    const revisioned = channel === UPDATE_DIALOG_IPC.respond || channel === UPDATE_DIALOG_IPC.openLink
+    return fixture.handlers.get(channel)!(event, ...(revisioned ? [view.revision, ...args] : args))
   }
   return { parent, show, invoke }
 }
@@ -231,4 +233,23 @@ it('reads the current locale for each presentation', async () => {
     dialogs!.cancel()
     await pending
   }
+})
+
+it('opens only links from the active release and rejects stale or foreign renderer requests', async () => {
+  const openExternal = vi.spyOn(shell, 'openExternal')
+  const url = 'https://github.com/deepseek-ai/deepseek-harness/releases'
+  const f = setup(resolveDesktopLocale('zh-CN'), { versions: [], facts: [], notice: '',
+    notes: { label: '发布说明', html: '<p>Notes</p>', links: [url] } })
+  const pending = f.show()
+  await expect(f.invoke(UPDATE_DIALOG_IPC.openLink, url)).resolves.toBeUndefined()
+  expect(openExternal).toHaveBeenCalledWith(url)
+  await expect(f.invoke(UPDATE_DIALOG_IPC.openLink, 'file:///C:/private')).rejects.toThrow(/rejected release link/u)
+  const window = fixture.windows.at(-1)!
+  const openLink = fixture.handlers.get(UPDATE_DIALOG_IPC.openLink)!
+  await expect(openLink({ sender: {}, senderFrame: window.webContents.mainFrame }, 1, url)).rejects.toThrow(/unowned/u)
+  const event = { sender: window.webContents, senderFrame: window.webContents.mainFrame }
+  await expect(openLink(event, 0, url)).rejects.toThrow(/rejected release link/u)
+  f.invoke(UPDATE_DIALOG_IPC.respond, 1)
+  await pending
+  await expect(openLink(event, 1, url)).rejects.toThrow(/rejected release link/u)
 })

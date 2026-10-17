@@ -17,18 +17,31 @@ afterEach(async () => {
     await rm(directory, { recursive: true, force: true })
   }
 })
-async function fixture(request: typeof fetch, file?: string) {
+async function fixture(request: typeof fetch, file?: string, base = product) {
   const directory = await mkdtemp(join(tmpdir(), 'w1-upstream-'))
   dirs.push(directory)
   const stateFile = file ?? join(directory, 'releases.json')
   const notify = vi.fn()
   const publish = vi.fn()
-  const owner = new W1UpstreamUpdates(product, stateFile, request, publish, notify)
+  const owner = new W1UpstreamUpdates(base, stateFile, request, publish, notify)
   owners.push(owner)
   return { owner, stateFile, notify, publish }
 }
 
 describe('W1 upstream source reminders', () => {
+  it('drops an integrated RC from the previous build cache even when the first refresh is offline', async () => {
+    const newer = release('dsh-v0.2.1-rc.2', '2026-10-17T08:16:33Z')
+    const first = await fixture(async () => Response.json([newer]))
+    await first.owner.start()
+    expect(first.owner.state.releases).toHaveLength(1)
+    first.owner.dispose()
+    const upgraded = await fixture(async () => { throw new Error('offline') }, first.stateFile,
+      { ...product, upstreamTag: newer.tag_name, upstreamPublishedAt: newer.published_at })
+    await upgraded.owner.start()
+    expect(upgraded.owner.state.releases).toEqual([])
+    expect(upgraded.owner.state.error).toBe('check-failed')
+    expect(upgraded.notify).not.toHaveBeenCalled()
+  })
   it('includes Alpha, RC, stable and a later patch of an older series, excluding the integrated base', () => {
     const input = [release(product.upstreamTag, product.upstreamPublishedAt), release('dsh-v0.2.1-alpha.5'),
       release('dsh-v0.2.1-rc.1'), release('dsh-v0.2.1'), release('dsh-v0.2.0-rc.3'),
