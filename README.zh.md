@@ -1,5 +1,7 @@
 # DeepSeek Harness
 
+W1 Harness 使用此独立衍生仓库。[W1 项目入口](docs/W1-Harness.md)记录本地规划和隔离构建验证；当前应用代码沿用上游基线。
+
 [English](README.md) | 中文
 
 DeepSeek Harness（`dsh`）是由 [DeepSeek AI](https://deepseek.com) 开发的开源 agent harness（智能体框架）。

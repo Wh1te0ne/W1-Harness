@@ -10,6 +10,10 @@ kind: "package-reference"
 
 `@deepseek-ai/dsh-api-workspace-controller` 拥有 Host 的 `ctx.workspaceController` 服务和生成的 Client `ctx.remote.workspace` namespace。它的 Remote 方法负责创建、重命名、移除和重排 Workspace，在 Workspace 内重排 Session，归档与取消归档 Session，以及跟随完整的 Workspace 投影。当 Client 必须修改或跟随 Workspace 导航时，请通过 API 网关使用它。本包同时拥有 `ctx.directoryPickerController` 与生成的 `ctx.remote.directoryPicker` namespace，因为它承载的选目录 seam 是抽象的，自身从不作为 Loader entry。
 
+## W1 项目
+
+`workspace/createProject` 接受 title、folderRoots、primaryFolderId；`workspace/updateProject` 还需要 workspaceId。两者返回完整项目视图，follow 更新携带相同字段。路径被规范化，新增目录必须存在；重复目录 ID/路径和无效主要目录会在保存前被拒绝。名称去除首尾空白并检查重名。已有会话归属保留；关联目录不导入其他项目，也不修改文件权限。
+
 ## 目录
 
 - [使用本包](#use-this-package)

@@ -2,6 +2,7 @@
 import { createHash } from 'node:crypto'
 import { mkdir, mkdtemp, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
+import { setTimeout } from 'node:timers/promises'
 import { fileURLToPath } from 'node:url'
 import { buildFrontend } from './devtools/vite.ts'
 import { DEVTOOLS_NPM_VERSION, DEVTOOLS_SOURCE_REVISION } from './devtools/source.ts'
@@ -43,7 +44,15 @@ async function compile(): Promise<{ files: number; bytes: number }> {
     }, null, 2)}\n`)
     const output = join(lib, 'devtools')
     await rm(output, { recursive: true, force: true })
-    await rename(temporary, output)
+    // Windows can retain sharing locks briefly after the frontend writer closes.
+    for (let attempt = 0; ; attempt++) {
+      try { await rename(temporary, output); break }
+      catch (error) {
+        if (process.platform !== 'win32' || attempt >= 5 || !(error instanceof Error) || !('code' in error)
+          || (error.code !== 'EPERM' && error.code !== 'EBUSY')) throw error
+        await setTimeout(500)
+      }
+    }
     console.log(`DevTools npm ${DEVTOOLS_NPM_VERSION}: ${files.length} files, ${bytes} bytes`)
     return { files: files.length, bytes }
   } finally {

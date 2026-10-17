@@ -23,7 +23,7 @@ import type { WorkspaceDomainState, WorkspaceRecord } from '../src/index.ts'
 import { defaultWorkspaceTitle, fullyQualifiedWorkspacePath } from '../src/paths.ts'
 import * as workspacePaths from '../src/paths.ts'
 
-const DOMAIN_VERSION = 2
+const DOMAIN_VERSION = 3
 
 const header = (id: string, cwd?: string, createdAt = 0): SessionHeader => ({
   version: SESSION_FORMAT_VERSION,
@@ -1544,3 +1544,51 @@ declare module '@deepseek-ai/dsh-workspace/types' {
     'probe-items': true
   }
 }
+
+describe('W1 independent projects', () => {
+  it('preserves ownership across primary changes, folder removal and reopening', async () => {
+    const a = await makeDir('source-a'), b = await makeDir('source-b')
+    const headers = [header('old-a', a), header('new-b', b)]
+    const first = await harness({ sessions: headers })
+    const project = first.registry.list().find(item => item.path === a)!
+    const oldId = project.id
+    await project.configureProject({ title: 'My Project', folderRoots: [{id:'a',path:a},{id:'b',path:b}], primaryFolderId:'b' })
+    expect(project.path).toBe(b)
+    expect(project.sessionIds).toContain(SessionId('old-a'))
+    await project.configureProject({ title: 'Renamed', folderRoots: [{id:'b',path:b}], primaryFolderId:'b' })
+    expect(project.sessionIds).toContain(SessionId('old-a'))
+    await first.ctx.fiber.dispose()
+    const reopened = await harness({ pool:first.pool, sessions:headers })
+    expect(reopened.registry.get(oldId)?.sessionIds).toContain(SessionId('old-a'))
+    expect(reopened.registry.get(oldId)?.path).toBe(b)
+    expect(headers[0]?.cwd).toBe(a)
+    await reopened.ctx.fiber.dispose()
+  })
+  it('gives projects independent identities even with the same folder', async () => {
+    const a = await makeDir('shared')
+    const {ctx,registry} = await harness()
+    const input = {title:'One',folderRoots:[{id:'a',path:a}],primaryFolderId:'a'}
+    const one = await registry.createProject(input)
+    const two = await registry.createProject({...input,title:'Two'})
+    expect(one.id).not.toBe(two.id)
+    expect(registry.list()).toHaveLength(2)
+    await expect(one.configureProject({...input,primaryFolderId:'missing'})).rejects.toThrow('primary')
+    await expect(one.configureProject({...input,folderRoots:[...input.folderRoots,{id:'b',path:a}]})).rejects.toThrow('twice')
+    expect(one.title).toBe('One')
+    await ctx.fiber.dispose()
+  })
+})
+
+it('keeps the managed directory stable when a project without folders is renamed', async () => {
+  const managed = await makeDir('managed')
+  vi.stubEnv('W1_DOCUMENTS_DIR', managed)
+  try {
+    const {ctx,registry} = await harness()
+    const project = await registry.createProject({title:'Empty',folderRoots:[],primaryFolderId:null})
+    const initial = project.path
+    expect(initial).toBe(join(managed,project.id))
+    await project.configureProject({title:'Renamed empty',folderRoots:[],primaryFolderId:null})
+    expect(project.path).toBe(initial)
+    await ctx.fiber.dispose()
+  } finally { vi.unstubAllEnvs() }
+})

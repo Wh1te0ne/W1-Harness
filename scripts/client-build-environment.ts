@@ -16,6 +16,14 @@ const CLIENT_BUILD_ENV_PREFIX = 'DSH_CLIENT_'
 /** Non-public selector used by build orchestration to request a named client profile. */
 export const CLIENT_BUILD_PROFILE_SELECTOR = 'DSH_BUILD_CLIENT_PROFILE'
 
+/** W1 product metadata applies only to this downstream checkout. */
+function w1ClientBuildEnvironment(root: string): Record<string, string> {
+  const path = resolve(root, 'apps/desktop/w1-product.json')
+  if (!existsSync(path)) return {}
+  const product = JSON.parse(readFileSync(path, 'utf8')) as { version: string; name: string }
+  return { DSH_CLIENT_TITLE: product.name, DSH_CLIENT_W1_VERSION: product.version }
+}
+
 /** Public client environment required by official DSH artifacts. */
 const OFFICIAL_CLIENT_BUILD_ENVIRONMENT = {
   DSH_CLIENT_BUILD_PROFILE: 'official',
@@ -126,6 +134,7 @@ export function repositoryClientBuildEnvironment(
   const dirty = repositoryGitDirty(root)
   return {
     ...inherited,
+    ...w1ClientBuildEnvironment(root),
     DSH_CLIENT_COMMIT_HASH: repositoryCommitHash(root, environment),
     ...(dirty === true ? { DSH_CLIENT_GIT_DIRTY: 'true' } : {}),
     DSH_CLIENT_VERSION: repositoryVersion(root),
@@ -146,6 +155,7 @@ export function officialClientBuildEnvironment(
     DSH_CLIENT_COMMIT_HASH: repositoryCommitHash(root, environment),
     DSH_CLIENT_VERSION: repositoryVersion(root),
     ...OFFICIAL_CLIENT_BUILD_ENVIRONMENT,
+    ...w1ClientBuildEnvironment(root),
   }
 }
 
@@ -202,6 +212,9 @@ export function resolveClientBuildEnvironment(
       DSH_CLIENT_COMMIT_HASH: commitHash,
       DSH_CLIENT_VERSION: version,
       ...OFFICIAL_CLIENT_BUILD_ENVIRONMENT,
+      ...(environment.DSH_CLIENT_W1_VERSION === undefined ? {} : {
+        DSH_CLIENT_TITLE: 'W1 Harness', DSH_CLIENT_W1_VERSION: environment.DSH_CLIENT_W1_VERSION,
+      }),
     }
   }
   throw new Error(`unknown client build profile ${JSON.stringify(profile)}; expected "official"`)

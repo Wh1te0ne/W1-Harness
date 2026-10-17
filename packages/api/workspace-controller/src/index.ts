@@ -14,6 +14,8 @@ import type {
   WorkspaceArchiveValue,
   WorkspaceBaseline,
   WorkspaceCreateRequest,
+  WorkspaceProjectCreateRequest,
+  WorkspaceProjectUpdateRequest,
   WorkspaceCreateValue,
   WorkspaceDeleteRequest,
   WorkspaceDeleteValue,
@@ -109,6 +111,18 @@ export class WorkspaceController extends TypertRemoteService {
       )
     })
     return workspace === undefined ? undefined : { workspace: workspaceView(workspace) }
+  }
+
+  /** Create a named project and its initial folder selection. */
+  @Remote('createProject')
+  createProject(request: WorkspaceProjectCreateRequest): Promise<WorkspaceCreateValue> {
+    return this.commands.createProject(request)
+  }
+
+  /** Update project folders and name without rebinding existing sessions. */
+  @Remote('updateProject')
+  updateProject(request: WorkspaceProjectUpdateRequest): Promise<WorkspaceValue> {
+    return this.commands.updateProject(request)
   }
 
   /**

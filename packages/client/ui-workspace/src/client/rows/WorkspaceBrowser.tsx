@@ -1,3 +1,4 @@
+import { ProjectEditor } from '../ProjectEditor.tsx'
 /**
  * The workspace/session browsing region filling the sidebar shell's
  * `sidebar.workspaces` hole: section header (title + view options + add
@@ -287,6 +288,7 @@ type SessionTreeProps = Pick<
   onLeaveArchivedOnly: () => void
   /** Open the browser-owned rename dialog for a real Workspace group. */
   onRenameRequest: (workspaceId: WorkspaceId, currentTitle: string) => void
+  onEditProject?: ((workspaceId: WorkspaceId) => void) | undefined
   /** Open the browser-owned delete-confirmation dialog for a real Workspace group. */
   onDeleteRequest: (workspaceId: WorkspaceId, currentTitle: string) => void
   /** Open the rename dialog from a row title double-click. */
@@ -318,7 +320,7 @@ function SessionTree({
   list, useSessionStatus, startSession, open, workspaces, ungroupedSessionIds,
   rowState, onLeaveArchivedOnly,
   workspaceReady, animationResetKey, usePanelInfo,
-  onRenameRequest, onDeleteRequest, onSessionRenameRequest,
+  onRenameRequest, onDeleteRequest, onSessionRenameRequest, onEditProject,
   renderSlot,
   insertWorkspaceBefore,
   nestWorkspaces, groupExpansion, setGroupExpanded,
@@ -574,6 +576,7 @@ function SessionTree({
           actions={group.workspaceId === undefined
             ? undefined
             : {
+              ...(onEditProject === undefined ? {} : { editProject: () => { if (group.workspaceId !== undefined) onEditProject(group.workspaceId) } }),
               rename: () => {
               /* v8 ignore next -- narrowing guard: the actions object exists only for real-workspace groups. */
                 if (group.workspaceId !== undefined) onRenameRequest(group.workspaceId, group.label)
@@ -907,6 +910,7 @@ export function WorkspaceBrowser({
   requestSessionRename,
   notifyArchivedNotOpenable,
   renameWorkspace,
+  createProject, updateProject, pickProjectFolder,
   deleteWorkspace,
   insertWorkspaceBefore,
   unarchiveSession,
@@ -924,6 +928,7 @@ export function WorkspaceBrowser({
   renderSlot,
   t,
 }: WorkspaceBrowserProps) {
+  const [editingProject, setEditingProject] = useState<WorkspaceId | null>(null)
   const home = useHostInfo(info => info.home)
   const shortcuts = useShortcuts(rows => rows)
   const searchShortcut = shortcuts.find(row => row.id === 'session.search')
@@ -1361,7 +1366,10 @@ export function WorkspaceBrowser({
           )}
         </div>
         {/* Add flow + its error dialog (same package — direct composition). */}
-        <WorkspacePickFlow
+        {createProject !== undefined && pickProjectFolder !== undefined ? (wsPickerOpen && <ProjectEditor
+          t={t} pickFolder={pickProjectFolder} close={closeAddWorkspace}
+          save={async input => { const workspace = await createProject(input); startSession(workspace.workspaceId, { clearPreviousDraft: false }) }}
+        />) : <WorkspacePickFlow
           t={t}
           open={wsPickerOpen}
           anchorRef={wsPlusRef}
@@ -1377,7 +1385,7 @@ export function WorkspaceBrowser({
             startSession(workspaceId, { clearPreviousDraft: false })
           }}
           onClose={() => { closeAddWorkspace() }}
-        />
+        />}
       </div>
 
       {/* The collapsed rail keeps search as its own 36px control. */}
@@ -1462,6 +1470,7 @@ export function WorkspaceBrowser({
                 onSessionRevealed={acknowledgeSessionReveal}
                 home={home}
                 t={t}
+                onEditProject={updateProject === undefined ? undefined : setEditingProject}
                 onRenameRequest={(workspaceId, displayTitle) => {
                   setRenameTarget({
                     workspaceId,
@@ -1512,6 +1521,12 @@ export function WorkspaceBrowser({
         )}
         {renameError !== null && <div className={css.renameError} role="alert">{renameError}</div>}
       </Modal>
+
+      {editingProject !== null && updateProject !== undefined && pickProjectFolder !== undefined && <ProjectEditor
+        key={editingProject} project={storedWorkspaces.find(item => item.workspaceId === editingProject)} t={t}
+        pickFolder={pickProjectFolder} close={() => { setEditingProject(null) }}
+        save={async input => { await updateProject({ ...input, workspaceId: editingProject }) }}
+      />}
 
       <Modal
         open={deleteTarget !== null}

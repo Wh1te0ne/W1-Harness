@@ -1,0 +1,7 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`includes associated project folders in the recorded prompt context without changing the session directory 1`] = `
+"Project: "Two roots"
+Associated folders: [{"path":"/source-a","primary":false},{"path":"/source-b","primary":true}]
+The primary folder is the default for new sessions. This session keeps its current working directory. Folder association does not override tool permissions."
+`;

@@ -194,6 +194,8 @@ class FakeWorkspaces implements IWorkspaces {
     }))
   }
 
+  declare readonly createProject: IWorkspaces['createProject']
+  declare readonly updateProject: IWorkspaces['updateProject']
   declare readonly create: IWorkspaces['create']
   declare readonly rename: IWorkspaces['rename']
   declare readonly delete: IWorkspaces['delete']
@@ -1021,7 +1023,6 @@ describe('UiWorkspaceService', () => {
 
   it.each([
     { archived: true, cwd: '/w/a' },
-    { archived: false, cwd: '/other' },
   ])('does not reclaim an ineligible saved blank: %j', async ({ archived, cwd }) => {
     persistSelection({ sessionId: sid('saved') })
     const b = bench({
@@ -1510,4 +1511,13 @@ describe('UiWorkspaceService', () => {
       rpcError: { code: 'directory-picker/exists' },
     })
   })
+})
+
+it('restores an existing blank after its project changes primary, and creates new sessions in the new primary', async () => {
+  persistSelection({ sessionId: sid('saved') })
+  const b = bench({sessions:sessionState([summary('saved',{blank:true,cwd:'/former'})]),workspaces:workspaceState([workspace('a',[sid('saved')])])})
+  expect(b.sessions.retain).toHaveBeenCalledExactlyOnceWith(sid('saved'),{source:'mainView'})
+  expect(b.sessions.create).not.toHaveBeenCalled()
+  await b.uiWorkspace.connectWorkspace(wid('a'))
+  expect(b.sessions.create).toHaveBeenCalledExactlyOnceWith({workspaceId:wid('a')})
 })

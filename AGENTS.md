@@ -1,5 +1,11 @@
 # AGENTS.md
 
+## W1 Harness downstream workspace
+
+Read the [W1 project](docs/W1-Harness.md). Use [local development](scripts/w1/Start-W1.ps1) for daily use; [baseline isolation](scripts/w1/Start-W1Baseline.ps1) is for disposable experiments. Preserve installed DSH and plugins. Never put real credentials or runtime data in this repository. User-authorized migration between private application data directories requires a backup and preserves the original application. Use PowerShell 7.
+
+W1 is currently for one local user. Follow [the local iteration workflow](docs/开发与上游维护.md): default to a targeted build and checks for the changed surface. Do not run packaging, installer cycles, or repository-wide gates by default; use them only when the requested delivery or affected contracts require them. The translation manifest lists Chinese-only W1 internal documents; maintain their [work record](docs/工作记录.md). Upstream product documentation keeps its bilingual rules.
+
 DeepSeek Harness is an all-plugin Cordis agent harness. Read [docs/architecture.md](docs/architecture.md) before changing `packages/`; follow [docs/AGENTS.md](docs/AGENTS.md) for documentation.
 
 ## Pre-stable APIs and released Session data

@@ -52,9 +52,10 @@ export async function prepareWindowsAsarUnpack(context, sourceRoot) {
  * @param {string} sourceRoot Original signed and sealed dsh directory.
  * @param {string} resourcesDir Assembled application resources directory.
  * @param {string[]} files PE paths returned by prepareWindowsAsarUnpack.
+ * @param {(path: string) => Promise<Buffer>} readBytes File reader; the Windows packager supplies bounded sharing-violation retries.
  * @returns {Promise<void>} Resolves after every PE has an unpacked ASAR entry and identical bytes.
  */
-export async function verifyWindowsAsarUnpack(sourceRoot, resourcesDir, files) {
+export async function verifyWindowsAsarUnpack(sourceRoot, resourcesDir, files, readBytes = readFile) {
   const archive = await readAsar(join(resourcesDir, 'app.asar'))
   for (const file of files) {
     const entry = archive.getFile(join('dsh', file), false)
@@ -64,7 +65,7 @@ export async function verifyWindowsAsarUnpack(sourceRoot, resourcesDir, files) {
     const copied = join(resourcesDir, 'app.asar.unpacked', 'dsh', file)
     const stat = await lstat(copied)
     if (!stat.isFile() || stat.isSymbolicLink()) throw new Error(`Windows ASAR: expected a real PE file: ${file}`)
-    const [prepared, packaged] = await Promise.all([readFile(join(sourceRoot, file)), readFile(copied)])
+    const [prepared, packaged] = await Promise.all([readBytes(join(sourceRoot, file)), readBytes(copied)])
     if (!prepared.equals(packaged)) throw new Error(`Windows ASAR: PE bytes changed: ${file}`)
   }
 }

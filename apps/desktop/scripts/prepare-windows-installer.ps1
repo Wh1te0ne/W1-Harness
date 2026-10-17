@@ -71,7 +71,13 @@ foreach ($asset in @('brand', 'brand-2x', 'brand-dark', 'brand-dark-2x', 'uninst
             try {
                 $background = if ($asset -like '*dark*') { [Drawing.Color]::FromArgb(21, 21, 23) } else { [Drawing.Color]::White }
                 $graphics.Clear($background)
-                $graphics.DrawImage($image, 0, 0, $image.Width, $image.Height)
+                $markPath = Join-Path $installerRoot ('assets/w1-mark-' + $(if ($asset -like '*dark*') { 'light' } else { 'dark' }) + '.png')
+                $mark = [Drawing.Image]::FromFile($markPath)
+                try {
+                    $size = [Math]::Min($image.Width, $image.Height)
+                    $graphics.InterpolationMode = [Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+                    $graphics.DrawImage($mark, [int](($image.Width - $size) / 2), [int](($image.Height - $size) / 2), $size, $size)
+                } finally { $mark.Dispose() }
             } finally { $graphics.Dispose() }
             $bitmap.Save((Join-Path $output "$asset.bmp"), [Drawing.Imaging.ImageFormat]::Bmp)
         } finally { $bitmap.Dispose() }

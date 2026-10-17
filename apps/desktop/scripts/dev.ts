@@ -63,19 +63,20 @@ async function launchElectron(): Promise<void> {
   const mainPort = debugPort('DSH_DESKTOP_MAIN_INSPECT_PORT', 9229)
   const rendererPort = debugPort('DSH_DESKTOP_RENDERER_DEBUG_PORT', 9222)
   const hostPort = debugPort('DSH_DESKTOP_HOST_INSPECT_PORT', 9230)
+  const inspect = process.env.DSH_DESKTOP_NO_INSPECT !== '1'
   const home = resolve(process.env.DSH_HOME ?? join(DEVELOPMENT_ROOT, 'home'))
   const userData = resolve(process.env.DSH_DESKTOP_USER_DATA_DIR ?? join(DEVELOPMENT_ROOT, 'electron-user-data'))
   const environment: NodeJS.ProcessEnv = {
     ...process.env,
     DSH_HOME: home,
     DSH_DESKTOP_PRIMARY_RUNTIME_DIR: process.env.DSH_DESKTOP_PRIMARY_RUNTIME_DIR ?? developmentRuntimeDirectory(),
-    DSH_DESKTOP_HOST_INSPECT_PORT: String(hostPort),
+    DSH_DESKTOP_HOST_INSPECT_PORT: inspect ? String(hostPort) : undefined,
     DSH_DESKTOP_OPEN_DEVTOOLS: process.env.DSH_DESKTOP_OPEN_DEVTOOLS ?? '1',
     ELECTRON_ENABLE_LOGGING: process.env.ELECTRON_ENABLE_LOGGING ?? '1',
   }
   console.log(`desktop development: DSH_HOME=${home}`)
   console.log(`desktop development: userData=${userData}`)
-  console.log(`desktop development: inspectors main=${String(mainPort)}, renderer=${String(rendererPort)}, host=${String(hostPort)}`)
+  if (inspect) console.log(`desktop development: inspectors main=${String(mainPort)}, renderer=${String(rendererPort)}, host=${String(hostPort)}`)
   if (process.platform === 'darwin') {
     const executable = prepareDevelopmentApp({ electron, appRoot: APP_ROOT, directory: DEVELOPMENT_ROOT, home, userData,
       mainPort, rendererPort, hostPort, openDevtools: environment.DSH_DESKTOP_OPEN_DEVTOOLS! })
@@ -83,15 +84,18 @@ async function launchElectron(): Promise<void> {
     return
   }
   await run(electron, [
-    `--inspect=127.0.0.1:${String(mainPort)}`,
-    `--remote-debugging-port=${String(rendererPort)}`,
+    ...inspect ? [`--inspect=127.0.0.1:${String(mainPort)}`, `--remote-debugging-port=${String(rendererPort)}`] : [],
     `--user-data-dir=${userData}`,
     APP_ROOT,
   ], APP_ROOT, environment)
 }
 
 async function main(): Promise<void> {
-  const { values } = parseArgs({ options: { 'skip-build': { type: 'boolean', default: false } } })
+  const { values } = parseArgs({ options: {
+    'skip-build': { type: 'boolean', default: false },
+    'reuse-runtime': { type: 'boolean', default: false },
+    'reuse-project': { type: 'boolean', default: false },
+  } })
   if (!values['skip-build']) {
     await runPackageScript('build:artifacts', REPOSITORY_ROOT)
     await runPackageScript('build', APP_ROOT)
@@ -112,15 +116,25 @@ async function main(): Promise<void> {
       { encoding: 'utf8', env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' } }).trim(),
     pnpmVersion,
   }
-  prepareDevelopmentProject({
-    projectDir: join(DEVELOPMENT_ROOT, 'project'),
+  const projectDir = join(DEVELOPMENT_ROOT, 'project')
+  if (values['reuse-project']) {
+    const cached = JSON.parse(readFileSync(join(projectDir, 'desktop-runtime.json'), 'utf8')) as { release: DesktopRelease }
+    if (cached.release.version !== release.version || cached.release.nodeVersion !== release.nodeVersion
+      || cached.release.pnpmVersion !== release.pnpmVersion || cached.release.hostProtocolVersion !== release.hostProtocolVersion) {
+      throw new Error('Development project changed; start once without --reuse-project to refresh its links.')
+    }
+  } else prepareDevelopmentProject({
+    projectDir,
     cliDir: join(REPOSITORY_ROOT, 'apps', 'cli'),
     hostDir: join(REPOSITORY_ROOT, 'apps', 'desktop-host'),
     dependencyDir: join(REPOSITORY_ROOT, 'node_modules', '.pnpm', 'node_modules'),
     release,
     target: resolveDesktopBuildTarget(),
   })
-  await preparePrimaryRuntime()
+  if (values['reuse-runtime']) {
+    const runtime = join(developmentRuntimeDirectory(), 'runtime.json')
+    if (!existsSync(runtime)) throw new Error('Prepared runtime missing; run prepare:primary-runtime once before local development.')
+  } else await preparePrimaryRuntime()
   await launchElectron()
 }
 

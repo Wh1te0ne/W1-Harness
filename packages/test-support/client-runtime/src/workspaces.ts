@@ -80,6 +80,24 @@ export class TestWorkspaces implements IWorkspaces {
     } as unknown as WorkspaceView
   }
 
+  async createProject(input: Parameters<IWorkspaces['createProject']>[0]): Promise<WorkspaceView> {
+    this.calls.push({ method: 'createProject', args: [input] })
+    const stub = this.stubs.get('createProject')
+    if (stub !== undefined) return await (stub(input) as Promise<WorkspaceView>)
+    return { ...input, workspaceId: ('ws-' + input.title) as WorkspaceId,
+      path: input.folderRoots.find(folder => folder.id === input.primaryFolderId)?.path ?? '/project',
+      sessionIds: [], createdAt: '', updatedAt: '' }
+  }
+
+  async updateProject(input: Parameters<IWorkspaces['updateProject']>[0]): Promise<WorkspaceView> {
+    this.calls.push({ method: 'updateProject', args: [input] })
+    const stub = this.stubs.get('updateProject')
+    if (stub !== undefined) return await (stub(input) as Promise<WorkspaceView>)
+    const old = this.list.getSnapshot().items.find(item => item.workspaceId === input.workspaceId)
+    return { ...input, path: input.folderRoots.find(folder => folder.id === input.primaryFolderId)?.path ?? '/project',
+      sessionIds: old?.sessionIds ?? [], createdAt: old?.createdAt ?? '', updatedAt: '' }
+  }
+
   /**
    * Initialize the default Workspace through a test stub; defaults to an ineligible first use.
    * @param signal - caller lifetime.

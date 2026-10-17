@@ -6,7 +6,7 @@
  */
 
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import type { SessionActivity, WorkspaceId } from '@deepseek-ai/dsh-workspace/types'
+import type { SessionActivity, WorkspaceId, WorkspaceFolder, WorkspaceProjectInput } from '@deepseek-ai/dsh-workspace/types'
 
 export type { WorkspaceId } from '@deepseek-ai/dsh-workspace/types'
 export type {
@@ -19,6 +19,10 @@ export interface WorkspaceView {
   readonly workspaceId: WorkspaceId
   /** Canonical host directory path. */
   readonly path: string
+  /** Source folder records, supplied by W1 Hosts; absent on older Hosts. */
+  readonly folderRoots?: readonly WorkspaceFolder[]
+  /** Primary source folder identity; null for a project without source folders. */
+  readonly primaryFolderId?: string | null
   /** User-visible title. */
   readonly title: string
   /** Sessions accounted to this Workspace in manual order. */
@@ -174,3 +178,8 @@ export type WorkspaceFollowIncrement =
 export type WorkspaceFollowFrame =
   | { readonly type: 'baseline'; readonly value: WorkspaceBaseline }
   | WorkspaceFollowIncrement
+
+/** Create an independently identified project with its source-folder selection. */
+export interface WorkspaceProjectCreateRequest extends WorkspaceProjectInput {}
+/** Replace project metadata atomically while preserving session ownership. */
+export interface WorkspaceProjectUpdateRequest extends WorkspaceProjectInput { readonly workspaceId: WorkspaceId }

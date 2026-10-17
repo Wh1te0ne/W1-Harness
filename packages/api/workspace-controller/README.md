@@ -10,6 +10,10 @@ English | [中文](README.zh.md)
 
 `@deepseek-ai/dsh-api-workspace-controller` owns the Host `ctx.workspaceController` service and the generated Client `ctx.remote.workspace` namespace. Its Remote methods create, rename, remove, and reorder Workspaces, reorder Sessions within a Workspace, archive and unarchive Sessions from Workspace navigation, and follow the complete Workspace projection. Use it through API Gateway when a Client must change or follow Workspace navigation. The package also owns `ctx.directoryPickerController` and the generated `ctx.remote.directoryPicker` namespace, because the directory-picking seam it carries is abstract and never a Loader entry of its own.
 
+## W1 projects
+
+`workspace/createProject` accepts a title, folderRoots and primaryFolderId; `workspace/updateProject` also requires workspaceId. They return the complete Workspace view and publish the same fields in follow updates. Paths are canonicalized, new folders must exist, and duplicate folder IDs/paths or an invalid primary are rejected before saving. Names are trimmed and checked for conflicts. Existing Session membership is retained; associating a folder does not import other projects or alter filesystem permissions.
+
 ## Table of Contents
 
 - [Use this package](#use-this-package)

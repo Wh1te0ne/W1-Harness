@@ -1,3 +1,4 @@
+import type { WorkspaceProjectCreateRequest, WorkspaceProjectUpdateRequest } from '../types.ts'
 /** React-free Client Workspace service and command facade. */
 
 import { Service, type Context } from '@deepseek-ai/cordis'
@@ -45,6 +46,10 @@ export interface WorkspaceSource {
 
 /** Workspace Controller's Client service face. */
 export interface IWorkspaces {
+  /** Create an independent project with an explicit name and folder selection. */
+  createProject(input: WorkspaceProjectCreateRequest): Promise<WorkspaceView>
+  /** Atomically update a project without changing its session memberships. */
+  updateProject(input: WorkspaceProjectUpdateRequest): Promise<WorkspaceView>
   /** Host-authoritative Workspace rows, order, archive set, and follow lifecycle. */
   readonly list: WorkspaceSource
   /**
@@ -125,6 +130,17 @@ export class WorkspaceController extends Service implements IWorkspaces {
   constructor(ctx: Context, private readonly model: ClientWorkspaceModel) {
     super(ctx, 'workspaces')
     this.list = model
+  }
+
+  async createProject(input: WorkspaceProjectCreateRequest): Promise<WorkspaceView> {
+    const result = await this.model.createProject(input)
+    if (!result.ok) throw new WorkspaceCreateError(result.error)
+    return result.value.workspace
+  }
+  async updateProject(input: WorkspaceProjectUpdateRequest): Promise<WorkspaceView> {
+    const result = await this.model.updateProject(input)
+    if (!result.ok) throw commandError('updateProject', result.error)
+    return result.value.workspace
   }
 
   async create(input: { path: string }): Promise<WorkspaceView> {

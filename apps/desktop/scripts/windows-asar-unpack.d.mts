@@ -13,6 +13,8 @@ export function prepareWindowsAsarUnpack(context: BeforePackContext, sourceRoot:
  * @param sourceRoot Original signed and sealed dsh directory.
  * @param resourcesDir Assembled application resources directory.
  * @param files PE paths returned by prepareWindowsAsarUnpack.
+ * @param readBytes File reader; the Windows packager supplies bounded sharing-violation retries.
  * @returns Resolves after every PE has an unpacked ASAR entry and identical bytes.
  */
-export function verifyWindowsAsarUnpack(sourceRoot: string, resourcesDir: string, files: string[]): Promise<void>
+export function verifyWindowsAsarUnpack(sourceRoot: string, resourcesDir: string, files: string[],
+  readBytes?: (path: string) => Promise<Buffer>): Promise<void>

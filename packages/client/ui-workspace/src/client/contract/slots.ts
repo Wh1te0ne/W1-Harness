@@ -1,3 +1,4 @@
+import type { WorkspaceProjectCreateRequest, WorkspaceProjectUpdateRequest } from '@deepseek-ai/dsh-api-workspace-controller/client'
 /**
  * ui-workspace contracts. Two registrations share this package:
  *
@@ -261,6 +262,10 @@ export type WorkspaceBrowserInjected = {
   notifyArchivedNotOpenable: () => void
   /** Rename a Host Workspace (rejects on name conflict; resolves on durability). */
   renameWorkspace: (workspaceId: WorkspaceId, title: string) => Promise<void>
+  /** W1 project editor actions; older slot compositions retain the directory-only flow. */
+  createProject?: (input: WorkspaceProjectCreateRequest) => Promise<WorkspaceView>
+  updateProject?: (input: WorkspaceProjectUpdateRequest) => Promise<WorkspaceView>
+  pickProjectFolder?: () => Promise<string | null>
   /** Delete only a Host Workspace registration; directory and Session logs remain. */
   deleteWorkspace: (workspaceId: WorkspaceId) => Promise<void>
   /**

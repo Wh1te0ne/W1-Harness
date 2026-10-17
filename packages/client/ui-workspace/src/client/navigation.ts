@@ -448,7 +448,7 @@ class UiWorkspaceService extends Service implements UiWorkspace {
     const summary = saved.sessionId === undefined ? undefined : sessions.byId[saved.sessionId]
     const workspace = summary === undefined ? undefined
       : workspaces.items.find(item => item.sessionIds.includes(summary.id))
-    if (summary !== undefined && (!summary.blank || workspace === undefined)) {
+    if (summary !== undefined && (!summary.blank || workspace === undefined || (summary.cwd !== workspace.path && !workspaces.archivedSessionIds.includes(summary.id)))) {
       this.replaceMain(summary.id, this.lifetime.signal, 'preserve')
       return
     }

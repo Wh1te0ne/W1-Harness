@@ -4,10 +4,19 @@
     ".agents/notes/implemented/AGENTS.md",
     ".agents/notes/implemented/CLAUDE.md",
     ".github/review-ownership/README.md",
+    "docs/工作记录.md",
+    "docs/W1品牌规范.md",
+    "docs/开发与上游维护.md",
+    "docs/项目规划.md",
+    "docs/原版构建与隔离运行.md",
+    "docs/资源与决策.md",
     "docs/AGENTS.md",
     "docs/cordis-api/inherited.md",
     "docs/i18n/style-samples.md",
     "docs/i18n/terminology.md",
-    "docs/i18n/translation-prompt.md"
+    "docs/i18n/translation-prompt.md",
+    "docs/W1-Harness.md",
+    "docs/首版构建与验收.md",
+    "scripts/w1/AGENTS.default.md"
   ]
 }

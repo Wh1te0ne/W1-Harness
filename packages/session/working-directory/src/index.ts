@@ -13,6 +13,7 @@ import { createUserMessage } from '@deepseek-ai/dsh-llm'
 import type { Session } from '@deepseek-ai/dsh-session'
 import type {} from '@deepseek-ai/dsh-session-projection'
 import type {} from '@deepseek-ai/dsh-system-prompt'
+import type {} from '@deepseek-ai/dsh-workspace'
 
 declare module '@deepseek-ai/cordis' {
   interface Context {
@@ -93,6 +94,21 @@ export class WorkingDirectoryService extends Service {
       required: true,
       interpolate: false,
       text: context => context.agent === undefined ? '' : this.contextText(context.agent.session),
+    })
+    ctx.inject(['workspaceRegistry'], (scope) => {
+      scope.systemPrompt.context({
+        name: 'workspace:project-folders',
+        order: scope.systemPrompt.getContextOrder('WORKING_DIRECTORY'),
+        interpolate: false,
+        text: ({ agent }) => {
+          if (agent === undefined) return ''
+          const project = scope.workspaceRegistry.list().find(item => item.sessionIds.includes(agent.session.id))
+          if (project === undefined) return ''
+          return 'Project: ' + JSON.stringify(project.title) + '\nAssociated folders: '
+            + JSON.stringify(project.folderRoots.map(folder => ({ path: folder.path, primary: folder.id === project.primaryFolderId })))
+            + '\nThe primary folder is the default for new sessions. This session keeps its current working directory. Folder association does not override tool permissions.'
+        },
+      })
     })
     ctx.on('system-prompt/assemble', async (_assembly, context, next) => {
       if (context.agent === undefined) return next()

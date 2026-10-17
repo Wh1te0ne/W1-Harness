@@ -11,6 +11,10 @@ kind: "package-reference"
 
 改变一个 Session 的工作目录，同时保留已有进程各自的目录。所选目录可通过回放恢复，并出现在用户上下文中。当前目录消失时，只要原始项目仍然存在，就恢复到原始项目。
 
+## W1 项目
+
+可选 workspaceRegistry 存在时，`workspace:project-folders` 通过 systemPrompt.context 提供所属项目名称、关联路径和主要目录标记，模型可见内容随正常提示词快照记录。它不改变当前会话目录、已有终端或沙箱权限；未归属项目的会话没有这项上下文。
+
 ## 目录
 
 - [使用此包](#use-this-package)

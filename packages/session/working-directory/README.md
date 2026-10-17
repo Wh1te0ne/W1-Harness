@@ -11,6 +11,10 @@ English | [中文](README.zh.md)
 
 Change one Session’s working directory while existing processes retain theirs. The selected directory survives replay and appears in user context. A missing directory restores the original project when it remains available.
 
+## W1 projects
+
+With the optional workspaceRegistry peer, `workspace:project-folders` contributes the owning project name, associated paths and primary selection through systemPrompt.context. The normal prompt snapshot records this model-visible context. It does not change the current Session directory, existing terminals, or sandbox permissions. This context is absent for unassigned Sessions.
+
 ## Table of Contents
 
 - [Use this package](#use-this-package)

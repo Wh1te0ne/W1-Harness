@@ -1,3 +1,6 @@
+# W1 keeps its dependency store inside this checkout.
+storeDir: .work/pnpm-store
+
 packages:
   - vendor/*
   - packages/*/*

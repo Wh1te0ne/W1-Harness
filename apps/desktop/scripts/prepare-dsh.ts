@@ -171,7 +171,8 @@ async function main(): Promise<void> {
       await packagingStep(process.env.DSH_DESKTOP_PACKAGING_RUN_DIR, 'runtime:verify-after-smoke', () => verifyDesktopRuntime(DSH_OUTPUT_ROOT, release.version, target))
     }
   } catch (error) {
-    rmSync(DSH_OUTPUT_ROOT, { recursive: true, force: true })
+    try { rmSync(DSH_OUTPUT_ROOT, { recursive: true, force: true, maxRetries: 5, retryDelay: 250 }) }
+    catch (cleanupError) { throw new AggregateError([error, cleanupError], 'Runtime preparation and cleanup both failed') }
     throw error
   } finally {
     let cleaned = false

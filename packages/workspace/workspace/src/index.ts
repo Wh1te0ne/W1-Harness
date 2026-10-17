@@ -1,3 +1,7 @@
+import { normalizeProjectFolders, projectWorkingDirectory } from './project-folders.ts'
+import type { WorkspaceProjectInput } from './types.ts'
+export type { WorkspaceFolder, WorkspaceProjectInput } from './types.ts'
+export { projectFolders } from './project-folders.ts'
 /**
  * Workspace entity registry (`ctx.workspaceRegistry`): durable workspace records,
  * stable registry order, and header-validated session membership over the
@@ -182,7 +186,10 @@ export class WorkspaceRegistry extends Service {
 
   private readonly host: WorkspaceEntityHost = {
     table: () => this.requireTable(),
-    candidateMatches: (id, path) => this.sessionPaths.get(id) === path || this.missingSessionPaths.has(id),
+    candidateMatches: (id, path, explicitOwnership = false) => explicitOwnership
+      ? this.headers.has(id) || this.sessionPaths.has(id)
+      : this.sessionPaths.get(id) === path || this.missingSessionPaths.has(id),
+    sessionAtPath: (id, path) => this.sessionPaths.get(id) === path,
     readSessionHeader: id => this.readSessionHeader(id),
     rememberSessionPath: (id, path) => {
       this.sessionPaths.set(id, path)
@@ -219,6 +226,15 @@ export class WorkspaceRegistry extends Service {
     this.reportFilteredCandidates()
   }
 
+  /** Create an independently named project, even when another project uses the same folders. */
+  async createProject(input: WorkspaceProjectInput): Promise<Workspace> {
+    const folderRoots = await normalizeProjectFolders(input)
+    const primary = folderRoots.find(folder => folder.id === input.primaryFolderId)
+    const id = WorkspaceId(randomUUID())
+    const directory = primary?.path ?? await projectWorkingDirectory(id)
+    return this.enqueueOperation(() => this.createCanonical(directory, input.title.trim(), false, { ...input, folderRoots }, id))
+  }
+
   /**
    * Create or reuse a workspace for an existing directory. The fully qualified
    * path is canonicalized through `fs.realpath`; a relative, nonexistent, or
@@ -230,11 +246,6 @@ export class WorkspaceRegistry extends Service {
    * @param title - Display title used only when a new record is created.
    * @returns the existing or newly durable workspace.
    */
-  // TODO: `title` lost its last production caller when the gateway's
-  // create-by-name branch was deleted
-  // (.agents/notes/archived/simplification/2026-07-31-one-route-to-add-a-workspace.md);
-  // drop the parameter with its @param clause and the `create(path, title?)`
-  // lines in this package's README pair.
   async create(path: string, title?: string): Promise<Workspace> {
     const canonical = await realpathNormalize(path)
     if (!(await stat(canonical)).isDirectory()) {
@@ -507,18 +518,19 @@ export class WorkspaceRegistry extends Service {
     return undefined
   }
 
-  private async createCanonical(canonical: string, title?: string, firstUse = false): Promise<WorkspaceEntity> {
+  private async createCanonical(canonical: string, title?: string, firstUse = false, project?: WorkspaceProjectInput, projectId?: WorkspaceId): Promise<WorkspaceEntity> {
     for (const entity of this.entities.values()) {
-      if (entity.path === canonical) return entity
+      if (project === undefined && entity.path === canonical) return entity
     }
 
     const workspaceName = title ?? defaultWorkspaceTitle(canonical)
     const table = this.requireTable()
     const state = this.requireState()
-    const id = WorkspaceId(randomUUID())
+    const id = projectId ?? WorkspaceId(randomUUID())
     const now = new Date().toISOString()
     const record: WorkspaceRecord = {
       path: canonical,
+      ...(project === undefined ? {} : { folderRoots: [...project.folderRoots], primaryFolderId: project.primaryFolderId }),
       title: workspaceName,
       sessionIds: [],
       createdAt: now,
@@ -764,13 +776,13 @@ export class WorkspaceRegistry extends Service {
     const accounted = new Map<SessionId, WorkspaceId>()
     for (const [id, record] of table.entries()) {
       const pathHolder = paths.get(record.path)
-      if (pathHolder !== undefined) {
+      if (record.folderRoots === undefined && pathHolder !== undefined) {
         throw new Error(
           `workspace domain is inconsistent: path '${record.path}' is claimed `
           + `by both workspace '${pathHolder}' and workspace '${id}'`,
         )
       }
-      paths.set(record.path, id)
+      if (record.folderRoots === undefined) paths.set(record.path, id)
       for (const sessionId of record.sessionIds) {
         const holder = accounted.get(sessionId)
         if (holder !== undefined) {
@@ -845,7 +857,7 @@ export class WorkspaceRegistry extends Service {
     for (const entity of this.entities.values()) {
       const record = this.requireTable().get(entity.id) as WorkspaceRecord
       for (const sessionId of record.sessionIds) {
-        if (this.host.candidateMatches(sessionId, record.path)) continue
+        if (this.host.candidateMatches(sessionId, record.path, record.folderRoots !== undefined)) continue
         const path = this.sessionPaths.get(sessionId)
         const reason = this.invalidSessionPaths.get(sessionId)
           ?? (this.headers.has(sessionId)

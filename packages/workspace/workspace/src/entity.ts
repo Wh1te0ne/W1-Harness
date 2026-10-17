@@ -12,7 +12,8 @@ import { stat } from 'node:fs/promises'
 import type { SessionHeader, SessionId } from '@deepseek-ai/dsh-session'
 import type { KvTable } from '@deepseek-ai/dsh-storage-domain'
 import type { WorkspaceRecord } from './spec.ts'
-import type { Workspace, WorkspaceId } from './types.ts'
+import type { Workspace, WorkspaceId, WorkspaceProjectInput } from './types.ts'
+import { normalizeProjectFolders, projectFolders, projectWorkingDirectory } from './project-folders.ts'
 import { realpathNormalize } from './paths.ts'
 
 /** An insertSessionBefore request named a session or anchor not on the account (storage failures stay plain errors). */
@@ -45,7 +46,9 @@ export interface WorkspaceEntityHost {
    * @param path - Workspace's stored canonical directory.
    * @returns whether the candidate remains a member.
    */
-  candidateMatches(id: SessionId, path: string): boolean
+  candidateMatches(id: SessionId, path: string, explicitOwnership?: boolean): boolean
+  /** Whether an owned session was started in this historical directory. */
+  sessionAtPath(id: SessionId, path: string): boolean
 
   /**
    * Read one stored session header for attach validation.
@@ -87,6 +90,22 @@ export class WorkspaceEntity implements Workspace {
     return this.record.path
   }
 
+  get folderRoots() { return projectFolders(this.record) }
+
+  get primaryFolderId(): string | null {
+    return this.record.folderRoots === undefined ? 'primary' : this.record.primaryFolderId ?? null
+  }
+
+  async configureProject(input: WorkspaceProjectInput): Promise<void> {
+    const folderRoots = await normalizeProjectFolders(input, this.folderRoots)
+    const primary = folderRoots.find(folder => folder.id === input.primaryFolderId)
+    const path = primary?.path ?? await projectWorkingDirectory(this.id)
+    await this.mutate(current => ({
+      ...current, title: input.title.trim(), path, folderRoots, primaryFolderId: input.primaryFolderId,
+      sessionIds: current.sessionIds.filter(id => this.host.candidateMatches(id, current.path, current.folderRoots !== undefined)),
+    }))
+  }
+
   get title(): string {
     return this.record.title
   }
@@ -100,7 +119,7 @@ export class WorkspaceEntity implements Workspace {
   }
 
   get sessionIds(): readonly SessionId[] {
-    return this.record.sessionIds.filter(id => this.host.candidateMatches(id, this.record.path))
+    return this.record.sessionIds.filter(id => this.host.candidateMatches(id, this.record.path, this.record.folderRoots !== undefined))
   }
 
   async setTitle(title: string): Promise<void> {
@@ -136,7 +155,10 @@ export class WorkspaceEntity implements Workspace {
           + `its cwd '${header.cwd}' is not a directory`,
         )
       }
-      if (cwd !== this.record.path) {
+      const associated = this.folderRoots.some(folder => folder.path === cwd)
+      const historical = this.record.folderRoots !== undefined
+        && this.record.sessionIds.some(id => this.host.sessionAtPath(id, cwd))
+      if (cwd !== this.record.path && !associated && !historical) {
         throw new Error(
           `cannot attach session '${sessionId}' to workspace '${this.record.path}': `
           + `its cwd resolves to '${cwd}'`,
@@ -206,7 +228,7 @@ export class WorkspaceEntity implements Workspace {
       next = await this.host.table().update(this.id, (current) => {
         const changed = fn(current)
         const sessionIds = changed.sessionIds.filter(
-          id => this.host.candidateMatches(id, changed.path),
+          id => this.host.candidateMatches(id, changed.path, changed.folderRoots !== undefined),
         )
         if (changed === current && sessionIds.length === current.sessionIds.length) {
           throw unchangedSentinel

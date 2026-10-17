@@ -12,11 +12,11 @@ import { ToolCallId } from '@deepseek-ai/dsh-llm'
 import { renderContextSnapshot, renderPrompt } from '@deepseek-ai/dsh-system-prompt'
 import * as WorkingDirectoryTool from '@deepseek-ai/dsh-tool-working-directory'
 
-async function fixture(config?: (root: string) => WorkingDirectoryConfig) {
+async function fixture(config?: (root: string) => WorkingDirectoryConfig, includeRuntimeContext = false) {
   const root = await realpath(await mkdtemp(join(tmpdir(), 'dsh-working-directory-')))
   const ctx = new Context()
   try {
-    await mountAgentLoopTestDependencies(ctx, { systemPrompt: { includeRuntimeContext: false } })
+    await mountAgentLoopTestDependencies(ctx, { systemPrompt: { includeRuntimeContext } })
     await ctx.plugin(LocalFileSystem, { cwd: root })
     const directoryFiber = ctx.plugin(WorkingDirectory, config?.(root) ?? {})
     await directoryFiber
@@ -355,4 +355,14 @@ describe('Session working directories', () => {
     await fiber.dispose()
     expect(f.ctx.tools.schemas().some(tool => tool.name === 'working_directory')).toBe(false)
   })
+})
+
+it('includes associated project folders in the recorded prompt context without changing the session directory', async () => {
+  await using f = await fixture(undefined, true)
+  f.ctx.provide('workspaceRegistry', {list: () => [{title:'Two roots',sessionIds:[f.agent.session.id],folderRoots:[{id:'a',path:'/source-a'},{id:'b',path:'/source-b'}],primaryFolderId:'b'}]} as never)
+  await setImmediate()
+  const assembled = await f.ctx.systemPrompt.assemble({agent:f.agent,scope:f.agent})
+  expect(assembled.contexts.find(item => item.name === 'workspace:project-folders')?.text).toMatchSnapshot()
+  expect(f.ctx.workingDirectory.get(f.agent.session)).toBe(f.root)
+  expect(f.agent.session.header.cwd).toBe(f.root)
 })

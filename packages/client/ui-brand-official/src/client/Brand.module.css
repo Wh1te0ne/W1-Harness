@@ -1,0 +1,13 @@
+.wordmark {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  white-space: nowrap;
+  font-family: var(--dsw-font-family-brand);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: inherit;
+}

@@ -16,6 +16,8 @@ import type {
   WorkspaceArchiveSessionRequest,
   WorkspaceArchiveValue,
   WorkspaceCreateRequest,
+  WorkspaceProjectCreateRequest,
+  WorkspaceProjectUpdateRequest,
   WorkspaceCreateValue,
   WorkspaceDeleteRequest,
   WorkspaceDeleteValue,
@@ -36,6 +38,33 @@ export class WorkspaceCommands {
 
   /** @param ctx - Host context containing the Workspace registry. */
   constructor(private readonly ctx: Context) {}
+
+  /** Create a project without conflating its identity with a folder path. */
+  createProject(request: WorkspaceProjectCreateRequest): Promise<WorkspaceCreateValue> {
+    return this.enqueue(async () => {
+      this.checkProjectName(request.title)
+      try { return { workspace: workspaceView(await this.ctx.workspaceRegistry.createProject(request)), created: true } }
+      catch (error) { throw new RemoteError('gateway/bad-request', errorMessage(error), {}, { cause: error }) }
+    })
+  }
+
+  /** Persist name, folders and primary selection together without moving existing conversations. */
+  updateProject(request: WorkspaceProjectUpdateRequest): Promise<WorkspaceValue> {
+    return this.enqueue(async () => {
+      const workspace = this.requireWorkspace(request.workspaceId)
+      this.checkProjectName(request.title, workspace.id)
+      try { await workspace.configureProject(request) }
+      catch (error) { throw new RemoteError('gateway/bad-request', errorMessage(error), {}, { cause: error }) }
+      return { workspace: workspaceView(workspace) }
+    })
+  }
+
+  private checkProjectName(title: string, ownId?: string): void {
+    if (!title.trim()) throw new RemoteError('gateway/bad-request', 'A project requires a name', {})
+    if (this.ctx.workspaceRegistry.list().some(item => item.id !== ownId && item.title === title.trim())) {
+      throw new RemoteError('workspace/name-conflict', 'A project already uses this name', { name: title.trim() })
+    }
+  }
 
   /**
    * Create or resolve one Workspace over an existing directory.

@@ -5,6 +5,7 @@ import { Deque } from '@deepseek-ai/dsh-deque'
 import type { DomainChanged } from '@deepseek-ai/dsh-storage-domain'
 import type { Workspace, WorkspaceRecord } from '@deepseek-ai/dsh-workspace'
 import {
+  projectFolders,
   workspaceDomainState,
   workspaceRecord,
   WorkspaceId,
@@ -27,6 +28,8 @@ export function workspaceView(workspace: Workspace): WorkspaceView {
   return {
     workspaceId: workspace.id,
     path: workspace.path,
+    folderRoots: workspace.folderRoots.map(folder => ({ ...folder })),
+    primaryFolderId: workspace.primaryFolderId,
     title: workspace.title,
     sessionIds: [...workspace.sessionIds],
     createdAt: workspace.createdAt,
@@ -39,6 +42,8 @@ function changedWorkspaceView(workspaceId: string, value: unknown): WorkspaceVie
   return {
     workspaceId: WorkspaceId(workspaceId),
     path: record.path,
+    folderRoots: projectFolders(record).map(folder => ({ ...folder })),
+    primaryFolderId: record.folderRoots === undefined ? 'primary' : record.primaryFolderId ?? null,
     title: record.title,
     sessionIds: [...record.sessionIds],
     createdAt: record.createdAt,

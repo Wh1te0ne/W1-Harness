@@ -11,6 +11,10 @@ English | [中文](README.zh.md)
 
 Use this package to keep an ordered, persistent list of project directories and the sessions run in each directory. Hosts can build project sidebars, hide sessions from grouping without deleting their histories, and remove projects without deleting folders, files, or sessions. Re-adding a removed directory creates a fresh project; an existing project's sessions stay grouped when its directory disappears. Choose it for GUI or host workflows that need durable project grouping; it is invisible to models and adds no prompt or request-context cost, but requires session persistence and storage backends.
 
+## W1 projects
+
+W1 projects use independent IDs and names. `createProject({ title, folderRoots, primaryFolderId })` always creates a distinct project; `configureProject(...)` saves its name, associated folders and primary folder together. Folders carry stable IDs. One primary is required when folders exist; an empty list uses a private working directory keyed by project ID. `path` is the default cwd for new Sessions. Existing Session membership and cwd survive primary changes and folder removal. The legacy `create(path)` operation retains its path-deduplication behavior; the single-directory rules below apply to legacy records. W1 project storage is version 3; launch through `scripts/w1/Start-W1.ps1` to back up and migrate version 2.
+
 ## Table of Contents
 
 - [Use this package](#use-this-package)

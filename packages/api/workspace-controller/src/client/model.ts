@@ -1,3 +1,4 @@
+import type { WorkspaceProjectCreateRequest, WorkspaceProjectUpdateRequest, WorkspaceCreateValue, WorkspaceValue } from '../types.ts'
 /** Client-side Workspace state model shared by Remote transport and UI projection. */
 
 import { notifySubscribers } from '@deepseek-ai/dsh-client-store'
@@ -9,7 +10,6 @@ import type {
   WorkspaceArchiveValue,
   WorkspaceBaseline,
   WorkspaceCreateRequest,
-  WorkspaceCreateValue,
   WorkspaceDeleteValue,
   WorkspaceInsertSessionBeforeRequest,
   WorkspaceOrderValue,
@@ -17,7 +17,6 @@ import type {
   WorkspacePinValue,
   WorkspaceUnarchiveSessionRequest,
   WorkspaceUnpinSessionRequest,
-  WorkspaceValue,
   WorkspaceId,
   WorkspaceView,
 } from '../types.ts'
@@ -95,6 +94,19 @@ export class ClientWorkspaceModel implements WorkspaceFollowSink {
    * @param input - existing absolute path to adopt.
    * @returns generated Remote result.
    */
+  /** Create a project and immediately install its authoritative row. */
+  async createProject(input: WorkspaceProjectCreateRequest): Promise<RemoteResult<WorkspaceCreateValue>> {
+    const result = await this.remote.createProject(input)
+    if (result.ok) this.upsert(result.value.workspace)
+    return result
+  }
+  /** Update a project and immediately install its authoritative row. */
+  async updateProject(input: WorkspaceProjectUpdateRequest): Promise<RemoteResult<WorkspaceValue>> {
+    const result = await this.remote.updateProject(input)
+    if (result.ok) this.upsert(result.value.workspace)
+    return result
+  }
+
   async create(input: WorkspaceCreateRequest): Promise<RemoteResult<WorkspaceCreateValue>> {
     const result = await this.remote.create(input)
     if (result.ok) this.upsert(result.value.workspace)

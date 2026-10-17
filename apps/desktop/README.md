@@ -6,6 +6,8 @@ description: "Desktop runs the Harness workspace in a native application. This r
 
 English | [中文](README.zh.md)
 
+The W1 downstream product, independent data paths, account-free startup and source-release reminders are documented in [W1 build and verification](../../docs/首版构建与验收.md). Local W1 reuse flags and targeted builds are documented in [local development](../../docs/开发与上游维护.md). The upstream Desktop implementation and release references below remain maintenance background.
+
 ## Summary
 
 Desktop runs the Harness workspace in a native application. This reference covers application behavior, development and integration; the packaging, Windows signing and publication guides own build and release operations.

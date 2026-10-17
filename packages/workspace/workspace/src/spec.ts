@@ -23,10 +23,21 @@ const sessionId = z.string().transform(value => brandString<SessionId>(value))
  */
 export const workspaceRecord = z.object({
   path: z.string(),
+  folderRoots: z.array(z.object({ id: z.string().min(1), path: z.string() })).optional(),
+  primaryFolderId: z.string().nullable().optional(),
   title: z.string(),
   sessionIds: z.array(sessionId),
   createdAt: z.string(),
   updatedAt: z.string(),
+}).superRefine((record, ctx) => {
+  if (record.folderRoots === undefined) return
+  const folders = record.folderRoots
+  const primary = folders.find(folder => folder.id === record.primaryFolderId)
+  if (new Set(folders.map(folder => folder.id)).size !== folders.length
+    || new Set(folders.map(folder => folder.path)).size !== folders.length
+    || (folders.length === 0 ? record.primaryFolderId !== null : primary?.path !== record.path)) {
+    ctx.addIssue({ code: 'custom', message: 'Invalid project folders or primary directory' })
+  }
 })
 
 /** One stored workspace record, inferred from {@link workspaceRecord}. */
@@ -75,7 +86,7 @@ export type WorkspaceDomainState = z.infer<typeof workspaceDomainState>
  */
 export const workspaceDomainSpec = defineDomain({
   name: 'workspace',
-  version: 2,
+  version: 3,
   global: {
     schema: workspaceDomainState,
     initial: { initialized: false, workspaceIds: [], archivedSessionIds: [], pinnedSessionIds: [] },

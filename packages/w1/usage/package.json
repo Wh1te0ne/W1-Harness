@@ -1,0 +1,68 @@
+{
+  "name": "dsh-usage-manager",
+  "version": "0.2.0+w1.2",
+  "description": "W1 内置用量与费用中心",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": {
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "default": "./lib/client.js"
+    },
+    "./typert": {
+      "default": "./lib/typert.host.js"
+    },
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json"
+  },
+  "dsh": {
+    "client": {
+      "platform": "web"
+    }
+  },
+  "files": [
+    "lib",
+    "locale",
+    "README.md",
+    "LICENSE",
+    "UPSTREAM.md",
+    "docs/provider-pricing.json",
+    "THIRD_PARTY.md",
+    "README.zh.md"
+  ],
+  "keywords": [
+    "deepseek",
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "client-plugin",
+    "cost",
+    "usage",
+    "billing",
+    "budget",
+    "i18n",
+    "bilingual",
+    "zh",
+    "en",
+    "language"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test test/w1-policy.test.mjs test/w1-navigation.test.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  },
+  "private": true
+}

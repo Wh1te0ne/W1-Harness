@@ -7,6 +7,7 @@ import { promisify } from 'node:util'
 import { valid } from 'semver'
 import { DESKTOP_HOST_PACKAGE } from './core-package-set.ts'
 import { parseDesktopRelease, type DesktopRelease } from './release.ts'
+import { retryWindowsFileAccess, retryWindowsFileAccessSync } from './windows-file-access.ts'
 
 /** Descriptor at the root of the immutable Desktop resource tree. */
 export const DESKTOP_RUNTIME_FILE = 'desktop-runtime.json'
@@ -85,7 +86,7 @@ function runtimeFile(path: string, name: string, body: Buffer): DesktopRuntimeFi
  * @returns Sorted final-file inventory; executable permissions are false on Windows.
  */
 export function inventoryDesktopRuntime(root: string): DesktopRuntimeFile[] {
-  return runtimeFiles(root).map(({ path, name }) => runtimeFile(path, name, readFileSync(path)))
+  return runtimeFiles(root).map(({ path, name }) => runtimeFile(path, name, retryWindowsFileAccessSync(() => readFileSync(path))))
     .sort((a, b) => a.path < b.path ? -1 : a.path > b.path ? 1 : 0)
 }
 
@@ -100,7 +101,7 @@ async function inventoryRuntimeForVerification(root: string): Promise<DesktopRun
       if (next.done) return
       const { path, name } = next.value
       try {
-        files.push(runtimeFile(path, name, await readRuntimeFile(path)))
+        files.push(runtimeFile(path, name, await retryWindowsFileAccess(() => readRuntimeFile(path))))
       } catch (error) {
         failed = true
         throw error

@@ -1,5 +1,5 @@
 ---
-description: "面向侧栏的官方 DeepSeek Harness 品牌填充，仅在官方构建中生效；供选择或替换品牌呈现的用户与维护者阅读。"
+description: "使用既有 Fold 图形的 W1 Harness 侧栏与会话首屏品牌填充。"
 kind: "package-reference"
 ---
 
@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-本包让以 `official` profile 构建的客户端在侧栏显示 DeepSeek Harness 标志与名称。其他构建 profile 保留外壳的鱼形标志与本地构建标签，会话首屏则始终使用动画鱼。品牌为 DeepSeek Harness 的部署应选择本包；使用其他品牌的部署应提供替代品牌包。本包不保留运行时状态，也不影响模型请求。
+在 W1 仓库中，本包用既有 Fold 标志和 W1 Harness 名称填充侧栏及会话首屏。DSH_CLIENT_TITLE 为 W1 Harness 时启用注册。本包没有运行时状态，也不影响模型请求；保留上游包身份，便于维护衍生产品。
 
 ## 目录
 
@@ -25,15 +25,15 @@ kind: "package-reference"
 <a id="use-this-package"></a>
 ## 使用本包
 
-在采用 DeepSeek 自有品牌的部署中，将本插件挂载到浏览器插件名单，然后以 `official` profile 构建客户端，让填充得以注册。
+在 W1 部署的浏览器插件名单中挂载本插件。本地和打包构建均由 W1 产品元数据提供客户端标题。
 
 ### 选择 profile
 
-`DSH_CLIENT_BUILD_PROFILE` 决定渲染哪个品牌。`official` 构建在侧栏显示官方标志与名称；任何其他取值都让外壳回退——鱼形标志与本地构建标签——保持原样。会话首屏无论 profile 如何都显示来自 `dsh-client-ui-conversation` 的动画首屏鱼，因为这个回退本身就是官方标志。两种情况下插件都会照常加载并通过校验；只有注册受 profile 门控。
+`DSH_CLIENT_TITLE` 选择此衍生产品的呈现。取值为 W1 Harness 时注册侧栏标志、名称和会话首屏标志；其他标题保留声明的回退组件。两种情况下插件都会加载。
 
 ### 替换品牌
 
-自有身份的部署不组合本包，而是组合另一个占据侧栏 slot——以及本包留给回退的首屏 slot——的包。占据 slot 是唯一的组合路径；这里不存在任何品牌配置面。
+既有几何图形与导出规则维护在 [W1 品牌规范](../../../docs/W1品牌规范.md)。侧栏与首屏使用同一个标志组件。侧栏由 Fold 图标和 15px、500 字重、0.1em 字距的 Montserrat HARNESS 字标组成。图标承担 W1 标识，不重复显示文字 W1；无障碍名称仍为 W1 Harness。通过现有 slot 替换呈现，不修改会话或侧栏状态。
 
 -----
 
@@ -43,7 +43,7 @@ kind: "package-reference"
 <details>
 <summary>实现细节——点击展开</summary>
 
-两个填充作为一组声明感知的注册安装：嵌套的 `ctx.slots.inject()` 调用等待侧栏声明，因此无论本行在声明者之前还是之后激活，这组注册都能工作；声明消失时两个填充一并撤回，HMR 期间也不会留下残缺的品牌混合。浏览器半部是 [`src/client/index.ts`](src/client/index.ts)；node 半部是一个空 Loader 座位。浏览器标题是构建环境的事（`DSH_CLIENT_TITLE`），不在 slot 系统之内。
+声明感知的 `ctx.slots.inject()` 注册等待侧栏与首屏 slot，声明或插件卸载时撤回。浏览器半部是 [`src/client/index.ts`](src/client/index.ts)；node 半部是一个空 Loader 座位。浏览器标题仍由构建环境（`DSH_CLIENT_TITLE`）选择。
 
 </details>
 

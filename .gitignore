@@ -47,3 +47,14 @@ worktrees/
 .agents/worktrees/
 .typert-*/
 native/system/test/bin/
+
+# W1 local build evidence and delivery archives
+/.work/
+/releases/
+.env.*
+!.env.example
+!.env.template
+
+# W1 built-in usage owns its Host JS and shipped browser modules.
+!packages/w1/usage/lib/
+!packages/w1/usage/lib/**
