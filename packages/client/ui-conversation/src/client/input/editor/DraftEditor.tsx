@@ -21,6 +21,8 @@ export interface DraftEditorProps {
   readonly onWorkspaceKeyDown: KeyboardEventHandler<HTMLDivElement>
   readonly hint: string | null
   readonly showPlaceholder: boolean
+  readonly suggestionText?: string | undefined
+  readonly suggestionHint?: string
 }
 
 /**
@@ -31,10 +33,11 @@ export interface DraftEditorProps {
 export function DraftEditor({
   classNames: css, editor, scrollRef, editable, editorDisabled, phase, placeholderText, ariaLabel,
   workspaceTrigger, workspacePickerOpen, onWorkspaceKeyDown, hint, showPlaceholder,
+  suggestionText, suggestionHint,
 }: DraftEditorProps): ReactNode {
   return (
     <div ref={scrollRef} className={css.scroll} data-input-scroll>
-      <div className={css.grow}>
+      <div className={clsx(css.grow, suggestionText !== undefined && css.growSuggestion)}>
         <ComposerContentEditable
           editor={workspaceTrigger ? null : editor}
           editable={editable}
@@ -45,6 +48,7 @@ export function DraftEditor({
           // The placeholder was the textarea's accessible name; a div's
           // data attribute is not, so the label restores it.
           aria-label={ariaLabel}
+          aria-description={suggestionText === undefined ? undefined : `${suggestionHint}: ${suggestionText}`}
           aria-haspopup={workspaceTrigger ? 'menu' : undefined}
           aria-expanded={workspaceTrigger ? workspacePickerOpen : undefined}
           tabIndex={workspaceTrigger ? 0 : undefined}
@@ -52,8 +56,9 @@ export function DraftEditor({
           style={hint === null ? undefined : { '--dsh-composer-hint': JSON.stringify(hint) } as CSSProperties}
         />
         {showPlaceholder && (
-          <div aria-hidden className={css.placeholder} data-composer-placeholder>
-            {placeholderText}
+          <div aria-hidden className={clsx(css.placeholder, suggestionText !== undefined && css.replySuggestion)} data-composer-placeholder>
+            {suggestionText ?? placeholderText}
+            {suggestionText !== undefined && <span className={css.replySuggestionHint}>{suggestionHint}</span>}
           </div>
         )}
         <DecoratorPortals editor={workspaceTrigger ? null : editor} />

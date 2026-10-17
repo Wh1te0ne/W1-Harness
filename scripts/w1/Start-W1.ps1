@@ -1,6 +1,12 @@
 param([ValidateRange(0,65532)][int]$DebugPortBase = 0, [switch]$RefreshProject)
 $ErrorActionPreference = 'Stop'
+$node = if ($env:W1_NODE) { $env:W1_NODE } else { (Get-Command node -CommandType Application | Select-Object -First 1).Source }
+$launcher = Join-Path $env:USERPROFILE '.w1-harness-app/W1 Harness.exe'
+if (-not $env:W1_DESKTOP_LAUNCHER -and (Test-Path -LiteralPath $launcher)) { $env:W1_DESKTOP_LAUNCHER = $launcher }
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
+$w1App = Join-Path $env:USERPROFILE '.w1-harness-app'
+$env:W1_DESKTOP_EXECUTABLE = & $node (Join-Path $PSScriptRoot 'prepare-windows-shell.mjs') $w1App --check
+if ($LASTEXITCODE -ne 0) { throw 'W1 desktop runtime missing; run Install-W1Launcher.ps1 once.' }
 $localLogs = Join-Path $root '.work/local-dev'
 New-Item -ItemType Directory -Path $localLogs -Force | Out-Null
 $w1Home = Join-Path $env:USERPROFILE '.w1-harness'
@@ -10,21 +16,21 @@ $projectStore = Join-Path $w1Home 'storages/workspace.json'
 if (Test-Path -LiteralPath $projectStore) {
   $projectVersion = (Get-Content -Raw -LiteralPath $projectStore | ConvertFrom-Json).unit.version
   if ($projectVersion -eq 2) {
-    $activeW1 = Get-CimInstance Win32_Process -Filter "Name='electron.exe'" | Where-Object { $_.ExecutablePath -and $_.ExecutablePath.StartsWith($root + '\', [StringComparison]::OrdinalIgnoreCase) }
+    $activeW1 = Get-CimInstance Win32_Process -Filter "Name='electron.exe' OR Name='W1 Harness.exe'" | Where-Object { $_.ExecutablePath -and ($_.ExecutablePath.StartsWith($root + '\', [StringComparison]::OrdinalIgnoreCase) -or $_.ExecutablePath.StartsWith((Join-Path $w1App 'shell') + '\', [StringComparison]::OrdinalIgnoreCase)) }
     if ($activeW1) { throw 'Close W1 Harness from its application menu before upgrading project metadata.' }
   }
 }
-& node (Join-Path $PSScriptRoot 'migrate-projects.mjs') $w1Home
+& $node (Join-Path $PSScriptRoot 'migrate-projects.mjs') $w1Home
 if ($LASTEXITCODE -ne 0) { throw 'W1 project migration failed; application launch stopped.' }
 $usageProfile = Join-Path $w1Home 'profiles/desktop/package.json'
 if (Test-Path -LiteralPath $usageProfile) {
   $usageManifest = Get-Content -Raw -LiteralPath $usageProfile | ConvertFrom-Json
   if ($usageManifest.dependencies.'dsh-usage-manager' -or $usageManifest.dependencies.'dsh-cost-meter') {
-    $activeW1 = Get-CimInstance Win32_Process -Filter "Name='electron.exe'" | Where-Object { $_.ExecutablePath -and $_.ExecutablePath.StartsWith($root + '\', [StringComparison]::OrdinalIgnoreCase) }
+    $activeW1 = Get-CimInstance Win32_Process -Filter "Name='electron.exe' OR Name='W1 Harness.exe'" | Where-Object { $_.ExecutablePath -and ($_.ExecutablePath.StartsWith($root + '\', [StringComparison]::OrdinalIgnoreCase) -or $_.ExecutablePath.StartsWith((Join-Path $w1App 'shell') + '\', [StringComparison]::OrdinalIgnoreCase)) }
     if ($activeW1) { throw 'Exit W1 before migrating its usage module.' }
   }
 }
-& node (Join-Path $PSScriptRoot 'migrate-usage.mjs') $w1Home
+& $node (Join-Path $PSScriptRoot 'migrate-usage.mjs') $w1Home
 if ($LASTEXITCODE -ne 0) { throw 'W1 usage migration failed; launch stopped.' }
 $rules = Join-Path $w1Home 'AGENTS.md'
 if (-not (Test-Path -LiteralPath $rules)) { Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'AGENTS.default.md') -Destination $rules }
@@ -49,10 +55,12 @@ if ($DebugPortBase -gt 0) {
   $env:DSH_DESKTOP_RENDERER_DEBUG_PORT = [string]($DebugPortBase+1)
   $env:DSH_DESKTOP_HOST_INSPECT_PORT = [string]($DebugPortBase+2)
 }
+# Each invocation owns its log, including a second launch that focuses the existing instance.
+$launchLog = Join-Path $localLogs ('desktop-' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '-' + $PID + '.log')
 Push-Location -LiteralPath $root
 try {
-  $launchArgs = @('--filter','@deepseek-ai/dsh-desktop','run','start','--reuse-runtime')
+  $launchArgs = @('--import','tsx/esm','apps/desktop/scripts/dev.ts','--skip-build','--reuse-runtime')
   if (-not $RefreshProject -and (Test-Path -LiteralPath (Join-Path $root 'apps/desktop/.desktop-build/development/project/desktop-runtime.json'))) { $launchArgs += '--reuse-project' }
-  & node (Join-Path $root 'node_modules/pnpm/bin/pnpm.cjs') @launchArgs *> (Join-Path $localLogs 'desktop.log')
-  if ($LASTEXITCODE -ne 0) { throw "W1 failed to start. See $localLogs/desktop.log" }
+  & $node @launchArgs *> $launchLog
+  if ($LASTEXITCODE -ne 0) { throw "W1 failed to start. See $launchLog" }
 } finally { Pop-Location }

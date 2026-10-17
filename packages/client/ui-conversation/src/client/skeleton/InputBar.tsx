@@ -24,6 +24,7 @@ import {
 import type {} from '@deepseek-ai/dsh-plan-mode/client'
 // Type-only: the `goal` projection key merge (hint disambiguation).
 import type {} from '@deepseek-ai/dsh-goal/client'
+import type {} from '@deepseek-ai/dsh-w1-reply-suggestions/types'
 // The `imageLimits` projection key merge (intake pre-check) arrives with the
 // wire types: apiproxy's sessions contract declares it, and client-runtime's
 // api-remotes import already places it in every client program.
@@ -69,6 +70,9 @@ export const InputBar = memo(function InputBar({
   const planActive = useProjection('plan', plan => plan !== undefined && (plan.pending ? !plan.active : plan.active))
   // Absent (undefined: no frame yet) and cleared (null) both mean no goal.
   const hasGoal = useProjection('goal', goal => goal != null)
+  const replySuggestion = useProjection('w1ReplySuggestion')
+  const [dismissedReply, setDismissedReply] = useState<string | null>(null)
+  const replyKey = replySuggestion == null ? null : `${sessionId}:${replySuggestion.turn}`
   // Session-maybe: the machine faces are absent together while no session is
   // current; the bar renders the same DOM inert instead of a parallel tree.
   const live = input !== undefined && keyboard !== undefined && inputActions !== undefined
@@ -145,6 +149,21 @@ export const InputBar = memo(function InputBar({
   // be disabled do lock it — there is no session to choose a model for.
   const modelSeatLocked = removed || inert || !live
   const machineBusy = input?.phase === 'adjudicating' || input?.phase === 'submitting'
+  const visibleReply = !disabled && !machineBusy && !running && subagent === null
+    && draft === '' && attachments.length === 0 && input.phase === 'plain' && !commandMenuOpen
+    && replyKey !== dismissedReply ? replySuggestion?.text : undefined
+  const dismissSuggestion = (): boolean => {
+    if (visibleReply === undefined) return false
+    setDismissedReply(replyKey)
+    return true
+  }
+  const acceptSuggestion = (): boolean => {
+    if (visibleReply === undefined || keyboard === undefined || keyboard.snapshot.draft !== ''
+      || keyboard.snapshot.attachmentIds.length !== 0 || keyboard.snapshot.phase !== 'plain') return false
+    keyboard.paste(visibleReply)
+    setDismissedReply(replyKey)
+    return true
+  }
   // The no-workspace surface remains the resident DOM node but acts as the
   // existing picker trigger. Message controls stay locked until a Session
   // exists; the trigger itself is read-only rather than disabled so pointer
@@ -253,10 +272,12 @@ export const InputBar = memo(function InputBar({
   const gate = useRef({
     locked, machineBusy, canSteerQueue, running, steeringAvailable, busyEnter,
     intakeFiles, uploadsPending, showToast, t, canAcceptDrop,
+    acceptSuggestion, dismissSuggestion,
   })
   gate.current = {
     locked, machineBusy, canSteerQueue, running, steeringAvailable, busyEnter,
     intakeFiles, uploadsPending, showToast, t, canAcceptDrop,
+    acceptSuggestion, dismissSuggestion,
   }
 
   useEffect(() => {
@@ -429,6 +450,8 @@ export const InputBar = memo(function InputBar({
           editorDisabled={editorDisabled}
           phase={input?.phase ?? 'inert'}
           placeholderText={placeholderText}
+          suggestionText={visibleReply}
+          suggestionHint={t('input.replySuggestion')}
           ariaLabel={workspaceTrigger ? t('hero.chooseWorkspace') : placeholderText}
           workspaceTrigger={workspaceTrigger}
           workspacePickerOpen={workspacePickerOpen}

@@ -2685,6 +2685,9 @@ importers:
 
   packages/bundle/web-app:
     dependencies:
+      '@deepseek-ai/dsh-w1-reply-suggestions':
+        specifier: workspace:*
+        version: link:../../w1/reply-suggestions
       dsh-usage-manager:
         specifier: workspace:*
         version: link:../../w1/usage
@@ -3765,6 +3768,9 @@ importers:
         specifier: link:../../../vendor/schemastery
         version: link:../../../vendor/schemastery
     devDependencies:
+      '@deepseek-ai/dsh-w1-reply-suggestions':
+        specifier: workspace:*
+        version: link:../../w1/reply-suggestions
       '@deepseek-ai/cordis':
         specifier: workspace:~
         version: link:../../../vendor/cordis
@@ -15383,6 +15389,58 @@ importers:
       '@deepseek-ai/dsh-working-directory':
         specifier: workspace:*
         version: link:../../session/working-directory
+
+  packages/w1/reply-suggestions:
+    dependencies:
+      "@deepseek-ai/schemastery":
+        specifier: workspace:~
+        version: link:../../../vendor/schemastery
+      "@deepseek-ai/dsh-llm":
+        specifier: workspace:*
+        version: link:../../llm/llm
+      "@deepseek-ai/dsh-session":
+        specifier: workspace:*
+        version: link:../../core/session
+      "@deepseek-ai/dsh-session-projection":
+        specifier: workspace:*
+        version: link:../../session/session-projection
+      "@deepseek-ai/dsh-timeout":
+        specifier: workspace:*
+        version: link:../../util/timeout
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
+    devDependencies:
+      '@deepseek-ai/dsh-session-persistence-jsonl':
+        specifier: workspace:*
+        version: link:../../session/session-persistence-jsonl
+      '@deepseek-ai/dsh-session-persistence':
+        specifier: workspace:*
+        version: link:../../session/session-persistence
+      "@deepseek-ai/cordis":
+        specifier: workspace:~
+        version: link:../../../vendor/cordis
+      "@deepseek-ai/dsh-agent":
+        specifier: workspace:*
+        version: link:../../core/agent
+      "@deepseek-ai/dsh-tool-subagent":
+        specifier: workspace:*
+        version: link:../../subagent/tool-subagent
+      "@deepseek-ai/cordis-plugin-loader":
+        specifier: workspace:~
+        version: link:../../../vendor/loader
+      "@deepseek-ai/dsh-agent-loop":
+        specifier: workspace:*
+        version: link:../../core/agent-loop
+      "@deepseek-ai/dsh-system-prompt":
+        specifier: workspace:*
+        version: link:../../core/system-prompt
+      "@deepseek-ai/dsh-tools":
+        specifier: workspace:*
+        version: link:../../core/tools
+      "@deepseek-ai/cordis-plugin-include":
+        specifier: workspace:~
+        version: link:../../../vendor/include
 
   packages/w1/usage:
     devDependencies:

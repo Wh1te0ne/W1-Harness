@@ -19,6 +19,8 @@ interface DraftViewGate {
   showToast: (text: string) => void
   t: ComposerBarProps['t']
   canAcceptDrop: boolean
+  acceptSuggestion?: () => boolean
+  dismissSuggestion?: () => boolean
 }
 
 /**
@@ -109,6 +111,8 @@ export function installDraftKeymap(
   gate: MutableRefObject<DraftViewGate>,
 ): () => void {
   return registerComposerKeymap(editor, {
+    acceptSuggestion: () => gate.current.acceptSuggestion?.() ?? false,
+    dismissSuggestion: () => gate.current.dismissSuggestion?.() ?? false,
     arbitrate: (key, composing) => keyboard.arbitrate(key, composing),
     space: () => {
       if (gate.current.machineBusy || gate.current.locked) return false

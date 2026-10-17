@@ -318,6 +318,8 @@ export interface LaunchOptions {
    * ordering.
    */
   extraOverlayPath?: string | readonly string[]
+  /** Enable W1 auxiliary drafts only in scenarios that explicitly exercise them. */
+  replySuggestions?: boolean
   /**
    * Additional package manifests whose dependency closures supply experimental
    * profile layers named by {@link extraOverlayPath}.
@@ -613,6 +615,7 @@ export async function launchWebScaffold(options: LaunchOptions = {}): Promise<We
     // workspace, keeping the composition untouched.
     { id: 'agent-instructions', disabled: true },
     { id: 'session-title-llm', disabled: true },
+    { id: 'w1-reply-suggestions', disabled: options.replySuggestions !== true },
     // Fixture sessions must never leave the process: the shipped row defaults
     // to the production OTLP endpoint (or whatever DSH_TELEMETRY_OTLP_URL
     // names in the ambient environment). A scenario with a local collector

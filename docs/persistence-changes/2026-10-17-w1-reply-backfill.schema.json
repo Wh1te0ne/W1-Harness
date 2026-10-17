@@ -1,0 +1,72 @@
+{
+  "formatVersion": 2,
+  "roots": [
+    {
+      "key": "event:w1/reply-attempt",
+      "kind": "event",
+      "event": "w1/reply-attempt",
+      "surface": false,
+      "digest": "e9b30014331880c466eaa0351a4975d96eedbd415a3802921877aaf9e3c17bfc",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "data",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "ignorable",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "seq",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "time",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "type",
+                "type": 4,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "turn",
+                "type": 2,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "primitive",
+            "type": "number"
+          },
+          {
+            "kind": "literal",
+            "value": true
+          },
+          {
+            "kind": "literal",
+            "value": "w1/reply-attempt"
+          }
+        ]
+      }
+    }
+  ],
+  "types": []
+}

@@ -42,6 +42,10 @@ export interface ComposerKeymapHandlers {
   intakeFiles(files: readonly File[], directories?: ReadonlySet<File>): void
   /** Pasted plain text (sanitized insertion through the shell). */
   pasteText(text: string): void
+  /** Accept a visible reply suggestion into the empty draft, without submitting. */
+  acceptSuggestion?(): boolean
+  /** Dismiss a visible suggestion after menu Escape arbitration. */
+  dismissSuggestion?(): boolean
 }
 
 /** Composition state a keydown can trust (see the module doc's Safari note). */
@@ -110,7 +114,14 @@ export function registerComposerKeymap(editor: LexicalEditor, handlers: Composer
     // consuming the draft.
     editor.registerCommand(
       KEY_TAB_COMMAND,
-      event => arrow(event.shiftKey ? 'tabBack' : 'tab')(event),
+      (event) => {
+        if (arrow(event.shiftKey ? 'tabBack' : 'tab')(event)) return true
+        if (event.shiftKey || event.ctrlKey || event.metaKey || event.altKey || event.repeat
+          || isComposingEvent(event, recentlyComposing)) return false
+        if (handlers.acceptSuggestion?.() !== true) return false
+        event.preventDefault()
+        return true
+      },
       COMMAND_PRIORITY_CRITICAL,
     ),
     editor.registerCommand(KEY_ESCAPE_COMMAND, (event) => {
@@ -118,6 +129,10 @@ export function registerComposerKeymap(editor: LexicalEditor, handlers: Composer
       // does NOT release (deleting the command chip is the only exit gesture).
       handlers.dismissPopup()
       if (handlers.arbitrate('escape', isComposingEvent(event, recentlyComposing)) === 'consumed') {
+        event.preventDefault()
+        return true
+      }
+      if (!isComposingEvent(event, recentlyComposing) && handlers.dismissSuggestion?.() === true) {
         event.preventDefault()
         return true
       }

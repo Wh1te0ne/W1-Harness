@@ -231,6 +231,30 @@
   cursor: not-allowed;
 }
 
+/* Ghost text shares the editor's grid cell, growing the empty composer to fit. */
+.growSuggestion {
+  display: grid;
+}
+
+.growSuggestion > .input,
+.growSuggestion > .replySuggestion {
+  grid-area: 1 / 1;
+}
+
+.growSuggestion > .replySuggestion {
+  position: static;
+  padding: 4px 8px 0 14px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.replySuggestionHint {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 11px;
+  color: var(--dsw-alias-label-tertiary);
+}
+
 .input[aria-haspopup='menu'] {
   cursor: pointer;
 }

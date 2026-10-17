@@ -2,6 +2,7 @@
 import { randomUUID } from 'node:crypto'
 import { app, session, type BrowserWindow, type Session, type WebContents } from 'electron'
 import type { DesktopBrowserLeaseId, DesktopBrowserOpenRequest, DesktopBrowserReservation } from '@deepseek-ai/dsh-client-ui-sidebar-browser/types'
+import { isW1Development } from './w1-identity.ts'
 import { DESKTOP_IPC } from './ipc.ts'
 
 interface GuestLease {
@@ -87,7 +88,7 @@ export class DesktopBrowserGuests {
         nodeIntegration: false, nodeIntegrationInWorker: false, nodeIntegrationInSubFrames: false,
         contextIsolation: true, sandbox: true, webSecurity: true, allowRunningInsecureContent: false,
         webviewTag: false, plugins: false, navigateOnDragDrop: false, disableDialogs: true,
-        devTools: !app.isPackaged,
+        devTools: isW1Development(app),
       })
       params.httpreferrer = ''
     })

@@ -42,6 +42,16 @@
 # `dsh.client` rows are the browser roster the modules node half scans into
 # window.__DSH_BOOT__; the modules row is simultaneously a host row.
 - insert:
+    - id: w1-reply-suggestions
+      name: '@deepseek-ai/dsh-w1-reply-suggestions'
+      config:
+        maxContextCharacters: 12000
+        maxMessages: 6
+        maxSuggestionCharacters: 240
+        maxOutputTokens: 768
+        maxInputBytes: 65536
+        timeoutMs: 30000
+
     - id: desktop-product-telemetry
       name: '@deepseek-ai/dsh-host-product-telemetry-otel'
       disabled: true

@@ -35,6 +35,7 @@ import type { DraftAttachmentId } from '../src/client/contract/input.ts'
 import { InputBar } from '../src/client/skeleton/InputBar.tsx'
 import type { InputBarProps } from '../src/client/skeleton/InputBar.tsx'
 import { en, zh } from '../src/client/locales.ts'
+import type { ReplySuggestion } from '@deepseek-ai/dsh-w1-reply-suggestions/types'
 
 // Every fixture carries the resource hook the resources plugin merges into GlobalStandardProps.
 const useResource = (() => ({ status: 'none' as const, value: undefined, failure: undefined })) as GlobalStandardProps['useResource']
@@ -60,6 +61,7 @@ function snapshotOf(overrides: Partial<SessionSnapshot> = {}): SessionSnapshot {
 }
 
 interface BenchOptions {
+  replySuggestion?: ReplySuggestion
   planEntry?: React.ReactNode
   /** The `plan` projection value the standard-kit useProjection serves. */
   plan?: { active: boolean; pending: boolean }
@@ -197,7 +199,8 @@ function bench(over?: BenchOptions) {
         ? over?.plan
         : key === 'goal' ? over?.goal
           : key === 'imageLimits' ? over?.imageLimits
-            : key === 'contextPressure' ? over?.contextPressure : undefined)),
+            : key === 'w1ReplySuggestion' ? over?.replySuggestion
+              : key === 'contextPressure' ? over?.contextPressure : undefined)),
     useInput: bindSnapshotSelector(shell.state),
     inputActions: shell.actions,
     keyboard: shell,
@@ -283,6 +286,56 @@ function editableOf(input: HTMLElement): boolean {
 function writeDraft(shell: SessionInputShell, text: string): void {
   act(() => { shell.setDraft(text) })
 }
+
+describe('W1 suggested replies', () => {
+  const replySuggestion = { turn: 1, text: '请先说明修改范围。', route: { provider: 'mock', model: 'small' } }
+
+  it('shows ghost text, accepts with Tab, and sends only after a separate Enter', async () => {
+    const h = bench({ replySuggestion })
+    expect(h.view.getByText(replySuggestion.text)).toBeTruthy()
+    expect(h.shell.snapshot.draft).toBe('')
+    fireEvent.keyDown(h.textarea, { key: 'Enter' })
+    expect(h.sink).not.toHaveBeenCalled()
+    await act(async () => { h.textarea.focus(); fireEvent.keyDown(h.textarea, { key: 'Tab' }) })
+    expect(h.shell.snapshot.draft).toBe(replySuggestion.text)
+    expect(h.sink).not.toHaveBeenCalled()
+    expect(h.view.queryByText('Tab 填入 · Esc 忽略')).toBeNull()
+    await act(async () => { fireEvent.keyDown(h.textarea, { key: 'Enter' }) })
+    expect(h.sink).toHaveBeenCalledTimes(1)
+    expect(h.sink.mock.calls[0]?.[0]).toBe(replySuggestion.text)
+  })
+
+  it('dismisses with Escape and preserves typed drafts', () => {
+    const h = bench({ replySuggestion })
+    fireEvent.keyDown(h.textarea, { key: 'Escape' })
+    expect(h.view.queryByText(replySuggestion.text)).toBeNull()
+    fireEvent.keyDown(h.textarea, { key: 'Tab' })
+    expect(h.shell.snapshot.draft).toBe('')
+    writeDraft(h.shell, '我自己写的回复')
+    fireEvent.keyDown(h.textarea, { key: 'Tab' })
+    expect(h.shell.snapshot.draft).toBe('我自己写的回复')
+    expect(h.sink).not.toHaveBeenCalled()
+  })
+
+  it.each([{ shiftKey: true }, { ctrlKey: true }, { altKey: true }, { metaKey: true }, { isComposing: true }])(
+    'does not accept a suggestion for modified or composing Tab %j', (modifiers) => {
+      const h = bench({ replySuggestion })
+      fireEvent.keyDown(h.textarea, { key: 'Tab', ...modifiers })
+      expect(h.shell.snapshot.draft).toBe('')
+      expect(h.sink).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each([{ running: true }, { disabled: true }, { commandMenuOpen: true }, { draft: '已有草稿' }])(
+    'hides suggestions while another composer operation takes priority %j', (over) => {
+      const h = bench({ replySuggestion, ...over })
+      expect(h.view.queryByText(replySuggestion.text)).toBeNull()
+      fireEvent.keyDown(h.textarea, { key: 'Tab' })
+      expect(h.shell.snapshot.draft).toBe(over.draft ?? '')
+      expect(h.sink).not.toHaveBeenCalled()
+    },
+  )
+})
 
 describe('composer focus handoff', () => {
   it.each(['hero', 'composer'] as const)('focuses the %s editor when its card background is pressed', (variant) => {

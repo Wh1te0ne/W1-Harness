@@ -188,7 +188,8 @@
     "@deepseek-ai/dsh-host-product-telemetry-otel": "workspace:*",
     "@deepseek-ai/dsh-client-ui-settings-session-log": "workspace:*",
     "@deepseek-ai/dsh-harness-dev-context": "workspace:*",
-    "dsh-usage-manager": "workspace:*"
+    "dsh-usage-manager": "workspace:*",
+    "@deepseek-ai/dsh-w1-reply-suggestions": "workspace:*"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "workspace:~",

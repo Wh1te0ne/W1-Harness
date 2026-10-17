@@ -1,5 +1,5 @@
 import type { ProductEventMap, ProductEvent } from '@deepseek-ai/dsh-client-product-analytics/types'
-import { configureW1Identity } from './w1-identity.ts'
+import { configureW1Identity, configureW1Taskbar, configureW1StartMenu, isW1Development } from './w1-identity.ts'
 import { W1UpstreamUpdates } from './w1-upstream.ts'
 import { showW1Upstream } from './w1-upstream-ui.ts'
 import { WINDOWS_TITLEBAR_HEIGHT } from './windows-layout.ts'
@@ -63,6 +63,7 @@ import { DesktopTray } from './tray.ts'
 import { DesktopBackgroundNotice } from './background-notice.ts'
 
 const w1Product = configureW1Identity(app)
+const w1Packaged = !isW1Development(app)
 
 let focusPrimaryWindow = (): void => {}
 let stopForRecovery = async (): Promise<void> => {}
@@ -153,7 +154,7 @@ interface RuntimeResources {
 }
 
 function runtimeResources(): RuntimeResources {
-  const development = !app.isPackaged
+  const development = !w1Packaged
   const node = process.execPath
   const nodeBin = development ? join(app.getAppPath(), 'scripts', 'node-bin') : join(process.resourcesPath, 'runtime', 'bin')
   const pnpm = (development ? process.env.DSH_DESKTOP_PNPM_ENTRY : undefined)
@@ -226,6 +227,7 @@ function createWindow(preload: string, show = false, primary = false): BrowserWi
       devTools: true,
     },
   })
+  configureW1Taskbar(app, window, w1Product)
   window.webContents.setWindowOpenHandler(({ url }) => {
     if (['http:', 'https:'].includes(new URL(url).protocol)) void shell.openExternal(url)
     return { action: 'deny' }
@@ -307,9 +309,11 @@ async function main(): Promise<void> {
   void pruneCrashReports(app.getPath('logs'))
   const journalDirectory = process.env.DSH_DESKTOP_UPDATE_JOURNAL_DIR
   const updateJournal = journalDirectory === undefined ? undefined : new DesktopUpdateJournal(journalDirectory, app.getVersion())
+  try { configureW1StartMenu(app, shell, w1Product) }
+  catch (error) { console.warn('W1 Start Menu shortcut could not be updated:', error) }
   const resources = runtimeResources()
   const paths = resolveDesktopPaths()
-  const development = !app.isPackaged
+  const development = !w1Packaged
   const primaryRuntime = development
     ? developmentPrimaryRuntime()
     : join(process.resourcesPath, 'runtime', 'primary-runtime')
@@ -379,7 +383,7 @@ async function main(): Promise<void> {
   }
   const commandManager = new DesktopCommandManager({
     resources: process.resourcesPath,
-    isPackaged: app.isPackaged,
+    isPackaged: w1Packaged,
     isInstalledLocation: () => process.platform !== 'darwin' || app.isInApplicationsFolder(),
     isInstalling: () => updateState.phase === 'installing',
     isQuitting,
@@ -1064,7 +1068,7 @@ async function main(): Promise<void> {
     window.focus()
   }
 
-  if (app.isPackaged || process.env.DSH_DESKTOP_DEV_APP === '1') app.setAsDefaultProtocolClient(w1Product.protocol)
+  if (w1Packaged || process.env.DSH_DESKTOP_DEV_APP === '1') app.setAsDefaultProtocolClient(w1Product.protocol)
   app.on('open-url', (event, url) => {
     event.preventDefault()
     if (url === `${w1Product.protocol}://open` || url === `${w1Product.protocol}://open/`) focusPrimaryWindow()
@@ -1122,7 +1126,7 @@ async function main(): Promise<void> {
 
   mainWindow = createMainWindow()
   if (typeof manifest !== 'object' || manifest === null) throw new Error('desktop policy: invalid application manifest')
-  const policyConfig = resolveDesktopPolicyConfig(undefined, !app.isPackaged)
+  const policyConfig = resolveDesktopPolicyConfig(undefined, !w1Packaged)
   if (policyConfig !== undefined) {
     if (policyConfig.authentication === 'feishu-test') {
       policyAuth = new DesktopPolicyTestAuth(policyConfig.origin, policyConfig.allowedAuthOrigins, locale,
@@ -1134,7 +1138,7 @@ async function main(): Promise<void> {
     mandatoryPolicy = new DesktopMandatoryUpdatePolicy(policyConfig, {
       platform: process.platform as 'win32' | 'darwin', arch: process.arch as 'x64' | 'arm64',
       channel: updateChannel,
-      bundledDshVersion: app.isPackaged ? readDesktopRuntime(resources.dsh).release.version : app.getVersion(),
+      bundledDshVersion: w1Packaged ? readDesktopRuntime(resources.dsh).release.version : app.getVersion(),
     }, (state) => {
       if (state.error !== 'authentication-required') policyAuthenticationQueued = false
       if (state.blocking) {
@@ -1155,7 +1159,7 @@ async function main(): Promise<void> {
       download: downloadUpdate, install: version => updates.install(version),
     })
     void mandatoryPolicy.check('launch').then((state) => {
-      if (app.isPackaged && state.error === 'authentication-required' && !isQuitting()) queuePolicyAuthentication()
+      if (w1Packaged && state.error === 'authentication-required' && !isQuitting()) queuePolicyAuthentication()
     }).catch((error: unknown) => { console.error(error) })
   }
   await reconcileBackend().catch(() => undefined)

@@ -58,7 +58,8 @@ async function runPackageScript(script: string, cwd: string): Promise<void> {
 
 async function launchElectron(): Promise<void> {
   const require = createRequire(import.meta.url)
-  const electron: unknown = require('electron')
+  const electron: unknown = process.platform === 'win32' && process.env.W1_DESKTOP_EXECUTABLE !== undefined
+    ? process.env.W1_DESKTOP_EXECUTABLE : require('electron')
   if (typeof electron !== 'string') throw new Error('desktop development: electron executable is unavailable')
   const mainPort = debugPort('DSH_DESKTOP_MAIN_INSPECT_PORT', 9229)
   const rendererPort = debugPort('DSH_DESKTOP_RENDERER_DEBUG_PORT', 9222)
