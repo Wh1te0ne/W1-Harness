@@ -59,24 +59,45 @@ export class RemoteHost {
   }
   wire(frame) { if (this.ws?.readyState === WebSocket.OPEN) { if (this.ws.bufferedAmount > 4_000_000) { this.ws.close(); return; } this.ws.send(JSON.stringify(frame)); } }
   routes() { this.wire({ type: 'routes', devices: this.state.devices.map(d => d.id), invites: this.invite ? [this.invite.id] : [] }); }
-  connect() {
-    if (this.stopped || !this.state.enabled) return;
+  retryLater() {
+    this.status = this.state.enabled ? 'offline' : 'disabled';
+    if (!this.stopped && this.state.enabled) this.retry = setTimeout(() => this.connect(), Math.min(30_000, 1000 * 2 ** Math.min(this.failureCount++, 5)));
+  }
+  async connect() {
+    if (this.stopped || !this.state.enabled || this.attempt) return;
+    const attempt = this.attempt = new AbortController();
     this.status = 'connecting'; this.error = '';
+    try {
+      const response = await fetch(this.state.relay + '/healthz', { redirect: 'error', signal: AbortSignal.any([attempt.signal, AbortSignal.timeout(8000)]) });
+      if (!response.ok) { await response.body?.cancel(); throw Object.assign(new Error('中继健康检查返回 HTTP ' + response.status + '，请检查域名反向代理是否指向 W1 中继的 28981 端口'), { code: 'W1_HEALTH' }); }
+      const health = await response.json().catch(() => null);
+      if (health?.ok !== true || health.service !== 'w1h-relay' || health.protocol !== 1) throw Object.assign(new Error('此地址未返回兼容的 W1 中继，请检查域名和反向代理后端'), { code: 'W1_HEALTH' });
+    } catch (error) {
+      if (attempt.signal.aborted) return;
+      const code = error.cause?.code;
+      this.error = code === 'ENOTFOUND' || code === 'EAI_AGAIN' ? '中继域名解析失败，请检查 DNS 和网络连接'
+        : error.name === 'TimeoutError' ? '中继连接超时，请检查网络、公网端口和服务状态'
+        : code?.includes('CERT') || code?.startsWith('ERR_TLS') || code === 'UNABLE_TO_VERIFY_LEAF_SIGNATURE' ? '中继 HTTPS 证书验证失败，请检查证书域名、有效期和完整证书链'
+        : error.code === 'W1_HEALTH' ? error.message : '无法访问中继 HTTPS，请检查网络、公网端口和 NAS 服务';
+      this.attempt = null; this.retryLater(); return;
+    }
+    if (attempt.signal.aborted) return;
     const ws = this.ws = new WebSocket(socketUrl(this.state.relay));
-    const startup = setTimeout(() => ws.close(), 15_000);
+    const startup = setTimeout(() => { if (this.ws === ws) this.error = '中继未完成 WebSocket 握手，请检查 /v1/connect 转发'; ws.close(); }, 15_000);
     ws.addEventListener('open', () => { if (this.ws === ws) this.wire({ type: 'host', hostId: this.hostId, token: this.state.token, devices: this.state.devices.map(d => d.id), invites: this.invite ? [this.invite.id] : [] }); });
     ws.addEventListener('message', event => {
-      this.messageQueue = this.messageQueue.then(async () => { if (this.ws !== ws) return; const msg = JSON.parse(event.data); await this.receive(msg); }).catch(() => { this.error = '连接数据异常，正在重连'; ws.close(); });
+      this.messageQueue = this.messageQueue.then(async () => { if (this.ws !== ws) return; const msg = JSON.parse(event.data); if (msg.type === 'ready') clearTimeout(startup); await this.receive(msg); }).catch(() => { if (this.ws === ws) this.error = '连接数据异常，正在重连'; ws.close(); });
     });
-    ws.addEventListener('error', () => { this.error = '无法连接中继，请检查 HTTPS 证书、端口和 WebSocket 转发'; });
+    ws.addEventListener('error', () => { if (this.ws === ws) this.error = '中继 HTTPS 正常，但 WebSocket 连接失败，请检查 /v1/connect 的 Upgrade 转发'; });
     ws.addEventListener('close', () => {
-      clearTimeout(startup); if (this.ws !== ws) return; this.ws = null; this.status = this.state.enabled ? 'offline' : 'disabled';
+      clearTimeout(startup); if (this.ws !== ws) return; this.ws = null; this.attempt = null;
       for (const id of [...this.peers.keys()]) this.closePeer(id);
-      if (!this.stopped && this.state.enabled) this.retry = setTimeout(() => this.connect(), Math.min(30_000, 1000 * 2 ** Math.min(this.failureCount++, 5)));
+      if (!this.error) this.error = '中继连接已断开，正在自动重连';
+      this.retryLater();
     });
   }
   async receive(msg) {
-    if (msg.type === 'ready') { this.status = 'online'; this.failureCount = 0; return; }
+    if (msg.type === 'ready') { this.status = 'online'; this.error = ''; this.failureCount = 0; return; }
     if (msg.type === 'peer-close') { this.closePeer(msg.peerId); return; }
     if (msg.type === 'peer-open') {
       const pair = msg.kind === 'pair'; const secret = pair ? (this.invite?.id === msg.route && this.invite.expiresAt > Date.now() ? this.invite.secret : null) : this.state.devices.find(d => d.id === msg.route)?.key;
@@ -129,6 +150,6 @@ export class RemoteHost {
     } catch (error) { await this.sendPeer(peer, { type: 'error', id, error: String(error.message).slice(0, 300) }).catch(() => {}); }
   }
   closePeer(id) { const peer = this.peers.get(id); if (!peer) return; peer.watch?.abort(); clearTimeout(peer.deadline); this.peers.delete(id); this.wire({ type: 'close', peerId: id }); }
-  disconnect() { clearTimeout(this.retry); clearTimeout(this.inviteTimer); this.invite = null; for (const id of [...this.peers.keys()]) this.closePeer(id); const ws = this.ws; this.ws = null; ws?.close(); this.status = 'disabled'; }
+  disconnect() { this.attempt?.abort(); this.attempt = null; clearTimeout(this.retry); clearTimeout(this.inviteTimer); this.invite = null; for (const id of [...this.peers.keys()]) this.closePeer(id); const ws = this.ws; this.ws = null; ws?.close(); this.status = 'disabled'; }
   stop() { this.stopped = true; this.disconnect(); }
 }

@@ -1,9 +1,10 @@
 services:
   relay:
     build: .
-    image: w1h-relay:0.1.0
+    image: w1h-relay:0.1.1
     container_name: w1h-relay
     restart: unless-stopped
+    network_mode: bridge
     ports:
       - "28981:28981"
     read_only: true

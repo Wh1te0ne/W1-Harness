@@ -1,8 +1,8 @@
 FROM node:24-alpine
 WORKDIR /app
-COPY package.json ./
+COPY --chmod=644 package.json ./
 RUN npm install --omit=dev --ignore-scripts --package-lock=false && npm cache clean --force
-COPY relay.mjs crypto.mjs ./
+COPY --chmod=644 relay.mjs crypto.mjs ./
 USER node
 ENV PORT=28981 HOST=0.0.0.0
 EXPOSE 28981

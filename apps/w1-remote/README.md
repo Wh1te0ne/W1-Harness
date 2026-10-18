@@ -1,6 +1,6 @@
 # W1 远程访问与 NAS 中继
 
-W1 Mobile 0.1.0 是本机自用 Android 客户端，和电脑 W1 的同一 Host 通信。任务、历史记录、模型 Key 与文件操作留在电脑；NAS 只转发加密消息，不运行模型。默认关闭远程连接，在电脑「应用 → 远程设备」启用并配对。
+W1 Mobile 0.1.0 与连接模块/中继 0.1.1 兼容。手机客户端是本机自用 Android 客户端，和电脑 W1 的同一 Host 通信。任务、历史记录、模型 Key 与文件操作留在电脑；NAS 只转发加密消息，不运行模型。默认关闭远程连接，在电脑「应用 → 远程设备」启用并配对。
 
 ## 部署参数
 
@@ -14,7 +14,7 @@ W1 Mobile 0.1.0 是本机自用 Android 客户端，和电脑 W1 的同一 Host 
 | 数据卷 | 无；中继不保存会话、配对密钥或令牌 |
 | 运行条件 | Docker Compose，或 Node.js 24；不需要 GPU |
 
-在 NAS 创建独立项目目录，解压中继交付包后执行 `docker compose up -d --build`，或在 NAS 的 Docker Compose 界面导入此目录。该服务独占 `28981`；如已有服务占用，只修改 Compose 的宿主机端口，不修改容器内部端口。初次构建需要能够拉取 Node 官方镜像及 npm 包。可通过 `docker compose ps` 和 `docker compose logs --tail=50` 查看状态。
+在 NAS 创建独立项目目录，解压中继交付包后执行 `docker compose up -d --build`，或在 NAS 的 Docker Compose 界面导入此目录。Compose 使用已有的默认 bridge 网络，不分配新子网；镜像为非 root 用户固定程序文件的读取权限，兼容 NAS 上传文件的严格权限。该服务独占 `28981`；如已有服务占用，只修改 Compose 的宿主机端口，不修改容器内部端口。初次构建需要能够拉取 Node 官方镜像及 npm 包。可通过 `docker compose ps` 和 `docker compose logs --tail=50` 查看状态。
 
 域名入口必须有手机信任的有效 HTTPS 证书，并把整个路径转发到中继后端，保留 `/v1/connect`，开启 WebSocket Upgrade。不要把后端填写为 HTTPS；本容器的 TLS 由 NAS 反向代理终止。公网路由器只需暴露你的 HTTPS 入口 `8112`，不需要把 `28981` 额外映射到公网，也不需要给电脑开放端口。长连接空闲超时建议至少 120 秒，中继每 25 秒做一次心跳。
 
@@ -33,7 +33,7 @@ location / {
 }
 ```
 
-部署完成后，先打开公网健康检查地址，确认返回的是 `w1h-relay` JSON，再在电脑启用远程连接。仅管理页面可访问、HTTP 404 或普通 HTTPS 成功，都不能证明 WebSocket 已可用。
+部署完成后，先打开公网健康检查地址，确认返回的是 `w1h-relay` JSON，再在电脑启用远程连接。仅管理页面可访问、HTTP 404 或普通 HTTPS 成功，都不能证明 WebSocket 已可用。电脑连接前检查服务标识及协议版本，分别提示 DNS、HTTPS、健康接口/代理后端和 WebSocket 转发错误；失败后自动重连。健康检查与握手均有超时，连接成功即取消握手超时；关闭远程功能会取消正在进行的检查和重连，不影响本地会话。
 
 ## 配对与日常使用
 
@@ -61,7 +61,7 @@ location / {
 
 ```powershell
 # 在 W1 仓库根目录执行
-node --test apps/w1-remote/tests/remote.test.mjs
+node --test apps/w1-remote/tests/remote.test.mjs apps/w1-remote/tests/connection.test.mjs
 node apps/w1-remote/tests/real-host-smoke.mjs
 pwsh -NoProfile -File apps/w1-remote/build-android.ps1
 ```

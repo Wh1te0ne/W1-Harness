@@ -1,6 +1,6 @@
 {
   "name": "@w1h/remote",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "type": "module",
   "description": "W1 encrypted remote companion transport and standalone NAS relay",
