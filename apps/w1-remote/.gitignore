@@ -1,0 +1,8 @@
+node_modules/
+android/.gradle/
+android/local.properties
+android/**/build/
+android/app/src/main/assets/
+android/app/src/main/res/drawable/w1_icon.png
+*.keystore
+*.jks

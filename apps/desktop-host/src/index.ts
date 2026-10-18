@@ -9,6 +9,7 @@ import type {} from '@deepseek-ai/dsh-host-webserver'
 import type {} from '@deepseek-ai/dsh-deepseek-account'
 import { resolveDshHome } from '@deepseek-ai/dsh-home-paths'
 import * as desktopOffice from './office.ts'
+import { installW1Remote } from './w1-remote.ts'
 
 import { installDesktopUpdateTaskControl } from './update-tasks.ts'
 import { installDesktopQuitInspection } from './quit-inspection.ts'
@@ -42,6 +43,7 @@ async function main(): Promise<void> {
   })
   let stopping: Promise<void> | undefined
   const control: {
+    remote?: Awaited<ReturnType<typeof installW1Remote>>
     updateTasks?: ReturnType<typeof installDesktopUpdateTaskControl>
     quitInspection?: ReturnType<typeof installDesktopQuitInspection>
   } = {}
@@ -59,6 +61,17 @@ async function main(): Promise<void> {
   process.on('message', (message: unknown) => {
     if (typeof message !== 'object' || message === null || !('type' in message)) return
     if (message.type === 'shutdown') { void stop(); return }
+    if (message.type === 'w1-remote' && 'requestId' in message && Number.isSafeInteger(message.requestId) && 'action' in message && typeof message.action === 'string') {
+      const requestId = message.requestId
+      void (async () => {
+        try {
+          if (control.remote === undefined) throw new Error('远程服务尚未就绪')
+          const value = await control.remote.manage(message.action as string, 'value' in message ? message.value : undefined)
+          await send({ type: 'w1-remote', requestId, value })
+        } catch (error) { await send({ type: 'w1-remote', requestId, error: error instanceof Error ? error.message : String(error) }) }
+      })().catch(() => {})
+      return
+    }
     if (message.type === 'quit-inspection') {
       if (!('requestId' in message) || !Number.isSafeInteger(message.requestId)) return
       const requestId = message.requestId
@@ -92,6 +105,8 @@ async function main(): Promise<void> {
   const { ctx } = await application
   control.updateTasks = installDesktopUpdateTaskControl(ctx)
   control.quitInspection = installDesktopQuitInspection(ctx)
+  try { control.remote = await installW1Remote(ctx) }
+  catch (error) { console.warn('W1 remote device service unavailable:', error instanceof Error ? error.message : String(error)) }
   await ctx.plugin(desktopOffice, {
     runtimeDir,
     source: process.argv[4] ?? join(runtimeDir, '..', 'runtime', 'primary-runtime'),

@@ -23,7 +23,7 @@ interface PlatformSessionEvent {
   readonly session: PlatformSession | null
 }
 
-type DesktopHostEvent = ReadyEvent | FatalEvent | PlatformSessionEvent | { readonly type: 'shutdown-complete' } | {
+type DesktopHostEvent = { readonly type: 'w1-remote'; readonly requestId: number; readonly value?: unknown; readonly error?: string } | ReadyEvent | FatalEvent | PlatformSessionEvent | { readonly type: 'shutdown-complete' } | {
   readonly type: 'update-tasks'
   readonly requestId: number
   readonly active: boolean
@@ -54,6 +54,8 @@ function isDesktopHostEvent(message: unknown): message is DesktopHostEvent {
   if (typeof message !== 'object' || message === null || !('type' in message)) return false
   const candidate = message as Record<string, unknown>
   switch (candidate.type) {
+    case 'w1-remote':
+      return Number.isSafeInteger(candidate.requestId) && (candidate.error === undefined || typeof candidate.error === 'string')
     case 'shutdown-complete':
       return true
     case 'ready':
@@ -257,8 +259,15 @@ export class DesktopHostProcess {
     return { activeTasks: response.activeTasks, scheduledTasks: response.scheduledTasks }
   }
 
+  /** Send a validated command from the shell-owned remote-device window. */
+  async remoteManage(action: string, value?: unknown): Promise<unknown> {
+    const response = await this.control({ type: 'w1-remote', action, value }, 15_000, '远程设置操作超时')
+    if (response.type !== 'w1-remote') throw new Error('远程服务响应错误')
+    return response.value
+  }
+
   private async control(
-    request: { readonly type: 'update-tasks'; readonly action: 'inspect' | 'lock' | 'unlock' } | { readonly type: 'quit-inspection' },
+    request: { readonly type: 'w1-remote'; readonly action: string; readonly value?: unknown } | { readonly type: 'update-tasks'; readonly action: 'inspect' | 'lock' | 'unlock' } | { readonly type: 'quit-inspection' },
     deadlineMs: number, deadlineMessage: string,
   ): Promise<DesktopHostControlResponse> {
     const child = this.child

@@ -19,6 +19,8 @@
     "docs/首版构建与验收.md",
     "scripts/w1/AGENTS.default.md",
     "docs/上游同步-0.2.1-rc.1.md",
-    "docs/上游同步-0.2.1-rc.2.md"
+    "docs/上游同步-0.2.1-rc.2.md",
+    "docs/远程访问与NAS中继.md",
+    "apps/w1-remote/README.md"
   ]
 }

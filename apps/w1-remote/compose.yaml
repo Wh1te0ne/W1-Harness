@@ -1,0 +1,18 @@
+services:
+  relay:
+    build: .
+    image: w1h-relay:0.1.0
+    container_name: w1h-relay
+    restart: unless-stopped
+    ports:
+      - "28981:28981"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 192m
+    pids_limit: 64
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"

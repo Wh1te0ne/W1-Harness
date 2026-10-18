@@ -1,0 +1,29 @@
+{
+  "name": "@w1h/remote",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "W1 encrypted remote companion transport and standalone NAS relay",
+  "exports": {
+    "./host": {
+      "types": "./host.d.mts",
+      "default": "./host.mjs"
+    },
+    "./qr": {
+      "types": "./qr.d.mts",
+      "default": "./qr.mjs"
+    },
+    "./presentation": {
+      "types": "./presentation.d.mts",
+      "default": "./presentation.mjs"
+    }
+  },
+  "scripts": {
+    "start": "node relay.mjs",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "dependencies": {
+    "ws": "8.21.3",
+    "qrcode-generator": "2.0.4"
+  }
+}

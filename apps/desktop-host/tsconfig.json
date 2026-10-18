@@ -8,6 +8,9 @@
     "src"
   ],
   "references": [
+    { "path": "../../packages/api/session-controller/tsconfig.host.json" },
+    { "path": "../../packages/api/workspace-controller/tsconfig.host.json" },
+    { "path": "../../packages/core/session" },
     { "path": "../../vendor/cordis" },
     { "path": "../../packages/core/agent" },
     { "path": "../../packages/jobs/jobs" },

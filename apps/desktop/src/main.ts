@@ -1,6 +1,7 @@
 import type { ProductEventMap, ProductEvent } from '@deepseek-ai/dsh-client-product-analytics/types'
 import { configureW1Identity, configureW1Taskbar, configureW1StartMenu, isW1Development } from './w1-identity.ts'
 import { W1UpstreamUpdates } from './w1-upstream.ts'
+import { W1RemoteWindow } from './w1-remote-window.ts'
 import { showW1Upstream } from './w1-upstream-ui.ts'
 import { WINDOWS_TITLEBAR_HEIGHT } from './windows-layout.ts'
 /** Electron shell: desktop project ownership, custom protocol, windows, and lifecycle. */
@@ -334,6 +335,11 @@ async function main(): Promise<void> {
   let quitting = false
   let startup: Promise<void> | undefined
   let workspaceRecovery: Promise<void> | undefined
+  let remoteManage: ((action: string, value?: unknown) => Promise<unknown>) | undefined
+  const remoteWindow = new W1RemoteWindow(fileURLToPath(new URL('./preload-w1-remote.cjs', import.meta.url)), async (action, value) => {
+    if (remoteManage === undefined) throw new Error('请等待 W1 会话服务启动')
+    return remoteManage(action, value)
+  })
   let mainWindow: BrowserWindow | undefined
   let welcomeWindow: BrowserWindow | undefined
   let enteredWorkspace = false
@@ -439,6 +445,7 @@ async function main(): Promise<void> {
     return {
       start: async () => {
         const ready = await host.start()
+        remoteManage = (action, value) => host.remoteManage(action, value)
         hostCookie = await authenticateWebHost(ready.url)
         hostUrl = ready.url
         if (ready.injections === undefined) throw new Error('Desktop Host did not provide boot injections')
@@ -450,6 +457,7 @@ async function main(): Promise<void> {
 
       },
       stop: async () => {
+        remoteManage = undefined
         analyticsEnabled = false
         stopAccount?.()
         try { await host.stop(requireCleanStop) }
@@ -865,6 +873,7 @@ async function main(): Promise<void> {
         click: () => { void showAbout().catch((error: unknown) => { console.error(error) }) } }
       : { label: currentDesktopLocale().messages.aboutMenu, role: 'about' },
     { type: 'separator' },
+    { label: '远程设备', click: () => { remoteWindow.open() } },
     { label: currentDesktopLocale().messages.checkUpdatesMenu, click: () => { void openUpdatePrompt(true) } },
     ...development ? [
       { type: 'separator' as const },

@@ -82,6 +82,7 @@
     "sanitize-html": "2.18.1",
     "sharp": "0.35.5",
     "typescript": "^6.0.3",
-    "vite": "^6.4.3"
+    "vite": "^6.4.3",
+    "@w1h/remote": "workspace:*"
   }
 }
