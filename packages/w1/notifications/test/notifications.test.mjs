@@ -1,0 +1,34 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import vm from 'node:vm';
+import {readFileSync} from 'node:fs';
+import {mkdtemp,mkdir,writeFile,readFile,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join,resolve} from 'node:path';
+import {migrateNotifications} from '../../../../scripts/w1/migrate-notifications.mjs';
+
+function fixture(saved={}) {
+  const handlers=new Map(),timers=new Map(),effects=[],notices=[],syncs=[],rows={a:{id:'a',running:false},b:{id:'b',running:false},child:{id:'child',running:false,parentId:'a',origin:'subagent'}},statuses=new Map();
+  let tid=0,focused=false,active='a',section,plugin,click;
+  const observable=getSnapshot=>{const listeners=new Set();return{getSnapshot,subscribe:f=>{listeners.add(f);return()=>listeners.delete(f)},emit:()=>{for(const f of listeners)f()}}};
+  const list=observable(()=>({phase:'ready',byId:rows})),status=observable(()=>statuses),current=observable(()=>({key:active})),generation=observable(()=>({}));
+  const bridge={show:async value=>{notices.push(value);return{status:'shown'}},close:async()=>{},sync:async value=>{syncs.push(value);return{supported:true}},onClick:f=>{click=f;return()=>{click=null}}};
+  const desktop={notifications:bridge};
+  const win={dshDesktop:desktop,addEventListener(){},removeEventListener(){},focus(){},__ModuleLoader__:{load:p=>{plugin=p.factory(()=>({createElement:(type,props,...children)=>({type,props,children})}))}}};
+  const ctx={connection:{generation},remote:{$on:(name,f)=>handlers.set(name,f)},sessions:{list},uiSession:{adapter:{current},sessionStatus:status},uiWorkspace:{openSession:id=>{active=id;current.emit()}},
+    locale:{register:()=>()=>{},bind:()=>key=>key},slots:{inject:(_name,f)=>f(),register:(options,component)=>{section={options,component};return()=>{}}},effect:f=>{effects.push(f());}};
+  vm.runInNewContext(readFileSync(new URL('../lib/client.js',import.meta.url),'utf8'),{window:win,dshDesktop:desktop,navigator:{platform:'Win32'},document:{visibilityState:'visible',hasFocus:()=>focused,addEventListener(){},removeEventListener(){},createElement:()=>({getContext:()=>({beginPath(){},arc(){},fill(){},fillText(){}}),toDataURL:()=>null})},
+    localStorage:{getItem:key=>key==='dsh-task-notifier.preferences.v1'?JSON.stringify(saved):null,setItem(){}},setTimeout:(f,ms)=>{timers.set(++tid,{f,ms});return tid},clearTimeout:id=>timers.delete(id),console});
+  plugin.apply(ctx);
+  const flush=async ms=>{for(const [id,t] of [...timers])if(t.ms===ms){timers.delete(id);await t.f()}await new Promise(r=>setImmediate(r));};
+  return {notices,syncs,rows,statuses,status,current,generation,flush,section,fire:(...args)=>handlers.get(args.shift())(...args),view:()=>section.options.inject().hooks.reminder.getSnapshot(),focus:value=>{focused=value;current.emit()},click:id=>click(id),active:()=>active,dispose:()=>effects.reverse().forEach(f=>f?.())};
+}
+test('task completion routes once through native bridge and click opens its conversation',async()=>{const f=fixture();f.fire('api-session/status','b',true);f.fire('api-session/status','b',false);await f.flush(500);assert.equal(f.notices.length,1);assert.equal(f.notices[0].id,'b');f.fire('api-session/status','b',false);await f.flush(500);assert.equal(f.notices.length,1);f.click('b');assert.equal(f.active(),'b');f.dispose();});
+test('ordinary child completions and reconnect baselines do not notify',async()=>{const f=fixture();f.fire('api-session/status','child',true);f.fire('api-session/status','child',false);await f.flush(500);assert.equal(f.notices.length,0);f.generation.emit();f.fire('api-session/status','a',false);await f.flush(500);assert.equal(f.notices.length,0);f.dispose();});
+test('resolved approval is withdrawn before its delayed notification',async()=>{const f=fixture();f.statuses.set('a',{pendingInteraction:{key:'approve-1',kind:'approval'}});f.status.emit();f.statuses.set('a',{});f.status.emit();await f.flush(500);assert.equal(f.notices.length,0);f.dispose();});
+test('a real pending question notifies and an error suppresses completion',async()=>{const f=fixture();f.statuses.set('a',{pendingInteraction:{key:'question-1',kind:'question'}});f.status.emit();await f.flush(500);assert.equal(f.notices[0].title,'等待你的回答');f.fire('api-session/status','b',true);f.fire('api-session/error','b');f.fire('api-session/status','b',false);await f.flush(500);assert.equal(f.notices.filter(n=>n.id==='b').length,1);assert.equal(f.notices[1].title,'任务发生错误');f.dispose();});
+test('existing preferences survive and viewing one session preserves other unread counts',async()=>{const f=fixture({showTitle:true,flash:false});assert.equal(f.view().prefs.flash,false);assert.equal(f.view().prefs.showTitle,true);for(const id of ['a','b']){f.fire('api-session/status',id,true);f.fire('api-session/status',id,false)}await f.flush(500);assert.equal(f.view().count,2);f.focus(true);assert.equal(f.view().count,1);f.dispose();});
+test('disposal cancels delayed reminders and releases click listener',async()=>{const f=fixture();f.fire('api-session/status','a',true);f.fire('api-session/status','a',false);f.dispose();await f.flush(500);assert.equal(f.notices.length,0);});
+test('migration backs up W1, preserves unrelated settings and is idempotent',async()=>{const base=await mkdtemp(join(tmpdir(),'w1-notification-migrate-'));const home=join(base,'.w1-harness'),profile=join(home,'profiles','desktop');try{await mkdir(profile,{recursive:true});const manifest={dependencies:{'dsh-task-notifier':'old','other-plugin':'keep'},dsh:{profile:{bundles:['base','dsh-task-notifier','other-plugin']}}};await writeFile(join(profile,'package.json'),JSON.stringify(manifest));await writeFile(join(profile,'cordis.patch.yml'),'# preserved fixture\n');const result=await migrateNotifications(home);assert.equal(result.status,'migrated');assert.deepEqual(JSON.parse(await readFile(join(result.backup,'package.json'),'utf8')),manifest);const after=JSON.parse(await readFile(join(profile,'package.json'),'utf8'));assert.deepEqual(after.dependencies,{'other-plugin':'keep'});assert.deepEqual(after.dsh.profile.bundles,['base','other-plugin']);assert.equal(await readFile(join(profile,'cordis.patch.yml'),'utf8'),'# preserved fixture\n');assert.equal((await migrateNotifications(home)).status,'current');await assert.rejects(()=>migrateNotifications(join(base,'.dsh')));}finally{if(!resolve(base).startsWith(resolve(tmpdir())+'\\w1-notification-migrate-'))throw Error('Unsafe test cleanup');await rm(base,{recursive:true,force:true});}});
+
+test('settings render with the framework selector hook',()=>{const f=fixture();const face=f.section.options.inject();const panel=f.section.component({...face,useReminder:selector=>{assert.equal(typeof selector,'function');return selector(face.hooks.reminder.getSnapshot());},t:key=>key});assert.equal(panel.type,'section');f.dispose();});

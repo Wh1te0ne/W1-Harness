@@ -1,6 +1,6 @@
 # W1 远程访问与 NAS 中继
 
-W1 Mobile 0.1.0 与连接模块/中继 0.1.1 兼容。手机客户端是本机自用 Android 客户端，和电脑 W1 的同一 Host 通信。任务、历史记录、模型 Key 与文件操作留在电脑；NAS 只转发加密消息，不运行模型。默认关闭远程连接，在电脑「应用 → 远程设备」启用并配对。
+W1 Mobile 0.1.0 与连接模块/中继 0.1.1 兼容。手机客户端是本机自用 Android 客户端，和电脑 W1 的同一 Host 通信。任务、历史记录、模型 Key 与文件操作留在电脑；NAS 只转发加密消息，不运行模型。默认关闭远程连接，在电脑侧栏「手机连接」启用并配对，应用菜单的「远程设备」入口同时保留。
 
 ## 部署参数
 
@@ -38,7 +38,7 @@ location / {
 ## 配对与日常使用
 
 1. 安装交付的 `W1-Harness-Mobile-0.1.0.apk`，支持 Android 8.0 及以上。它是自用 Debug 签名包；后续自用升级保持同一签名。没有上架应用商店。
-2. 电脑 W1 打开「应用 → 远程设备」，确认中继地址，勾选允许连接并保存。显示「中继已连接」后生成二维码。
+2. 电脑 W1 打开侧栏「手机连接」，确认中继地址，勾选允许连接并保存。显示「中继已连接」后生成二维码。
 3. 手机点击「扫描二维码」，仅在扫描时申请相机权限。也可以手动粘贴电脑复制的配对信息。
 4. 在电脑确认请求设备。二维码 5 分钟过期且确认后作废，手机保留设备绑定；以后无需重复扫码。
 5. 手机查看项目和会话，继续发送文字，选择排队或立即引导，也可停止当前任务。在电脑移除设备即可撤销访问。
@@ -57,7 +57,7 @@ location / {
 
 ## 开发与验证
 
-`host.mjs` 是连接管理器；`crypto.mjs` 与 `client.mjs` 由 Node 测试和手机共用；`relay.mjs` 是独立 NAS 转发基础设施，不启动 Harness；`mobile/` 保存手机界面；`android/` 保存原生壳、相机扫码及 Keystore；电脑适配位于 `apps/desktop-host/src/w1-remote.ts`，设备管理窗口位于 `apps/desktop/src/w1-remote-window.ts`。
+`desktop-ui.js` 是侧栏入口，经受限 IPC 打开桌面自有设备管理窗口；build-desktop-ui.mjs 生成客户端模块，桌面构建会自动执行。`host.mjs` 是连接管理器；`crypto.mjs` 与 `client.mjs` 由 Node 测试和手机共用；`relay.mjs` 是独立 NAS 转发基础设施，不启动 Harness；`mobile/` 保存手机界面；`android/` 保存原生壳、相机扫码及 Keystore；电脑适配位于 `apps/desktop-host/src/w1-remote.ts`，设备管理窗口位于 `apps/desktop/src/w1-remote-window.ts`。
 
 ```powershell
 # 在 W1 仓库根目录执行

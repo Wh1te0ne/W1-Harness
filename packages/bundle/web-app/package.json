@@ -190,7 +190,9 @@
     "@deepseek-ai/dsh-client-ui-settings-session-log": "workspace:*",
     "@deepseek-ai/dsh-harness-dev-context": "workspace:*",
     "dsh-usage-manager": "workspace:*",
-    "@deepseek-ai/dsh-w1-reply-suggestions": "workspace:*"
+    "@deepseek-ai/dsh-w1-reply-suggestions": "workspace:*",
+    "@w1h/remote": "workspace:*",
+    "@w1h/notifications": "workspace:*"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "workspace:~",

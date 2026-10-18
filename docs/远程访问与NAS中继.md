@@ -4,7 +4,7 @@
 
 ## 组成与部署
 
-主要维护位置是 [apps/w1-remote/README.md](../apps/w1-remote/README.md)，包含端口、HTTPS/WSS 反向代理、Compose、配对、数据存储与回退。电脑端通过「应用 → 远程设备」管理连接；Android APK 沿用 Fold 图标。中继容器监听 `28981/TCP`，公网 `8112` 入口应转发到 `http://NAS内网IP:28981` 并开启 WebSocket，健康检查路径为 `/healthz`。
+主要维护位置是 [apps/w1-remote/README.md](../apps/w1-remote/README.md)，包含端口、HTTPS/WSS 反向代理、Compose、配对、数据存储与回退。电脑端通过侧栏「手机连接」管理连接，原「应用 → 远程设备」菜单保留；Android APK 沿用 Fold 图标。中继容器监听 `28981/TCP`，公网 `8112` 入口应转发到 `http://NAS内网IP:28981` 并开启 WebSocket，健康检查路径为 `/healthz`。
 
 电脑继续使用同一 `sessionController` 和 `workspaceController`，不另起一套生产 Host，不复制会话库，不改变模型配置或插件。远程设备配置独立保存于 W1 私有主目录；远程初始化失败只影响远程功能，不阻止本机 W1 启动。服务默认关闭，开启后主动连接中继，电脑无需接受公网入站连接。
 

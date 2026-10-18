@@ -32,6 +32,12 @@ if (Test-Path -LiteralPath $usageProfile) {
 }
 & $node (Join-Path $PSScriptRoot 'migrate-usage.mjs') $w1Home
 if ($LASTEXITCODE -ne 0) { throw 'W1 usage migration failed; launch stopped.' }
+if ((Test-Path -LiteralPath $usageProfile) -and (Get-Content -Raw -LiteralPath $usageProfile | ConvertFrom-Json).dependencies.'dsh-task-notifier') {
+  $activeW1 = Get-CimInstance Win32_Process -Filter "Name='W1 Harness.exe'" | Where-Object { $_.ExecutablePath -and $_.ExecutablePath.StartsWith((Join-Path $w1App 'shell') + '\', [StringComparison]::OrdinalIgnoreCase) }
+  if ($activeW1) { throw 'Exit W1 before migrating its built-in notifications.' }
+}
+& $node (Join-Path $PSScriptRoot 'migrate-notifications.mjs') $w1Home
+if ($LASTEXITCODE -ne 0) { throw 'W1 notification migration failed; launch stopped.' }
 $rules = Join-Path $w1Home 'AGENTS.md'
 if (-not (Test-Path -LiteralPath $rules)) { Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'AGENTS.default.md') -Destination $rules }
 foreach ($name in @('ELECTRON_RUN_AS_NODE','ELECTRON_OVERRIDE_DIST_PATH','DSH_DESKTOP_DSH_DIR','DSH_DESKTOP_PNPM_ENTRY','DSH_DESKTOP_PRIMARY_RUNTIME_DIR','DSH_DESKTOP_MANDATORY_UPDATE_CONFIG')) {

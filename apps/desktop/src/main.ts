@@ -1,6 +1,7 @@
 import type { ProductEventMap, ProductEvent } from '@deepseek-ai/dsh-client-product-analytics/types'
 import { configureW1Identity, configureW1Taskbar, configureW1StartMenu, isW1Development } from './w1-identity.ts'
 import { W1UpstreamUpdates } from './w1-upstream.ts'
+import { W1Notifications } from './w1-notifications.ts'
 import { W1RemoteWindow } from './w1-remote-window.ts'
 import { showW1Upstream } from './w1-upstream-ui.ts'
 import { WINDOWS_TITLEBAR_HEIGHT } from './windows-layout.ts'
@@ -341,6 +342,7 @@ async function main(): Promise<void> {
     return remoteManage(action, value)
   })
   let mainWindow: BrowserWindow | undefined
+  const taskNotifications = new W1Notifications(() => mainWindow, w1Product.name)
   let welcomeWindow: BrowserWindow | undefined
   let enteredWorkspace = false
   // NSIS passes --updated when it launches the application after installation.
@@ -748,6 +750,22 @@ async function main(): Promise<void> {
     return state.checking ? { phase: 'checking' } : state.error !== null ? { phase: 'error', failure: 'check' }
       : state.releases[0] !== undefined ? { phase: 'available', version: state.releases[0].tag } : { phase: 'idle' }
   })
+  ipcMain.handle(DESKTOP_IPC.notificationShow, (event, request: unknown) => {
+    assertProductSender(event)
+    return taskNotifications.show(request)
+  })
+  ipcMain.handle(DESKTOP_IPC.notificationClose, (event, id: unknown) => {
+    assertProductSender(event)
+    taskNotifications.close(id)
+  })
+  ipcMain.handle(DESKTOP_IPC.notificationSync, (event, request: unknown) => {
+    assertProductSender(event)
+    return taskNotifications.sync(request)
+  })
+  ipcMain.handle(DESKTOP_IPC.remoteOpen, (event) => {
+    assertProductSender(event)
+    remoteWindow.open()
+  })
   ipcMain.handle(DESKTOP_IPC.deviceInfo, (event) => {
     assertProductSender(event)
     return readDeviceInfo()
@@ -1009,7 +1027,10 @@ async function main(): Promise<void> {
       window.on('focus', () => { sessionEnding = false })
       window.on('show', () => { sessionEnding = false })
     }
-    window.on('closed', () => { if (mainWindow === window) mainWindow = undefined })
+    window.on('closed', () => { taskNotifications.dispose(); if (mainWindow === window) mainWindow = undefined })
+    window.webContents.on('did-start-navigation', (_event, _url, isInPlace, isMainFrame) => {
+      if (isMainFrame && !isInPlace) taskNotifications.dispose()
+    })
     window.webContents.on('console-message', (details) => {
       if (details.level !== 'error') return
       rendererConsole.push(`${details.sourceId}:${String(details.lineNumber)} ${details.message}`)
@@ -1091,6 +1112,7 @@ async function main(): Promise<void> {
   })
   if (process.platform !== 'win32') powerMonitor.on('shutdown', () => { sessionEnding = true })
   const finishQuit = (): void => {
+    taskNotifications.dispose()
     upstream.dispose()
     quitting = true
     shuttingDown = true

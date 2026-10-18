@@ -3120,6 +3120,12 @@ importers:
       '@deepseek-ai/schemastery':
         specifier: link:../../../vendor/schemastery
         version: link:../../../vendor/schemastery
+      '@w1h/notifications':
+        specifier: workspace:*
+        version: link:../../w1/notifications
+      '@w1h/remote':
+        specifier: workspace:*
+        version: link:../../../apps/w1-remote
       commander:
         specifier: ^15.0.0
         version: 15.0.0
@@ -15138,6 +15144,8 @@ importers:
       '@deepseek-ai/cordis':
         specifier: workspace:~
         version: link:../../../vendor/cordis
+
+  packages/w1/notifications: {}
 
   packages/w1/reply-suggestions:
     dependencies:

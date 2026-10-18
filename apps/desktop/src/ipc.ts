@@ -22,6 +22,11 @@ export const DESKTOP_IPC = {
   browserOpenRequested: 'dsh-desktop:browser-open-requested',
   directoryPick: 'dsh-desktop:directory-pick',
   deviceInfo: 'dsh-desktop:device-info',
+  remoteOpen: 'w1-desktop:remote-open',
+  notificationShow: 'w1-desktop:notification-show',
+  notificationClose: 'w1-desktop:notification-close',
+  notificationSync: 'w1-desktop:notification-sync',
+  notificationClick: 'w1-desktop:notification-click',
   localeBootstrap: 'dsh-desktop:locale-bootstrap',
   localeChanged: 'dsh-desktop:locale-changed',
   updatesStatus: 'dsh-desktop:updates-status',
@@ -68,9 +73,29 @@ export interface DesktopUpdatePresentation {
   readonly failure?: DesktopUpdateFailureKind
 }
 
+/** A privacy-preserving, renderer-selected task notification. */
+export interface DesktopNotificationRequest { readonly id: string; readonly title: string; readonly body: string }
+/** Native delivery acknowledgement is distinct from a user seeing the banner. */
+export interface DesktopNotificationResult { readonly status: 'shown' | 'failed' | 'unconfirmed' | 'unsupported' | 'cancelled'; readonly message?: string }
+/** A bounded unread count and small PNG rendered by the trusted product client. */
+export interface DesktopAttentionRequest {
+  readonly count: number
+  readonly flash: boolean
+  readonly focus: boolean
+  readonly probe: boolean
+  readonly badge: string | null
+}
 /** Product documents cannot supply update versions, package URLs, or installation authorization. */
 export interface DshDesktopProductApi {
   readonly protocolVersion: 1
+  /** Opens the desktop-owned phone pairing window without enabling access. */
+  readonly remote: { open(): Promise<void> }
+  readonly notifications: {
+    show(request: DesktopNotificationRequest): Promise<DesktopNotificationResult>
+    close(id: string): Promise<void>
+    sync(request: DesktopAttentionRequest): Promise<{ supported: boolean }>
+    onClick(listener: (id: string) => void): () => void
+  }
   readonly browser: DesktopBrowserBridge
   readonly keyboard: DesktopKeyboardApi
   readonly shortcuts: DesktopShortcutsApi

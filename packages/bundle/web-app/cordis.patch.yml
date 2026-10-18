@@ -605,3 +605,13 @@
 - insert:
     - id: usage-manager
       name: dsh-usage-manager
+
+# W1 phone pairing entry; the connector itself remains desktop-host owned.
+- insert:
+    - id: w1-remote-ui
+      name: "@w1h/remote"
+
+# W1 owns task notifications as an application feature.
+- insert:
+    - id: w1-notifications
+      name: "@w1h/notifications"

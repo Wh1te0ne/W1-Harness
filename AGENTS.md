@@ -20,6 +20,8 @@ Record each externally perceptible breaking change immediately in an [upgrade gu
 
 W1 remote companion and NAS relay: see [deployment and verification](docs/远程访问与NAS中继.md) and [component README](apps/w1-remote/README.md). The relay is standalone forwarding infrastructure, not a Harness execution profile; keep credentials and production history out of its package.
 
+W1 built-in Windows notifications and legacy-bundle migration: see [notification ownership and verification](packages/w1/notifications/README.md). Preserve the original DSH profile and keep native IPC restricted to the product window.
+
 ## Repository layout
 
 ```

@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process'
 import { defineConfig } from 'tsdown'
 import { build } from 'vite'
 import { fileURLToPath } from 'node:url'
@@ -51,6 +52,9 @@ export default defineConfig([
     plugins: [packagedImportsPlugin(mainProcessImports)],
     define: clientVersionDefine,
     onSuccess: async () => {
+      for (const file of ['../w1-remote/build-desktop-ui.mjs', '../../packages/w1/notifications/build.mjs']) {
+        execFileSync(process.execPath, [fileURLToPath(new URL(file, import.meta.url))], { stdio: 'inherit' })
+      }
       await build({
         configFile: false,
         plugins: [{
