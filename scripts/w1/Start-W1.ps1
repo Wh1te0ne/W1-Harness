@@ -46,7 +46,7 @@ if (-not $RefreshProject -and $DebugPortBase -eq 0) {
     $env:DSH_DESKTOP_PRIMARY_RUNTIME_DIR = Join-Path $root 'apps/desktop/.desktop-build/targets/win-x64/runtime/primary-runtime'
     $env:ELECTRON_ENABLE_LOGGING = '1'
     "W1 existing instance: forwarding activation to PID $($owner.ProcessId)" | Set-Content -LiteralPath $launchLog
-    & $env:W1_DESKTOP_EXECUTABLE "--user-data-dir=$w1Data" (Join-Path $root 'apps/desktop') *>> $launchLog
+    & $node (Join-Path $PSScriptRoot 'run-logged.mjs') $launchLog $env:W1_DESKTOP_EXECUTABLE "--user-data-dir=$w1Data" (Join-Path $root 'apps/desktop')
     if ($LASTEXITCODE -ne 0) { throw "W1 activation failed. See $launchLog" }
     return
   }
@@ -93,6 +93,6 @@ try {
       if ($activeW1) { throw 'Exit W1 Harness from its application menu, then open W1 again to finish the development update.' }
     }
   }
-  & $node @launchArgs *> $launchLog
+  & $node (Join-Path $PSScriptRoot 'run-logged.mjs') $launchLog $node @launchArgs
   if ($LASTEXITCODE -ne 0) { throw "W1 failed to start. See $launchLog" }
 } finally { Pop-Location }
