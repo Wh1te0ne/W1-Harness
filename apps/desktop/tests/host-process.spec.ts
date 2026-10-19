@@ -238,3 +238,36 @@ it.each([undefined, '', 7])('rejects malformed Platform account identity %s on p
   expect(changed.mock.calls).toEqual([[null]])
   await host.stop()
 })
+
+it('completes Host teardown when a descendant still holds its output pipe', async () => {
+  const runtime = projectWithHost(`
+    import { spawn } from 'node:child_process'
+    import { writeFileSync } from 'node:fs'
+    import { join } from 'node:path'
+    const release = join(process.argv[3], 'release-output')
+    const done = join(process.argv[3], 'output-released')
+    const source = 'const fs=require("node:fs");const timer=setInterval(()=>{if(fs.existsSync(process.argv[2])){fs.writeFileSync(process.argv[3],"");clearInterval(timer)}},25);process.send("ready");process.disconnect()'
+    const file = join(process.argv[3], 'descendant.cjs')
+    writeFileSync(file, source)
+    const descendant = spawn(process.execPath, [file, release, done], { detached: true, windowsHide: true, stdio: ['ignore', process.stdout, process.stderr, 'ipc'] })
+    descendant.once('message', () => process.send({ type: 'ready', url: 'http://127.0.0.1:3080/' }))
+    process.on('message', message => {
+      if (message.type === 'shutdown') process.send({ type: 'shutdown-complete' }, () => process.exit(0))
+    })
+  `)
+  const host = hostProcess(runtime)
+  await host.start()
+  const stopping = host.stop(true)
+  let timeout: ReturnType<typeof setTimeout> | undefined
+  try {
+    await Promise.race([stopping, new Promise<never>((_resolve, reject) => {
+      timeout = setTimeout(() => reject(new Error('Host exit waited for a descendant output pipe')), 3000)
+    })])
+    expect(existsSync(join(runtime, 'release-output'))).toBe(false)
+  } finally {
+    clearTimeout(timeout)
+    writeFileSync(join(runtime, 'release-output'), '')
+    await stopping
+    await expect.poll(() => existsSync(join(runtime, 'output-released'))).toBe(true)
+  }
+})

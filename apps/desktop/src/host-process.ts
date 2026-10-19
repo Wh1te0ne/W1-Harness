@@ -225,13 +225,16 @@ export class DesktopHostProcess {
       }
     })
     child.once('error', (error) => { this.fail(error) })
+    // Detached plugin descendants can retain stdio after the Host has exited.
+    // Teardown waits for the process; close still collects complete crash diagnostics.
     this.exitPromise = new Promise<void>((resolve) => {
-      child.once('close', (code) => {
-        const suffix = this.stderr.trim() === '' ? '' : `: ${this.stderr.trim()}`
-        if (code !== 0 && code !== null) this.fail(new Error(`dsh desktop host exited with ${String(code)}${suffix}`))
-        else this.fail(new Error(`dsh desktop host stopped${suffix}`))
-        resolve()
-      })
+      child.once('exit', () => { resolve() })
+      child.once('error', () => { resolve() })
+    })
+    child.once('close', (code) => {
+      const suffix = this.stderr.trim() === '' ? '' : `: ${this.stderr.trim()}`
+      if (code !== 0 && code !== null) this.fail(new Error(`dsh desktop host exited with ${String(code)}${suffix}`))
+      else this.fail(new Error(`dsh desktop host stopped${suffix}`))
     })
     return this.readyPromise
   }
