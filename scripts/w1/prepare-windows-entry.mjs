@@ -26,7 +26,8 @@ export async function prepareWindowsEntry(directory, originalArchive, asar) {
   try {
     writeFileSync(join(temporary, 'package.json'), JSON.stringify({ name: 'w1-harness-entry', productName: 'W1 Harness', type: 'module', main: 'main.mjs' }))
     writeFileSync(join(temporary, 'main.mjs'), entry)
-    await asar.createPackage(temporary, next)
+    const archiveTool = typeof asar === 'function' ? asar() : asar
+    await archiveTool.createPackage(temporary, next)
     const archiveHash = digest(readFileSync(next))
     renameSync(next, archive)
     writeFileSync(stamp, JSON.stringify({ schema: 1, entryHash, originalHash, archiveHash }, null, 2) + '\n')

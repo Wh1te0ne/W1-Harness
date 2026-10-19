@@ -28,7 +28,7 @@ test('the managed entry preserves the original loader and repeated checks do not
   assert.deepEqual(readFileSync(join(shell,'resources','w1-electron-default.asar')),before);
   const entry=join(shell,'resources','default_app.asar');const modified=statSync(entry).mtimeMs;
   const manifest=JSON.parse(asar.extractFile(entry,'package.json').toString());assert.equal(manifest.main,'main.mjs');
-  assert.equal((await prepareWindowsEntry(shell,original,asar)).changed,false);
+  assert.equal((await prepareWindowsEntry(shell,original,()=>{throw Error('Archive builder must stay unloaded on a cache hit')})).changed,false);
   assert.equal(statSync(entry).mtimeMs,modified);
 });
 test('an unrelated default application is refused and left intact',async t=>{

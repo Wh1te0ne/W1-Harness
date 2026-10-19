@@ -1,3 +1,4 @@
+import { markW1Startup } from './w1-startup.ts'
 import type { ProductEventMap, ProductEvent } from '@deepseek-ai/dsh-client-product-analytics/types'
 import { configureW1Identity, configureW1Taskbar, configureW1StartMenu, isW1Development } from './w1-identity.ts'
 import { W1UpstreamUpdates } from './w1-upstream.ts'
@@ -64,6 +65,7 @@ import { DesktopQuitConfirmation } from './quit-confirmation.ts'
 import { DesktopTray } from './tray.ts'
 import { DesktopBackgroundNotice } from './background-notice.ts'
 
+markW1Startup('main-loaded')
 const w1Product = configureW1Identity(app)
 const w1Packaged = !isW1Development(app)
 
@@ -307,6 +309,7 @@ function createWindow(preload: string, show = false, primary = false): BrowserWi
 }
 
 async function main(): Promise<void> {
+  markW1Startup('electron-ready')
   const desktopSettings = readDesktopSettings(app.getPath('userData'))
   void pruneCrashReports(app.getPath('logs'))
   const journalDirectory = process.env.DSH_DESKTOP_UPDATE_JOURNAL_DIR
@@ -446,7 +449,9 @@ async function main(): Promise<void> {
       resources, (next) => { platformView.setSession(next) })
     return {
       start: async () => {
+        markW1Startup('host-start')
         const ready = await host.start()
+        markW1Startup('host-ready')
         remoteManage = (action, value) => host.remoteManage(action, value)
         hostCookie = await authenticateWebHost(ready.url)
         hostUrl = ready.url
@@ -1005,6 +1010,7 @@ async function main(): Promise<void> {
     mainWindow = window
     // W1 has no sign-in gate: show its boot page while the Host is starting.
     window.once('ready-to-show', () => {
+      markW1Startup('window-ready')
       if (!quitting && !window.isDestroyed()) window.show()
     })
     browserGuests.bind(window, (guest, name) => shortcuts.attachGuest(window, guest, name))
@@ -1063,6 +1069,7 @@ async function main(): Promise<void> {
     if (activate) window.show()
     else window.showInactive()
     enteredWorkspace = true
+    markW1Startup('workspace-shown')
     if (welcomeWindow !== undefined) {
       welcomeWindow.close()
       window.webContents.send(DESKTOP_IPC.enterWorkspace)

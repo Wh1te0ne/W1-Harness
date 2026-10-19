@@ -1,5 +1,6 @@
-param([ValidateRange(0,65532)][int]$DebugPortBase = 0, [switch]$RefreshProject)
+param([ValidateRange(0,65532)][int]$DebugPortBase = 0, [switch]$RefreshProject, [switch]$PrepareOnly)
 $ErrorActionPreference = 'Stop'
+$env:W1_LAUNCH_STARTED_AT = [string][DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
 $node = if ($env:W1_NODE) { $env:W1_NODE } else { (Get-Command node -CommandType Application | Select-Object -First 1).Source }
 $launcher = Join-Path $env:USERPROFILE '.w1-harness-app/W1 Harness.exe'
 if (-not $env:W1_DESKTOP_LAUNCHER -and (Test-Path -LiteralPath $launcher)) { $env:W1_DESKTOP_LAUNCHER = $launcher }
@@ -36,7 +37,7 @@ if ($DebugPortBase -gt 0) {
 $launchLog = Join-Path $localLogs ('desktop-' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '-' + $PID + '.log')
 # A running Desktop already owns the prepared profile. Send Electron's normal
 # second-instance request without rerunning migrations or the development builder.
-if (-not $RefreshProject -and $DebugPortBase -eq 0) {
+if (-not $PrepareOnly -and -not $RefreshProject -and $DebugPortBase -eq 0) {
   $owner = Get-CimInstance Win32_Process -Filter "Name='W1 Harness.exe'" | Where-Object {
     $_.ExecutablePath -and $_.ExecutablePath.Equals($env:W1_DESKTOP_EXECUTABLE, [StringComparison]::OrdinalIgnoreCase) -and
     $_.CommandLine -like '*--user-data-dir=*' -and $_.CommandLine -notlike '*--type=*'
@@ -54,41 +55,46 @@ if (-not $RefreshProject -and $DebugPortBase -eq 0) {
 New-Item -ItemType Directory -Path $w1Home -Force | Out-Null
 $projectStore = Join-Path $w1Home 'storages/workspace.json'
 if (Test-Path -LiteralPath $projectStore) {
-  $projectVersion = (Get-Content -Raw -LiteralPath $projectStore | ConvertFrom-Json).unit.version
+  $projectState = Get-Content -Raw -LiteralPath $projectStore | ConvertFrom-Json
+  $projectVersion = $projectState.unit.version
+  if ($projectState.unit.name -ne 'workspace' -or $projectVersion -notin @(2,3)) { throw 'Unsupported W1 project storage format.' }
   if ($projectVersion -eq 2) {
     $activeW1 = Get-CimInstance Win32_Process -Filter "Name='electron.exe' OR Name='W1 Harness.exe'" | Where-Object { $_.ExecutablePath -and ($_.ExecutablePath.StartsWith($root + '\', [StringComparison]::OrdinalIgnoreCase) -or $_.ExecutablePath.StartsWith((Join-Path $w1App 'shell') + '\', [StringComparison]::OrdinalIgnoreCase)) }
     if ($activeW1) { throw 'Close W1 Harness from its application menu before upgrading project metadata.' }
+    & $node (Join-Path $PSScriptRoot 'migrate-projects.mjs') $w1Home
+    if ($LASTEXITCODE -ne 0) { throw 'W1 project migration failed; application launch stopped.' }
   }
 }
-& $node (Join-Path $PSScriptRoot 'migrate-projects.mjs') $w1Home
-if ($LASTEXITCODE -ne 0) { throw 'W1 project migration failed; application launch stopped.' }
+$usageManifest = $null
 $usageProfile = Join-Path $w1Home 'profiles/desktop/package.json'
 if (Test-Path -LiteralPath $usageProfile) {
   $usageManifest = Get-Content -Raw -LiteralPath $usageProfile | ConvertFrom-Json
-  if ($usageManifest.dependencies.'dsh-usage-manager' -or $usageManifest.dependencies.'dsh-cost-meter') {
+  if ($usageManifest.dependencies.'dsh-usage-manager' -or $usageManifest.dependencies.'dsh-cost-meter' -or
+      'dsh-usage-manager' -in $usageManifest.dsh.profile.bundles -or 'dsh-cost-meter' -in $usageManifest.dsh.profile.bundles) {
     $activeW1 = Get-CimInstance Win32_Process -Filter "Name='electron.exe' OR Name='W1 Harness.exe'" | Where-Object { $_.ExecutablePath -and ($_.ExecutablePath.StartsWith($root + '\', [StringComparison]::OrdinalIgnoreCase) -or $_.ExecutablePath.StartsWith((Join-Path $w1App 'shell') + '\', [StringComparison]::OrdinalIgnoreCase)) }
     if ($activeW1) { throw 'Exit W1 before migrating its usage module.' }
+    & $node (Join-Path $PSScriptRoot 'migrate-usage.mjs') $w1Home
+    if ($LASTEXITCODE -ne 0) { throw 'W1 usage migration failed; launch stopped.' }
   }
 }
-& $node (Join-Path $PSScriptRoot 'migrate-usage.mjs') $w1Home
-if ($LASTEXITCODE -ne 0) { throw 'W1 usage migration failed; launch stopped.' }
-if ((Test-Path -LiteralPath $usageProfile) -and (Get-Content -Raw -LiteralPath $usageProfile | ConvertFrom-Json).dependencies.'dsh-task-notifier') {
+if ($usageManifest.dependencies.'dsh-task-notifier' -or 'dsh-task-notifier' -in $usageManifest.dsh.profile.bundles) {
   $activeW1 = Get-CimInstance Win32_Process -Filter "Name='W1 Harness.exe'" | Where-Object { $_.ExecutablePath -and $_.ExecutablePath.StartsWith((Join-Path $w1App 'shell') + '\', [StringComparison]::OrdinalIgnoreCase) }
   if ($activeW1) { throw 'Exit W1 before migrating its built-in notifications.' }
+  & $node (Join-Path $PSScriptRoot 'migrate-notifications.mjs') $w1Home
+  if ($LASTEXITCODE -ne 0) { throw 'W1 notification migration failed; launch stopped.' }
 }
-& $node (Join-Path $PSScriptRoot 'migrate-notifications.mjs') $w1Home
-if ($LASTEXITCODE -ne 0) { throw 'W1 notification migration failed; launch stopped.' }
 $rules = Join-Path $w1Home 'AGENTS.md'
 if (-not (Test-Path -LiteralPath $rules)) { Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'AGENTS.default.md') -Destination $rules }
 Push-Location -LiteralPath $root
 try {
-  $launchArgs = @('--import','tsx/esm','apps/desktop/scripts/dev.ts','--skip-build','--reuse-runtime')
+  $launchArgs = @('scripts/w1/start-prepared.mjs')
+  if ($RefreshProject) { $launchArgs += '--refresh-project' }
+  if ($PrepareOnly) { $launchArgs += '--prepare-only' }
   $projectRuntime = Join-Path $root 'apps/desktop/.desktop-build/development/project/desktop-runtime.json'
   if (-not $RefreshProject -and (Test-Path -LiteralPath $projectRuntime)) {
     $cachedVersion = (Get-Content -LiteralPath $projectRuntime -Raw | ConvertFrom-Json).release.version
     $sourceVersion = (Get-Content -LiteralPath (Join-Path $root 'apps/desktop/package.json') -Raw | ConvertFrom-Json).version
-    if ($cachedVersion -eq $sourceVersion) { $launchArgs += '--reuse-project' }
-    else {
+    if ($cachedVersion -ne $sourceVersion) {
       $activeW1 = Get-CimInstance Win32_Process -Filter "Name='electron.exe' OR Name='W1 Harness.exe'" | Where-Object { $_.ExecutablePath -and ($_.ExecutablePath.StartsWith($root + '\', [StringComparison]::OrdinalIgnoreCase) -or $_.ExecutablePath.StartsWith((Join-Path $w1App 'shell') + '\', [StringComparison]::OrdinalIgnoreCase)) }
       if ($activeW1) { throw 'Exit W1 Harness from its application menu, then open W1 again to finish the development update.' }
     }

@@ -54,5 +54,5 @@ if (!existsSync(executable) || !existsSync(stamp) || readFileSync(stamp, 'utf8')
   }
 }
 const requireBuilder = createRequire(requireDesktop.resolve('app-builder-lib/package.json'))
-await prepareWindowsEntry(directory, join(dirname(electron), 'resources', 'default_app.asar'), requireBuilder('@electron/asar'))
+await prepareWindowsEntry(directory, join(dirname(electron), 'resources', 'default_app.asar'), () => requireBuilder('@electron/asar'))
 console.log(executable)

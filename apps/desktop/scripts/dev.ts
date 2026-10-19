@@ -94,6 +94,7 @@ async function launchElectron(): Promise<void> {
 async function main(): Promise<void> {
   const { values } = parseArgs({ options: {
     'skip-build': { type: 'boolean', default: false },
+    'prepare-only': { type: 'boolean', default: false },
     'reuse-runtime': { type: 'boolean', default: false },
     'reuse-project': { type: 'boolean', default: false },
   } })
@@ -136,7 +137,7 @@ async function main(): Promise<void> {
     const runtime = join(developmentRuntimeDirectory(), 'runtime.json')
     if (!existsSync(runtime)) throw new Error('Prepared runtime missing; run prepare:primary-runtime once before local development.')
   } else await preparePrimaryRuntime()
-  await launchElectron()
+  if (!values['prepare-only']) await launchElectron()
 }
 
 await main().catch((error: unknown) => {
