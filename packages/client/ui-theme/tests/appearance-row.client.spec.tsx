@@ -18,7 +18,7 @@ const usePanelInfo: GlobalStandardProps['usePanelInfo'] = selector => selector({
 afterEach(cleanup)
 
 const COPY: Record<string, string> = {
-  'appearance.title': 'Appearance',
+  'appearance.title': 'Appearance', 'appearance.mode': 'Mode',
   'appearance.light': 'Light',
   'appearance.dark': 'Dark',
   'appearance.system': 'System',
@@ -66,7 +66,7 @@ const pressed = (name: RegExp): string | null =>
 describe('AppearanceRow', () => {
   it('renders the title and three cubes with the preference cube selected', () => {
     mount('dark')
-    expect(screen.getByText('Appearance')).toBeDefined()
+    expect(screen.getByText('Mode')).toBeDefined()
     expect(pressed(/Dark/)).toBe('true')
     expect(pressed(/Light/)).toBe('false')
     expect(pressed(/System/)).toBe('false')

@@ -3,7 +3,7 @@ import type { ProductEventMap, ProductEvent } from '@deepseek-ai/dsh-client-prod
 import { configureW1Identity, configureW1Taskbar, configureW1StartMenu, isW1Development } from './w1-identity.ts'
 import { W1UpstreamUpdates } from './w1-upstream.ts'
 import { W1Notifications } from './w1-notifications.ts'
-import { W1RemoteWindow } from './w1-remote-window.ts'
+import { manageW1Remote } from './w1-remote-settings.ts'
 import { showW1Upstream } from './w1-upstream-ui.ts'
 import { WINDOWS_TITLEBAR_HEIGHT } from './windows-layout.ts'
 /** Electron shell: desktop project ownership, custom protocol, windows, and lifecycle. */
@@ -340,10 +340,7 @@ async function main(): Promise<void> {
   let startup: Promise<void> | undefined
   let workspaceRecovery: Promise<void> | undefined
   let remoteManage: ((action: string, value?: unknown) => Promise<unknown>) | undefined
-  const remoteWindow = new W1RemoteWindow(fileURLToPath(new URL('./preload-w1-remote.cjs', import.meta.url)), async (action, value) => {
-    if (remoteManage === undefined) throw new Error('请等待 W1 会话服务启动')
-    return remoteManage(action, value)
-  })
+
   let mainWindow: BrowserWindow | undefined
   const taskNotifications = new W1Notifications(() => mainWindow, w1Product.name)
   let welcomeWindow: BrowserWindow | undefined
@@ -767,9 +764,10 @@ async function main(): Promise<void> {
     assertProductSender(event)
     return taskNotifications.sync(request)
   })
-  ipcMain.handle(DESKTOP_IPC.remoteOpen, (event) => {
+  ipcMain.handle(DESKTOP_IPC.remoteManage, (event, action: unknown, value: unknown) => {
     assertProductSender(event)
-    remoteWindow.open()
+    if (remoteManage === undefined) throw new Error('请等待 W1 会话服务启动')
+    return manageW1Remote(action, value, remoteManage)
   })
   ipcMain.handle(DESKTOP_IPC.deviceInfo, (event) => {
     assertProductSender(event)
@@ -896,7 +894,6 @@ async function main(): Promise<void> {
         click: () => { void showAbout().catch((error: unknown) => { console.error(error) }) } }
       : { label: currentDesktopLocale().messages.aboutMenu, role: 'about' },
     { type: 'separator' },
-    { label: '远程设备', click: () => { remoteWindow.open() } },
     { label: currentDesktopLocale().messages.checkUpdatesMenu, click: () => { void openUpdatePrompt(true) } },
     ...development ? [
       { type: 'separator' as const },

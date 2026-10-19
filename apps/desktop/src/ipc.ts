@@ -22,7 +22,7 @@ export const DESKTOP_IPC = {
   browserOpenRequested: 'dsh-desktop:browser-open-requested',
   directoryPick: 'dsh-desktop:directory-pick',
   deviceInfo: 'dsh-desktop:device-info',
-  remoteOpen: 'w1-desktop:remote-open',
+  remoteManage: 'w1-desktop:remote-manage',
   notificationShow: 'w1-desktop:notification-show',
   notificationClose: 'w1-desktop:notification-close',
   notificationSync: 'w1-desktop:notification-sync',
@@ -88,8 +88,8 @@ export interface DesktopAttentionRequest {
 /** Product documents cannot supply update versions, package URLs, or installation authorization. */
 export interface DshDesktopProductApi {
   readonly protocolVersion: 1
-  /** Opens the desktop-owned phone pairing window without enabling access. */
-  readonly remote: { open(): Promise<void> }
+  /** Manage paired phones from the primary product settings page. */
+  readonly remote: { manage(action: string, value?: unknown): Promise<unknown> }
   readonly notifications: {
     show(request: DesktopNotificationRequest): Promise<DesktopNotificationResult>
     close(id: string): Promise<void>

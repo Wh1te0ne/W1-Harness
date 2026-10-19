@@ -101,6 +101,7 @@ async function bench(initialSettings?: ChatSettings, withBrowserRegistry = true,
   await runtime.root.declare({
     'main': { kind: 'keyed', scope: 'root' },
     'settings.general.item': { kind: 'list', scope: 'root' },
+    'settings.appearance.item': { kind: 'list', scope: 'root' },
   }, (_props: { renderSlot?: unknown }) => null)
   await runtime.mount({ inject: [...injectConversation], apply: applyConversation })
   const registerGroups = withProcessGroups ? undefined
@@ -140,7 +141,7 @@ describe('Chat inject API', () => {
   it('projects independent Settings choices and saves timing to Host settings', async () => {
     const b = await bench()
     try {
-      const row = b.runtime.slots.entries('settings.general.item')
+      const row = b.runtime.slots.entries('settings.appearance.item')
         .find(entry => entry.options.id === 'transcript-view')!
       const preference = row.inject!()
       const setCollapseTiming = preference.setCollapseTiming as TranscriptViewRowInjected['setCollapseTiming']

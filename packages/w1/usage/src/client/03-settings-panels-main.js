@@ -1895,8 +1895,8 @@
           monthLabels.map((m, i) => el('span', { key: 'm' + String(i), className: 'cm-ug-monthc' }, m))))
     }
 
-    function W1UsageIcon() {
-      return el('svg', { width:18,height:18,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:1.5,'aria-hidden':true },
+    function W1UsageIcon({ size = 16 }) {
+      return el('svg', { width:size,height:size,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:1.5,'aria-hidden':true },
         el('path',{d:'M4 19V12M10 19V5M16 19V9M3 21H21',strokeLinecap:'round'}))
     }
 

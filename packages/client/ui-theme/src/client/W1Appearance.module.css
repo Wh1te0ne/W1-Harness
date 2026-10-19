@@ -1,0 +1,142 @@
+.page {
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  color:var(--dsw-alias-label-primary)}
+.page h2 {
+  font-size:22px;
+  font-weight:550;
+  margin:0 0 4px}
+.description {
+  font-size:12px;
+  line-height:1.7;
+  color:var(--dsw-alias-label-secondary);
+  margin:0 0 8px}
+.customization {
+  display:flex;
+  flex-direction:column;
+  gap:14px}
+.card {
+  border:1px solid var(--dsw-alias-border-l2);
+  border-radius:14px;
+  padding:0 14px}
+.row {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  min-height:48px;
+  font-size:13px}
+.row+.row {
+  border-top:1px solid var(--dsw-alias-border-l2)}
+.row select {
+  max-width:65%;
+  min-width:150px;
+  padding:7px 10px;
+  border:1px solid var(--dsw-alias-border-l2);
+  border-radius:9px;
+  background:var(--dsw-alias-bg-layer-2);
+  color:inherit;
+  font:inherit}
+.colorField {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  border:1px solid var(--dsw-alias-border-l2);
+  padding:4px 8px;
+  border-radius:20px}
+.colorField input[type=color] {
+  padding:0;
+  border:0;
+  width:22px;
+  height:22px;
+  background:none;
+  cursor:pointer}
+.colorField input[type=text],.colorField input:not([type]) {
+  width:76px;
+  border:0;
+  outline:none;
+  background:none;
+  color:inherit;
+  font:12px ui-monospace,monospace}
+.segment {
+  display:flex;
+  gap:2px;
+  background:var(--dsw-alias-bg-module-platform);
+  padding:3px;
+  border-radius:9px}
+.segment button {
+  padding:4px 12px;
+  border:0;
+  border-radius:6px;
+  background:none;
+  color:inherit;
+  font:inherit;
+  cursor:pointer}
+.segment button[aria-pressed=true] {
+  background:var(--dsw-alias-bg-layer-2);
+  box-shadow:0 1px 4px #0001}
+.sample {
+  display:flex;
+  min-height:132px;
+  border:1px solid;
+  border-radius:12px;
+  overflow:hidden;
+  font-size:12px}
+.sampleAside {
+  width:100px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  padding:16px}
+.sampleBody {
+  display:flex;
+  flex:1;
+  flex-direction:column;
+  gap:12px;
+  padding:20px}
+.sampleBody b {
+  font-size:16px}
+.advanced summary {
+  cursor:pointer;
+  font-size:13px;
+  line-height:30px}
+.advanced textarea {
+  box-sizing:border-box;
+  width:100%;
+  min-height:160px;
+  padding:12px;
+  border:1px solid var(--dsw-alias-border-l2);
+  border-radius:10px;
+  background:var(--dsw-alias-bg-module-platform);
+  color:inherit;
+  font:12px/1.6 ui-monospace,monospace;
+  resize:vertical}
+.actions {
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px}
+.actions button,.fileButton {
+  font:inherit;
+  font-size:12px;
+  padding:7px 11px;
+  border:1px solid var(--dsw-alias-border-l2);
+  border-radius:8px;
+  background:transparent;
+  color:inherit;
+  cursor:pointer}
+.actions .primary {
+  background:var(--dsw-alias-label-primary);
+  color:var(--dsw-alias-bg-base);
+  border-color:transparent}
+.actions .reset {
+  margin-left:auto}
+.fileButton input {
+  display:none}
+.status {
+  font-size:12px;
+  min-height:18px;
+  margin:0;
+  color:var(--dsw-alias-label-secondary)}
+.status[role=alert] {
+  color:#c44545}

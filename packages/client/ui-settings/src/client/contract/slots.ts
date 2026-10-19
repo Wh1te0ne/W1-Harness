@@ -90,6 +90,8 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
      * layer and every registrant already depends on it for `ctx.configForms`.
      */
     'settings.general.item': { kind: 'list'; scope: 'root'; owner: SettingsGeneralItemOwnerProps }
+    /** Theme-owned rows inside the dedicated Appearance page. */
+    'settings.appearance.item': { kind: 'list'; scope: 'root'; owner: SettingsGeneralItemOwnerProps }
   }
 }
 /** Owner share of a General preference row (the section supplies nothing). */

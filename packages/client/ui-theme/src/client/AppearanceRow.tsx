@@ -24,7 +24,7 @@ export interface AppearanceRowInjected {
 
 /** Full component props: runtime share + store share + locale seat + injected face. */
 export type AppearanceRowComponentProps =
-  PropsRuntime<'settings.general.item'> & PropsStore<ReturnType<typeof createAppearanceRowStore>>
+  PropsRuntime<'settings.appearance.item'> & PropsStore<ReturnType<typeof createAppearanceRowStore>>
   & PropsLocale<'settings.theme'> & AppearanceRowInjected
 
 /** Cube order and icons (figma 501:30015-30017: Light, Dark, System). */
@@ -43,9 +43,9 @@ export function AppearanceRow({ t, setTheme, useStore }: AppearanceRowComponentP
   const preference = useStore(s => s.preference)
   return (
     <div className={css.group}>
-      <div className={css.title}>{t('appearance.title')}</div>
+      <div className={css.title}>{t('appearance.mode')}</div>
       <div className={css.cubeRow}>
-        {CUBES.map(({ id, labelKey, Icon }) => (
+        {CUBES.map(({ id, labelKey }) => (
           <button
             key={id}
             type="button"
@@ -53,7 +53,7 @@ export function AppearanceRow({ t, setTheme, useStore }: AppearanceRowComponentP
             aria-pressed={preference === id}
             onClick={() => { setTheme(id) }}
           >
-            <Icon />
+            <span className={clsx(css.preview, css[id])} aria-hidden="true"><i /><span><b /><b /><b /></span></span>
             {t(labelKey)}
           </button>
         ))}

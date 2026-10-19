@@ -30,6 +30,12 @@ const CONNECTING_MIN_VISIBLE_MS = 800
 
 /** Nav glyph by section id; unknown ids fall back to the settings gear. */
 function navIcon(id: string) {
+  const paths: Record<string, string> = {
+    appearance: 'M12 3a9 9 0 1 0 0 18h1a2 2 0 0 0 1.2-3.6c-.8-.6-.4-1.9.6-1.9H17a4 4 0 0 0 4-4A8.5 8.5 0 0 0 12 3M7.5 10h.01M10 6.5h.01M15 6.5h.01M18 10h.01',
+    'w1-notifications': 'M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4',
+    'w1-remote': 'M8 2h8a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2M10 18h4',
+  }
+  if (paths[id]) return <svg className={css.navIcon} data-settings-icon={id} width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[id]} /></svg>
   if (id === 'account') return <IconUserOutlineMedium className={css.navIcon} size={16} />
   if (id === 'models') return <IconDataOutlineMedium className={css.navIcon} size={16} />
   if (id === 'agent-presets') return <IconAgentPresetOutlineMedium className={css.navIcon} size={16} />

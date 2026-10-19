@@ -12,7 +12,7 @@ import { createDesktopBrowserBridge } from './preload-browser.ts'
 function createProductApi(): DshDesktopProductApi {
   return {
     protocolVersion: 1,
-    remote: { open: () => ipcRenderer.invoke(DESKTOP_IPC.remoteOpen) as Promise<void> },
+    remote: { manage: (action, value) => ipcRenderer.invoke(DESKTOP_IPC.remoteManage, action, value) as Promise<unknown> },
     notifications: {
       show: request => ipcRenderer.invoke(DESKTOP_IPC.notificationShow, request) as Promise<DesktopNotificationResult>,
       close: id => ipcRenderer.invoke(DESKTOP_IPC.notificationClose, id) as Promise<void>,

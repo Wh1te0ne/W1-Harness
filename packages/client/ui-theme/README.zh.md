@@ -1,5 +1,5 @@
 ---
-description: "dsh Web 客户端的主题、字号与字体设置：--dsw-* token 样式表、ThemeRuntime 状态、「通用」设置行与插件前引导。"
+description: "dsh Web 客户端的主题、字号与字体设置：--dsw-* token 样式表、ThemeRuntime 状态、「外观」设置行与插件前引导。"
 kind: "package-reference"
 ---
 
@@ -140,3 +140,5 @@ Desktop 的固定快捷键 `Cmd`/`Ctrl` + `+`（或 `=`）和 `Cmd`/`Ctrl` + `-`
 无。
 
 </details>
+
+W1 将明暗模式、字体、工作步骤展示和性能显示统一放入「设置 → 外观」。11 套参照 Codex 的明暗配色把主颜色映射到 W1 token，并非完整复制 Codex 的样式或代码高亮。配色覆盖与自定义 CSS 在本地 `w1.appearance.v1` 中持久化；既有字体和模式继续使用 Host 存储。预览持续 20 秒，未确认则还原；继续编辑会取消预览。导入/导出使用经过校验的 JSON，拒绝外部资源 CSS，CSS 上限 20,000 字。功能负责释放自身 token 层、样式表和预览计时器。

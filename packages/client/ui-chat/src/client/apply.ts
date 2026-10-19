@@ -175,8 +175,8 @@ export function apply(ctx: Context): void {
     children: { 'conversation.chat.user.images': { kind: 'single', scope: 'session' } },
   }, UserContent)
 
-  ctx.slots.inject('settings.general.item', () => ctx.slots.register({
-    name: 'settings.general.item',
+  ctx.slots.inject('settings.appearance.item', () => ctx.slots.register({
+    name: 'settings.appearance.item',
     id: 'performance-usage',
     order: 30,
     locale: NS,
@@ -186,8 +186,8 @@ export function apply(ctx: Context): void {
     }),
   }, PerformanceUsageRow))
 
-  ctx.slots.inject('settings.general.item', () => ctx.slots.register({
-    name: 'settings.general.item',
+  ctx.slots.inject('settings.appearance.item', () => ctx.slots.register({
+    name: 'settings.appearance.item',
     id: 'transcript-view',
     order: 12,
     locale: NS,

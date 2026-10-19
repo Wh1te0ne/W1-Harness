@@ -529,3 +529,11 @@ it('passes current Settings key labels to the launcher and removes them when unb
   setShortcuts([{ ...row, keys: [], aria: undefined, binding: null, modified: true }])
   expect(launcher()).not.toHaveProperty('settingsShortcut')
 })
+
+it('gives Appearance, Remote and Notifications different navigation glyphs', () => {
+  mount({ rows: [{ id: 'appearance', order: 5, label: 'Appearance' }, { id: 'w1-remote', order: 65, label: 'Remote' }, { id: 'w1-notifications', order: 70, label: 'Notifications' }] })
+  openPanel()
+  const paths = ['Appearance', 'Remote', 'Notifications'].map(name => screen.getByRole('button', { name }).querySelector('svg path')?.getAttribute('d'))
+  expect(paths.every(Boolean)).toBe(true)
+  expect(new Set(paths).size).toBe(3)
+})

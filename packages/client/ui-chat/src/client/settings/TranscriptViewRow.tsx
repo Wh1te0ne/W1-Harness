@@ -1,4 +1,4 @@
-/** General Settings row for work-details presentation. */
+/** Appearance Settings row for work-details presentation. */
 
 import type { SnapshotStore } from '@deepseek-ai/dsh-client-store'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
@@ -23,7 +23,7 @@ export interface TranscriptViewRowInjected {
 
 /** Full Settings-row props. */
 export type TranscriptViewRowProps =
-  PropsRuntime<'settings.general.item'>
+  PropsRuntime<'settings.appearance.item'>
   & PropsLocale<'chat'>
   & InjectFace<TranscriptViewRowInjected>
 

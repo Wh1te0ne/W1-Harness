@@ -1,3 +1,5 @@
+import { W1AppearanceSection, W1AppearanceControls } from './W1Appearance.tsx'
+import { createW1Appearance } from './w1-appearance.ts'
 /**
  * Browser theme registry over the `--dsw-*` token stylesheets. The service
  * owns the live theme preference (light/dark/system), resolves `system` through
@@ -548,6 +550,15 @@ export function apply(ctx: ClientContext): void {
   const host = ctx.configForms.get<ThemeSettings>(THEME_SETTINGS_NAMESPACE)
   const theme = new ThemeRuntime(ctx, host)
   ctx.provide('theme', theme)
+  const appearance = createW1Appearance(theme)
+  ctx.effect(() => () => { appearance.dispose() }, 'ui-theme: W1 appearance')
+  ctx.slots.inject('settings.section', () => ctx.slots.register({
+    name: 'settings.section', id: 'appearance', order: 5, locale: SETTINGS_NS, label: () => ctx.locale.bind(SETTINGS_NS)('appearance.title'),
+    children: { 'settings.appearance.item': { kind: 'list', scope: 'root' } },
+  }, W1AppearanceSection))
+  ctx.slots.inject('settings.appearance.item', () => ctx.slots.register({
+    name: 'settings.appearance.item', id: 'w1-theme-colors', order: 10.5, inject: () => ({ controller: appearance }),
+  }, W1AppearanceControls))
 
   const store = createAppearanceRowStore()
   let bound: BoundActions<typeof store> | undefined
@@ -567,8 +578,8 @@ export function apply(ctx: ClientContext): void {
       setTheme: (id) => { theme.setTheme(id) },
     }
   }
-  ctx.slots.inject('settings.general.item', () => ctx.slots.register({
-    name: 'settings.general.item',
+  ctx.slots.inject('settings.appearance.item', () => ctx.slots.register({
+    name: 'settings.appearance.item',
     id: 'appearance',
     order: 10,
     store,
@@ -576,8 +587,8 @@ export function apply(ctx: ClientContext): void {
     inject: injected,
   }, AppearanceRow))
 
-  ctx.slots.inject('settings.general.item', () => ctx.slots.register({
-    name: 'settings.general.item',
+  ctx.slots.inject('settings.appearance.item', () => ctx.slots.register({
+    name: 'settings.appearance.item',
     id: 'font-size',
     order: 11,
     store: fontStore,

@@ -1,57 +1,74 @@
-/* Appearance row (figma 'Frame 2117131228': title + cube row, column gap 8,
- * pad 16/0, hairline separator; the section column strips it when last). */
-
 .group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 16px 0;
-  border-bottom: 0.5px solid var(--dsw-alias-border-l2);
-}
-
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  padding:14px;
+  border:1px solid var(--dsw-alias-border-l2);
+  border-radius:14px}
 .title {
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 22px;
-  color: var(--dsw-alias-label-primary);
-}
-
+  font-size:13px;
+  color:var(--dsw-alias-label-primary)}
 .cubeRow {
-  display: flex;
-  align-items: stretch;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-/* Appearance cube (figma '.Selector Cube' 276x82, pad 20/32, centered
- * icon-over-label column, gap 4); flexed down from the figma width so all
- * three sit on one row in the 800 panel, wrapping when narrower. */
+  display:flex;
+  gap:8px}
 .themeCube {
-  box-sizing: border-box;
-  flex: 1 1 180px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 20px 32px;
-  border: 0.5px solid var(--dsw-alias-border-l4);
-  border-radius: var(--dsw-radius-xl);
-  background: transparent;
-  font: inherit;
-  font-size: 14px;
-  line-height: 22px;
-  color: var(--dsw-alias-label-primary);
-  cursor: pointer;
-}
-
-.themeCube:hover:not(.selected) {
-  background: var(--dsw-alias-interactive-bg-hover);
-}
-
-/* Selected cube: #F5F6F7 fill + #ADB2B8 border (static token — the bluish-400
- * step has no alias-layer name). */
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:4px;
+  width:78px;
+  padding:5px;
+  border:1px solid var(--dsw-alias-border-l2);
+  border-radius:10px;
+  background:transparent;
+  color:var(--dsw-alias-label-secondary);
+  font:inherit;
+  font-size:10px;
+  cursor:pointer}
+.themeCube:hover {
+  background:var(--dsw-alias-interactive-bg-hover)}
 .selected {
-  background: var(--dsw-alias-bg-module-platform);
-  border-color: var(--dsw-static-neutral-bluish-400);
+  border-color:var(--dsw-alias-state-business-primary);
+  box-shadow:0 0 0 1px var(--dsw-alias-state-business-primary)}
+.preview {
+  height:36px;
+  width:64px;
+  border-radius:6px;
+  display:flex;
+  overflow:hidden;
+  background:#fff;
+  border:1px solid #0002}
+.preview>i {
+  width:15px;
+  background:#f0f0ef;
+  border-right:1px solid #0001}
+.preview>span {
+  flex:1;
+  padding:7px 6px;
+  display:flex;
+  flex-direction:column;
+  gap:5px}
+.preview b {
+  height:2px;
+  width:100%;
+  background:#a2a3a5;
+  border-radius:2px}
+.preview b:nth-child(2) {
+  width:70%;
+  background:var(--dsw-alias-state-business-primary)}
+.dark {
+  background:#202021}
+.dark>i {
+  background:#2d2d2f}
+.system {
+  background:linear-gradient(90deg,#fff 50%,#202021 50%)}
+.system>i {
+  background:#f0f0ef}
+@media(max-width:600px) {
+  .group {
+  gap:8px;
+  flex-wrap:wrap}
+.cubeRow {
+  flex-wrap:wrap}
 }
