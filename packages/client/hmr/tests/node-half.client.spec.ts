@@ -89,19 +89,35 @@ function fakeHttpServer(routes: WebRoute[]): WebServer {
   return fake as WebServer
 }
 
-async function mount(clientModuleHost: FakeHost, webServer: WebServer) {
+async function mount(clientModuleHost: FakeHost, webServer: WebServer, watchBundles = true) {
   const ctx = new Context()
   ctx.provide('clientModules', clientModuleHost)
   ctx.provide('webServer', webServer)
   const fiber = ctx.plugin(
     { inject: [...inject], Config, apply },
-    { pollIntervalMs: POLL_MS },
+    { pollIntervalMs: POLL_MS, watchBundles },
   )
   await fiber.await()
   return fiber
 }
 
 describe('hmr node half', () => {
+  it('leaves running bundles untouched when file watching is disabled, while keeping graph delivery', async () => {
+    const bundle = join(dir, 'a.js')
+    writeFileSync(bundle, 'old')
+    const host = fakeClientModuleHost(new Map([['a', bundle]]))
+    const routes: WebRoute[] = []
+    const fiber = await mount(host, fakeHttpServer(routes), false)
+    try {
+      writeFileSync(bundle, 'rebuilt-for-next-launch')
+      host.fireGraphChanged()
+      await new Promise(resolve => setTimeout(resolve, POLL_MS * 3))
+      expect(host.rebuiltCalls).toEqual([])
+      expect(routes).toHaveLength(1)
+    } finally { await fiber.dispose() }
+    expect(routes).toHaveLength(0)
+  })
+
   it('watches graph bundles, ignores map-only changes, and unwatches on dispose', async () => {
     const bundle = join(dir, 'a.js')
     writeFileSync(bundle, 'v1')

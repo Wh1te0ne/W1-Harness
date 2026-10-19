@@ -230,6 +230,8 @@
     # client-side package, which a host-side bundle cannot import.
     - id: client-hmr
       name: '@deepseek-ai/dsh-client-hmr'
+      config:
+        watchBundles: !!js (!process.env.W1_HOME || process.env.W1_CLIENT_HOT_RELOAD === '1')
 
     # ── browser plugin roster (dsh.client rows; node halves are layer-2 hosts) ──
 

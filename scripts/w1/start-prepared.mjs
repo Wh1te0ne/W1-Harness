@@ -1,5 +1,6 @@
 /** Fast daily launch; refresh links through the original development script only when needed. */
-import { spawn } from 'node:child_process'
+import { spawn, execFileSync } from 'node:child_process'
+import { publishPendingBuilds } from './pending-builds.mjs'
 import { createRequire } from 'node:module'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -19,6 +20,16 @@ function run(command, args, env = process.env) {
     child.once('error', reject)
     child.once('exit', code => code === 0 ? resolve() : reject(new Error(`W1 launch exited with ${code}`)))
   })
+}
+if (!values['prepare-only']) {
+  if (!process.env.W1_DESKTOP_EXECUTABLE || !process.env.DSH_DESKTOP_USER_DATA_DIR) throw new Error('Launch W1 through Start-W1.ps1')
+  const count = publishPendingBuilds(root, () => {
+    const output = execFileSync('C:/Program Files/PowerShell/7/pwsh.exe', ['-NoProfile', '-Command',
+      "$ErrorActionPreference='Stop'; @(Get-CimInstance Win32_Process -Filter \"Name='W1 Harness.exe'\" | Where-Object { $_.ExecutablePath -eq $env:W1_DESKTOP_EXECUTABLE -and $_.CommandLine -notlike '*--type=*' }).Count"],
+    { encoding: 'utf8', windowsHide: true })
+    return Number(output.trim()) > 0
+  })
+  if (count) console.info('[w1-startup] applied pending package builds:', count)
 }
 const current = preparedProjectMatches({ root, electron: require('electron'), runtime,
   cacheDirectory: join(root, '.work/local-dev/launch-cache'), hostProtocolVersion: DESKTOP_HOST_PROTOCOL_VERSION })

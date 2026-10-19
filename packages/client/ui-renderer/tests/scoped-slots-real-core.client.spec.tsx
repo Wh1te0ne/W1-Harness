@@ -79,6 +79,20 @@ function mountFrame(core: SlotCore, body: (renderSlot: FrameSlots['renderSlot'])
 }
 
 describe('createSlotRenderer over the real SlotCore', () => {
+  it('recovers after a mounted root is removed and registered again without remounting React', async () => {
+    const core = new SlotCore()
+    const dispose = core.register({ name: 'root' }, () => <b>old layout</b>)
+    const view = render(<>{createSlotRenderer().renderRoot(hostOver(core), {})}</>)
+    expect(view.container.textContent).toBe('old layout')
+    await act(async () => { dispose() })
+    expect(view.getByRole('status').textContent).toContain('Interface temporarily unavailable')
+    expect(view.getByRole('button', { name: 'Reload interface' })).toBeTruthy()
+    await act(async () => { core.register({ name: 'root' }, () => <b>new layout</b>) })
+    expect(view.container.textContent).toBe('new layout')
+    expect(view.queryByRole('status')).toBeNull()
+    view.unmount()
+  })
+
   it('renders registrations live through real microtask batching: register, dispose back to fallback', async () => {
     const core = new SlotCore()
     const { view } = mountFrame(core, renderSlot =>

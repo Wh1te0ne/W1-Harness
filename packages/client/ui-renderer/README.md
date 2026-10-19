@@ -31,6 +31,8 @@ This package is infrastructure: the web shell and the boot kernel are its only d
 
 `mount(container)` installs the slot renderer, hydrates the existing boot DOM when present, renders the assembled application into the container before the next paint, and returns a disposer that unmounts the React root. The renderer performs the sole context-level `renderSlot('root')` call; the registered root occupant owns product layout and document metadata.
 
+A root removed after mounting shows a recovery view and stays subscribed; a replacement root restores the interface without remounting React. Failed root registrations show a visible failure message. An absent root during initial boot still reports the assembly error. The recovery control reloads only the page, not the Host.
+
 ### For business plugins
 
 A business plugin registers an ordinary Slot entry or a reusable Component Factory; the renderer binds the runtime's session and workspace observable sources into selector hooks at the render position. The plugin receives standard scope props through its derived Component props — it never imports the renderer or touches React internals. Every renderer-created Component can render a Factory occurrence, and a Factory can expose caller-selected local Components without sharing implementation values between packages.

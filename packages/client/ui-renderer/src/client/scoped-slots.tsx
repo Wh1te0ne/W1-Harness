@@ -19,6 +19,7 @@ import {
   useScopeBinding,
 } from './bindings.tsx'
 import { SlotAssemblyError } from './errors.ts'
+import { RootRecovery } from './root-recovery.tsx'
 
 type InjectedProps = Record<string, unknown>
 type SlotAnchorTag = 'div' | 'span'
@@ -1271,7 +1272,7 @@ function renderChainResult(
   )
 }
 
-/** Root outlet: the shell's single ctx-level render entry — an unregistered 'root' is a boot-order failure, never a silent blank. */
+/** Missing root at boot fails loud; later removal keeps a subscribed recovery view until a root returns. */
 function RootOutlet({ ownerProps }: { ownerProps: object }) {
   const host = useHost()
   useSyncExternalStore(
@@ -1280,11 +1281,14 @@ function RootOutlet({ ownerProps }: { ownerProps: object }) {
   )
   useLocaleRevision(host.locale)
   const entry = host.entriesOfSlot('root')[0]
+  const [hasRoot, setHasRoot] = useState(false)
+  if (entry && !hasRoot) setHasRoot(true)
   if (!entry) {
     // Registrations exist but every one abdicated: the shadowing collapse ran
     // dry, so the crash face replaces the tree (registered-but-broken is a
     // crash, not the boot-order assembly failure below).
-    if (host.entriesOf('root').length > 0) return <div data-slot-error="root" />
+    if (host.entriesOf('root').length > 0) return <RootRecovery failed />
+    if (hasRoot) return <RootRecovery />
     throw new SlotAssemblyError("renderSlot('root') before any 'root' registration (boot order)")
   }
   // Same anchor contract as SlotOutlet: 'root' is a slot like any other, and

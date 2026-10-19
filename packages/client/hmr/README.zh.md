@@ -39,6 +39,7 @@ kind: "package-reference"
 
 | 字段 | 默认值 | 含义 |
 |---|---|---|
+| `watchBundles` | `true` | 监听构建文件；设为 `false` 保留激活时的 bundle 直到 Host 重启，图事件传输仍可用 |
 | `pollIntervalMs` | `500` | bundle stat 轮询间隔，单位为毫秒 |
 
 生成的[配置目录](../../../docs/config-catalog.zh.md#deepseek-aidsh-client-hmr)是所有受支持字段及其 JSDoc 的完整真源。
