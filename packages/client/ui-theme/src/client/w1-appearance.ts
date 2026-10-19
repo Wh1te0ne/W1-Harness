@@ -1,10 +1,10 @@
-/** W1 appearance presets and reversible, local-only customization. */
+/** W1 appearance presets and automatically saved, local-only customization. */
 import type { ThemeRuntime, ThemeTokenOverrides } from './index.ts'
 import { W1_PRESETS } from './w1-presets.ts'
 
 export interface W1Palette { accent: string; surface: string; ink: string }
 export interface W1Appearance { preset: string; light: W1Palette; dark: W1Palette; css: string }
-export interface W1AppearanceSnapshot { saved: W1Appearance; previewing: boolean; message: string }
+export interface W1AppearanceSnapshot { saved: W1Appearance; message: string }
 export const W1_DEFAULT: W1Appearance = { preset: 'w1', light: { accent: '#4d6bfe', surface: '#ffffff', ink: '#171717' }, dark: { accent: '#7c8dff', surface: '#1b1b1c', ink: '#eeeeee' }, css: '' }
 const KEY = 'w1.appearance.v1'
 const hex = /^#[\da-f]{6}$/iu
@@ -47,7 +47,7 @@ export function appearanceTokens(value: W1Appearance): ThemeTokenOverrides {
   }
   return tokens
 }
-/** Own one theme layer, stylesheet, and timed preview for the plugin lifetime. */
+/** Own one immediately applied theme layer and persist valid edits for the plugin lifetime. */
 export function createW1Appearance(
   theme: Pick<ThemeRuntime, 'overrideTokens'>, storage?: Pick<Storage, 'getItem' | 'setItem'>,
 ) {
@@ -57,34 +57,29 @@ export function createW1Appearance(
     const raw = storage?.getItem(KEY)
     if (raw) saved = validateAppearance(JSON.parse(raw))
   } catch { /* Keep the recoverable default for invalid saved data. */ }
-  let snapshot: W1AppearanceSnapshot = { saved, previewing: false, message: '' }
+  let snapshot: W1AppearanceSnapshot = { saved, message: '' }
   const listeners = new Set<() => void>()
-  let timer: ReturnType<typeof setTimeout> | undefined
   let retract: (() => void) | undefined
-  let preview: W1Appearance | undefined
   const style = typeof document === 'undefined' ? undefined : document.createElement('style')
   if (style) { style.dataset.w1Appearance = 'custom'; document.head.append(style) }
   const publish = () => { for (const listener of listeners) listener() }
   const apply = (value: W1Appearance) => { const old = retract; retract = theme.overrideTokens('w1-appearance', appearanceTokens(value)); old?.(); if (style) style.textContent = value.css }
-  const cancel = (message = '') => { clearTimeout(timer); preview = undefined; apply(saved); snapshot = { saved, previewing: false, message }; publish() }
+  const update = (value: W1Appearance, message = '已自动保存') => {
+    const next = validateAppearance(value)
+    if (!storage) throw new Error('无法保存外观：本地存储不可用')
+    storage.setItem(KEY, JSON.stringify(next))
+    saved = next
+    apply(saved)
+    snapshot = { saved, message }
+    publish()
+  }
   apply(saved)
   return {
     getSnapshot: () => snapshot,
     subscribe: (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener) } },
-    preview(value: W1Appearance) {
-      const next = validateAppearance(value)
-      clearTimeout(timer); preview = next; apply(next)
-      snapshot = { saved, previewing: true, message: '正在预览，20 秒内保存，否则自动还原' }; publish()
-      timer = setTimeout(() => { cancel('预览已自动还原') }, 20_000)
-    },
-    save() {
-      if (!preview) return
-      if (!storage) throw new Error('无法保存外观：本地存储不可用')
-      storage.setItem(KEY, JSON.stringify(preview)); saved = preview; cancel('外观已保存')
-    },
-    cancel: () => { cancel('已还原') },
-    reset() { if (!storage) throw new Error('无法保存外观：本地存储不可用'); storage.setItem(KEY, JSON.stringify(W1_DEFAULT)); saved = structuredClone(W1_DEFAULT); cancel('已恢复 W1 默认外观') },
-    dispose() { clearTimeout(timer); retract?.(); style?.remove(); listeners.clear() },
+    update: (value: W1Appearance) => { update(value) },
+    reset: () => { update(structuredClone(W1_DEFAULT), '已恢复 W1 默认外观') },
+    dispose() { retract?.(); style?.remove(); listeners.clear() },
   }
 }
 export type W1AppearanceController = ReturnType<typeof createW1Appearance>

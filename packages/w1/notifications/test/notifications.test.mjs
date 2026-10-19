@@ -14,7 +14,7 @@ function fixture(saved={}) {
   const list=observable(()=>({phase:'ready',byId:rows})),status=observable(()=>statuses),current=observable(()=>({key:active})),generation=observable(()=>({}));
   const bridge={show:async value=>{notices.push(value);return{status:'shown'}},close:async()=>{},sync:async value=>{syncs.push(value);return{supported:true}},onClick:f=>{click=f;return()=>{click=null}}};
   const desktop={notifications:bridge};
-  const win={dshDesktop:desktop,addEventListener(){},removeEventListener(){},focus(){},__ModuleLoader__:{load:p=>{plugin=p.factory(()=>({createElement:(type,props,...children)=>({type,props,children})}))}}};
+  const win={dshDesktop:desktop,addEventListener(){},removeEventListener(){},focus(){},__ModuleLoader__:{load:p=>{plugin=p.factory(()=>({Button:'shared-button',Switch:'shared-switch',createElement:(type,props,...children)=>({type,props,children})}))}}};
   const ctx={connection:{generation},remote:{$on:(name,f)=>handlers.set(name,f)},sessions:{list},uiSession:{adapter:{current},sessionStatus:status},uiWorkspace:{openSession:id=>{active=id;current.emit()}},
     locale:{register:()=>()=>{},bind:()=>key=>key},slots:{inject:(_name,f)=>f(),register:(options,component)=>{section={options,component};return()=>{}}},effect:f=>{effects.push(f());}};
   vm.runInNewContext(readFileSync(new URL('../lib/client.js',import.meta.url),'utf8'),{window:win,dshDesktop:desktop,navigator:{platform:'Win32'},document:{visibilityState:'visible',hasFocus:()=>focused,addEventListener(){},removeEventListener(){},createElement:()=>({getContext:()=>({beginPath(){},arc(){},fill(){},fillText(){}}),toDataURL:()=>null})},
@@ -32,3 +32,18 @@ test('disposal cancels delayed reminders and releases click listener',async()=>{
 test('migration backs up W1, preserves unrelated settings and is idempotent',async()=>{const base=await mkdtemp(join(tmpdir(),'w1-notification-migrate-'));const home=join(base,'.w1-harness'),profile=join(home,'profiles','desktop');try{await mkdir(profile,{recursive:true});const manifest={dependencies:{'dsh-task-notifier':'old','other-plugin':'keep'},dsh:{profile:{bundles:['base','dsh-task-notifier','other-plugin']}}};await writeFile(join(profile,'package.json'),JSON.stringify(manifest));await writeFile(join(profile,'cordis.patch.yml'),'# preserved fixture\n');const result=await migrateNotifications(home);assert.equal(result.status,'migrated');assert.deepEqual(JSON.parse(await readFile(join(result.backup,'package.json'),'utf8')),manifest);const after=JSON.parse(await readFile(join(profile,'package.json'),'utf8'));assert.deepEqual(after.dependencies,{'other-plugin':'keep'});assert.deepEqual(after.dsh.profile.bundles,['base','other-plugin']);assert.equal(await readFile(join(profile,'cordis.patch.yml'),'utf8'),'# preserved fixture\n');assert.equal((await migrateNotifications(home)).status,'current');await assert.rejects(()=>migrateNotifications(join(base,'.dsh')));}finally{if(!resolve(base).startsWith(resolve(tmpdir())+'\\w1-notification-migrate-'))throw Error('Unsafe test cleanup');await rm(base,{recursive:true,force:true});}});
 
 test('settings render with the framework selector hook',()=>{const f=fixture();const face=f.section.options.inject();const panel=f.section.component({...face,useReminder:selector=>{assert.equal(typeof selector,'function');return selector(face.hooks.reminder.getSnapshot());},t:key=>key});assert.equal(panel.type,'section');f.dispose();});
+
+test('settings use shared switches and buttons and retain preference callbacks',()=>{
+  const f=fixture();const face=f.section.options.inject();
+  const tree=f.section.component({...face,useReminder:selector=>selector(face.hooks.reminder.getSnapshot()),t:key=>key});
+  const nodes=[];
+  const walk=node=>{if(!node||typeof node!=='object')return;if(Array.isArray(node)){node.forEach(walk);return}nodes.push(node);node.children?.forEach(walk)};
+  walk(tree);
+  const switches=nodes.filter(n=>n.type==='shared-switch');assert.equal(switches.length,10);
+  assert.equal(nodes.some(n=>n.type==='input'),false);
+  const enabled=switches.find(n=>n.props.label==='enabled');assert.equal(enabled.props.checked,true);
+  enabled.props.onChange(false);assert.equal(f.view().prefs.enabled,false);
+  const buttons=nodes.filter(n=>n.type==='shared-button');assert.equal(buttons.length,3);
+  for(const button of buttons){assert.equal(button.props.size,'sm');assert.equal(button.props.variant,'outline')}
+  f.dispose();
+});

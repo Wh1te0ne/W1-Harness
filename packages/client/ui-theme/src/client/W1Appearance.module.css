@@ -58,7 +58,10 @@
   outline:none;
   background:none;
   color:inherit;
-  font:12px ui-monospace,monospace}
+  font:inherit;
+  font-size:13px;
+  line-height:20px;
+  font-variant-numeric:tabular-nums}
 .segment {
   display:flex;
   gap:2px;
@@ -125,10 +128,6 @@
   background:transparent;
   color:inherit;
   cursor:pointer}
-.actions .primary {
-  background:var(--dsw-alias-label-primary);
-  color:var(--dsw-alias-bg-base);
-  border-color:transparent}
 .actions .reset {
   margin-left:auto}
 .fileButton input {
