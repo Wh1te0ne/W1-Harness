@@ -23,9 +23,13 @@ app.whenReady().then(async () => {
   const backup = join(directory, 'backups', stamp)
   mkdirSync(programs, { recursive: true })
   mkdirSync(desktop, { recursive: true })
-  const paths = [join(desktop, 'W1 Harness.lnk'), join(programs, 'W1 Harness.lnk')]
+  const taskbarOnly = process.argv.includes('--taskbar-only')
+  const pinned = join(app.getPath('appData'), 'Microsoft', 'Internet Explorer', 'Quick Launch', 'User Pinned', 'TaskBar', 'W1 Harness.lnk')
+  const paths = taskbarOnly ? [] : [join(desktop, 'W1 Harness.lnk'), join(programs, 'W1 Harness.lnk')]
+  if (existsSync(pinned)) paths.push(pinned)
+  if (taskbarOnly && paths.length === 0) throw new Error('W1 taskbar shortcut was not found')
   const previous = join(desktop, 'W1 Harness 开发版.lnk')
-  if (existsSync(previous)) paths.push(previous)
+  if (!taskbarOnly && existsSync(previous)) paths.push(previous)
   const results = []
   for (const [index, path] of paths.entries()) {
     if (existsSync(path)) {
@@ -40,7 +44,7 @@ app.whenReady().then(async () => {
     }
     const details = { target, args: '', cwd: root, description: 'W1 Harness · 本机日用开发版',
       icon, iconIndex: 0, appUserModelId: appId }
-    if (!shell.writeShortcutLink(path, 'create', details)) throw new Error(`Cannot write shortcut: ${path}`)
+    if (!shell.writeShortcutLink(path, existsSync(path) ? 'update' : 'create', details)) throw new Error(`Cannot write shortcut: ${path}`)
     const actual = shell.readShortcutLink(path)
     if (actual.target !== target || actual.icon !== icon || actual.appUserModelId !== appId) throw new Error(`Shortcut verification failed: ${path}`)
     const rendered = await app.getFileIcon(path, { size: 'normal' })

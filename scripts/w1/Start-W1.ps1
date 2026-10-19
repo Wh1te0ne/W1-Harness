@@ -11,6 +11,46 @@ $localLogs = Join-Path $root '.work/local-dev'
 New-Item -ItemType Directory -Path $localLogs -Force | Out-Null
 $w1Home = Join-Path $env:USERPROFILE '.w1-harness'
 $w1Data = Join-Path $env:APPDATA 'W1 Harness'
+foreach ($name in @('ELECTRON_RUN_AS_NODE','ELECTRON_OVERRIDE_DIST_PATH','DSH_DESKTOP_DSH_DIR','DSH_DESKTOP_PNPM_ENTRY','DSH_DESKTOP_PRIMARY_RUNTIME_DIR','DSH_DESKTOP_MANDATORY_UPDATE_CONFIG')) {
+  Remove-Item -LiteralPath ("Env:" + $name) -ErrorAction SilentlyContinue
+}
+$env:W1_HOME = $w1Home
+$env:W1_USER_DATA = $w1Data
+$env:DSH_HOME = $w1Home
+$env:DSH_AGENTS_HOME = Join-Path $w1Home 'agents'
+$env:DSH_DESKTOP_USER_DATA_DIR = $w1Data
+$env:DSH_DESKTOP_OPEN_DEVTOOLS = '0'
+$env:DSH_DESKTOP_DEV_APP = '0'
+$env:DSH_DESKTOP_NO_INSPECT = '1'
+if ($DebugPortBase -gt 0) {
+  foreach ($port in $DebugPortBase..($DebugPortBase + 2)) {
+    $probe = [Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback,$port)
+    try { $probe.Start() } finally { $probe.Stop() }
+  }
+  $env:DSH_DESKTOP_NO_INSPECT = '0'
+  $env:DSH_DESKTOP_MAIN_INSPECT_PORT = [string]$DebugPortBase
+  $env:DSH_DESKTOP_RENDERER_DEBUG_PORT = [string]($DebugPortBase+1)
+  $env:DSH_DESKTOP_HOST_INSPECT_PORT = [string]($DebugPortBase+2)
+}
+# Each invocation owns its log, including a second launch that focuses the existing instance.
+$launchLog = Join-Path $localLogs ('desktop-' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '-' + $PID + '.log')
+# A running Desktop already owns the prepared profile. Send Electron's normal
+# second-instance request without rerunning migrations or the development builder.
+if (-not $RefreshProject -and $DebugPortBase -eq 0) {
+  $owner = Get-CimInstance Win32_Process -Filter "Name='W1 Harness.exe'" | Where-Object {
+    $_.ExecutablePath -and $_.ExecutablePath.Equals($env:W1_DESKTOP_EXECUTABLE, [StringComparison]::OrdinalIgnoreCase) -and
+    $_.CommandLine -like '*--user-data-dir=*' -and $_.CommandLine -notlike '*--type=*'
+  } | Select-Object -First 1
+  if ($owner) {
+    # Keep a complete development environment if the owner exits during this handoff.
+    $env:DSH_DESKTOP_PRIMARY_RUNTIME_DIR = Join-Path $root 'apps/desktop/.desktop-build/targets/win-x64/runtime/primary-runtime'
+    $env:ELECTRON_ENABLE_LOGGING = '1'
+    "W1 existing instance: forwarding activation to PID $($owner.ProcessId)" | Set-Content -LiteralPath $launchLog
+    & $env:W1_DESKTOP_EXECUTABLE "--user-data-dir=$w1Data" (Join-Path $root 'apps/desktop') *>> $launchLog
+    if ($LASTEXITCODE -ne 0) { throw "W1 activation failed. See $launchLog" }
+    return
+  }
+}
 New-Item -ItemType Directory -Path $w1Home -Force | Out-Null
 $projectStore = Join-Path $w1Home 'storages/workspace.json'
 if (Test-Path -LiteralPath $projectStore) {
@@ -40,29 +80,6 @@ if ((Test-Path -LiteralPath $usageProfile) -and (Get-Content -Raw -LiteralPath $
 if ($LASTEXITCODE -ne 0) { throw 'W1 notification migration failed; launch stopped.' }
 $rules = Join-Path $w1Home 'AGENTS.md'
 if (-not (Test-Path -LiteralPath $rules)) { Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'AGENTS.default.md') -Destination $rules }
-foreach ($name in @('ELECTRON_RUN_AS_NODE','ELECTRON_OVERRIDE_DIST_PATH','DSH_DESKTOP_DSH_DIR','DSH_DESKTOP_PNPM_ENTRY','DSH_DESKTOP_PRIMARY_RUNTIME_DIR','DSH_DESKTOP_MANDATORY_UPDATE_CONFIG')) {
-  Remove-Item -LiteralPath ("Env:" + $name) -ErrorAction SilentlyContinue
-}
-$env:W1_HOME = $w1Home
-$env:W1_USER_DATA = $w1Data
-$env:DSH_HOME = $w1Home
-$env:DSH_AGENTS_HOME = Join-Path $w1Home 'agents'
-$env:DSH_DESKTOP_USER_DATA_DIR = $w1Data
-$env:DSH_DESKTOP_OPEN_DEVTOOLS = '0'
-$env:DSH_DESKTOP_DEV_APP = '0'
-$env:DSH_DESKTOP_NO_INSPECT = '1'
-if ($DebugPortBase -gt 0) {
-  foreach ($port in $DebugPortBase..($DebugPortBase + 2)) {
-    $probe = [Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback,$port)
-    try { $probe.Start() } finally { $probe.Stop() }
-  }
-  $env:DSH_DESKTOP_NO_INSPECT = '0'
-  $env:DSH_DESKTOP_MAIN_INSPECT_PORT = [string]$DebugPortBase
-  $env:DSH_DESKTOP_RENDERER_DEBUG_PORT = [string]($DebugPortBase+1)
-  $env:DSH_DESKTOP_HOST_INSPECT_PORT = [string]($DebugPortBase+2)
-}
-# Each invocation owns its log, including a second launch that focuses the existing instance.
-$launchLog = Join-Path $localLogs ('desktop-' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '-' + $PID + '.log')
 Push-Location -LiteralPath $root
 try {
   $launchArgs = @('--import','tsx/esm','apps/desktop/scripts/dev.ts','--skip-build','--reuse-runtime')

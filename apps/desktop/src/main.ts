@@ -1003,6 +1003,10 @@ async function main(): Promise<void> {
   const createMainWindow = (): BrowserWindow => {
     const window = createWindow(appPreload, false, true)
     mainWindow = window
+    // W1 has no sign-in gate: show its boot page while the Host is starting.
+    window.once('ready-to-show', () => {
+      if (!quitting && !window.isDestroyed()) window.show()
+    })
     browserGuests.bind(window, (guest, name) => shortcuts.attachGuest(window, guest, name))
     shortcuts.attach(window)
     window.on('focus', automaticCheck)
@@ -1091,8 +1095,6 @@ async function main(): Promise<void> {
       void (backend.state.phase === 'ready' ? openInitialWindow() : navigateMain(applicationUrl)).catch((error: unknown) => { reportFatal(error, 'main') })
       return
     }
-    // Startup and sign-out select the visible window before activation may reveal the workspace.
-    if (window === mainWindow && !enteredWorkspace) return
     if (window.isMinimized()) window.restore()
     window.show()
     window.focus()

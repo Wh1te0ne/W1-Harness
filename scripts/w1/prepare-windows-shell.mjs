@@ -1,4 +1,5 @@
 /** Prepare a W1-branded copy of Electron once; daily launches only check its cache. */
+import { prepareWindowsEntry } from './prepare-windows-entry.mjs'
 import { createHash } from 'node:crypto'
 import { createRequire } from 'node:module'
 import { closeSync, copyFileSync, cpSync, existsSync, mkdirSync, openSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
@@ -52,4 +53,6 @@ if (!existsSync(executable) || !existsSync(stamp) || readFileSync(stamp, 'utf8')
     unlinkSync(lockPath)
   }
 }
+const requireBuilder = createRequire(requireDesktop.resolve('app-builder-lib/package.json'))
+await prepareWindowsEntry(directory, join(dirname(electron), 'resources', 'default_app.asar'), requireBuilder('@electron/asar'))
 console.log(executable)
