@@ -38,7 +38,7 @@ export function ProjectEditor({ project, pickFolder, save, close, t }: Props) {
     try { await save({ title: title.trim(), folderRoots: folders, primaryFolderId: primary }); close() }
     catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)); setBusy(false) }
   }
-  return <Modal open className={css.dialog} onClose={() => { if (!busy) close() }} closeLabel={t('close')}
+  return <Modal open className={css.dialog ?? ''} onClose={() => { if (!busy) close() }} closeLabel={t('close')}
     title={t(project === undefined ? 'project.create' : 'project.edit')}
     footer={<><Button variant="outline" disabled={busy} onClick={close}>{t('cancel')}</Button>
       <Button variant="primary" disabled={busy || !title.trim()} onClick={() => { void commit() }}>{t('project.save')}</Button></>}>
