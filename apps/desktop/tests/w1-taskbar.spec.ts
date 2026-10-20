@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { configureW1StartMenu, configureW1Taskbar, isW1Development, relaunchW1 } from '../src/w1-identity.ts'
+import { configureW1Identity, configureW1StartMenu, configureW1Taskbar, isW1Development, relaunchW1 } from '../src/w1-identity.ts'
 import type { W1Product } from '../src/w1-upstream.ts'
 
 const product: W1Product = { name: 'W1 Harness', appId: 'local.w1.harness', protocol: 'w1-harness',
@@ -11,6 +11,36 @@ const owned: string[] = []
 afterEach(() => { vi.unstubAllEnvs(); for (const dir of owned.splice(0)) rmSync(dir, { recursive: true, force: true }) })
 
 describe.skipIf(process.platform !== 'win32')('W1 Windows taskbar relaunch', () => {
+  it('isolates test identity and paths even with inherited daily overrides, without touching daily shortcuts', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'w1-identity-'))
+    owned.push(directory)
+    writeFileSync(join(directory, 'w1-product.json'), JSON.stringify(product))
+    const home = join(directory, 'home'), appData = join(directory, 'appData')
+    mkdirSync(home)
+    mkdirSync(appData)
+    for (const name of ['DSH_HOME', 'DSH_AGENTS_HOME', 'W1_DOCUMENTS_DIR', 'XDG_CONFIG_HOME', 'XDG_DATA_HOME',
+      'XDG_STATE_HOME', 'XDG_CACHE_HOME', 'BILI_CONFIG_FILE', 'BILI_SESSIONS_DIR', 'BILI_ZONE_PORT',
+      'BILI_NATIVE_ATTACH_EXTERNAL', 'BILLION_CONTEXT_ATTACH', 'BILLION_CONTEXT_PROXY']) vi.stubEnv(name, process.env[name])
+    vi.stubEnv('W1_TEST_MODE', '1')
+    vi.stubEnv('W1_HOME', join(home, '.w1-harness'))
+    vi.stubEnv('W1_USER_DATA', join(appData, product.name))
+    const application = { isPackaged: true, getAppPath: () => directory,
+      getPath: (name: string) => name === 'home' ? home : appData,
+      setName: vi.fn(), setPath: vi.fn(), setAppUserModelId: vi.fn() }
+    const identity = configureW1Identity(application)
+    expect(identity).toMatchObject({ name: 'W1 Harness Test', appId: 'local.w1.harness.test' })
+    expect(application.setPath).toHaveBeenCalledWith('userData', join(appData, 'W1 Harness Test'))
+    expect(process.env.DSH_HOME).toBe(join(home, '.w1-harness-test'))
+    expect(process.env.BILI_ZONE_PORT).toBe('28788')
+    expect(existsSync(join(home, '.w1-harness'))).toBe(false)
+    expect(existsSync(join(appData, product.name))).toBe(false)
+    const window = { setIcon: vi.fn(), setAppDetails: vi.fn() }
+    const desktopShell = { readShortcutLink: vi.fn(), writeShortcutLink: vi.fn(() => true) }
+    configureW1Taskbar(application, window, identity)
+    configureW1StartMenu(application, desktopShell, identity)
+    expect(window.setAppDetails).not.toHaveBeenCalled()
+    expect(desktopShell.writeShortcutLink).not.toHaveBeenCalled()
+  })
   it('restarts development through the publisher launcher without inherited application arguments', () => {
     const directory = mkdtempSync(join(tmpdir(), 'w1-relaunch-'))
     owned.push(directory)

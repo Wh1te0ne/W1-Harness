@@ -89,7 +89,7 @@ The page refresh shortcut calls the same reload operation as the toolbar. Its to
 <a id="model-experience"></a>
 ## Model Experience
 
-This tab package registers no model tool. In W1 Desktop, the [browser control provider](../../w1/browser-use/README.md) operates these same tabs, binds each guest to its conversation, and exposes a per-tab pause control. Web iframe tabs remain presentation-only.
+None, as this package owns browser tabs and transport while W1 browser-use owns model tools.
 
 #### KV Cache effect
 

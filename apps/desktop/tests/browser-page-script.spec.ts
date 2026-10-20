@@ -18,7 +18,7 @@ const fill = (ref: string, text: string) => pageOperation({ action: 'fill', epoc
 it('reads bounded refs without exposing input values', () => {
   const snapshot = read()
   expect(JSON.stringify(snapshot)).not.toContain('secret')
-  expect(snapshot).toMatchObject({ elements: expect.arrayContaining([expect.objectContaining({ ref: 's:1', tag: 'input', label: 'Name' })]) })
+  expect(snapshot).toHaveProperty('elements', expect.arrayContaining([expect.objectContaining({ ref: 's:1', tag: 'input', label: 'Name' })]))
 })
 it('fills literal text and emits input/change, then invalidates the old snapshot', () => {
   read()
@@ -30,7 +30,7 @@ it('fills literal text and emits input/change, then invalidates the old snapshot
   expect(input.value).toBe('"; globalThis.bad = true; //')
   expect(changed).toHaveBeenCalledTimes(2)
   expect(() => fill('s:1', 'again')).toThrow('stale-element')
-  expect(read('next')).toMatchObject({ elements: expect.arrayContaining([expect.objectContaining({ value: input.value })]) })
+  expect(read('next')).toHaveProperty('elements', expect.arrayContaining([expect.objectContaining({ value: input.value })]))
 })
 it('rejects obsolete refs, detached controls, passwords and file fields', () => {
   read('old'); read('new')

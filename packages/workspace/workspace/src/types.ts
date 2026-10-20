@@ -76,6 +76,9 @@ export interface WorkspaceProjectInput {
   readonly primaryFolderId: string | null
 }
 
+/**
+ * A durable project identity, folder selection and session membership account.
+ */
 export interface Workspace {
   /** Stable record id (generated uuid). */
   readonly id: WorkspaceId

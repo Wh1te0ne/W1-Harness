@@ -31,6 +31,7 @@ kind: "package-reference"
 -----
 
 <a id="reference-previews"></a>
+
 ## 引用预览
 
 已发送的普通文件附件保留草稿中的[文件卡片圆角](../../../docs/ui-radius.zh.md#radius-scale)。
@@ -48,6 +49,7 @@ Session 作用域的 `conversation.chat.user.content` Factory 只渲染用户内
 设置 → 通用设置 → 网页链接默认打开方式控制普通点击 Chat HTTP(S) 链接时的目标：「应用内侧边栏」（默认）打开新的右侧 Sidebar Browser tab，「默认浏览器」打开外部标签页。该设置项位于快捷键之后，仅在 Sidebar Browser 可用时显示。若 Sidebar Browser 未注册，两种选择均使用外部浏览器；带修饰键的点击保留原生行为。已认证浏览器的 `ui-chat.linkOpening` 偏好在 Host 上持久化，设置无法持久化写入时仅在当前进程内生效。已发送的文件引用及消息日志确认调用的 skill 也可在右侧栏打开预览。文件路径使用当前查看的 Session；skill 名称由该 Session 当前的输入触发源解析。两者悬停或聚焦时均使用正文文件链接的虚线下划线。会话、目录和命令标签仍只作为引用展示。
 
 <a id="system-prompt-row"></a>
+
 ## Chat 隐藏的行
 
 Chat 在所有工作步骤展示模式下都不显示系统提示词行、普通上下文注入和 `permission` 命令行。包含工具添加或移除记录的上下文仍然可见。该过滤不改变已记录的 Session 事件或 Trajectory 查看能力。非人工轮次触发仍作为独立通知显示，其他命令行仍保留在 Chat 中。
@@ -55,6 +57,7 @@ Chat 在所有工作步骤展示模式下都不显示系统提示词行、普通
 Assistant 尝试结束且没有可见消息时，Chat 隐藏已发布的 Node，不移除其 key。同一 Step 的重试再次产生可见内容时，复用该 key。已加载窗口缺少 Step 起点时也遵循此规则。
 
 <a id="command-and-failure-rows"></a>
+
 ## 指令与失败行
 
 通用指令行在所有生命周期状态中都保留普通指令图标；失败仍通过行状态与摘要表达。每个终止轮次都渲染自己的红点行；欠费失败的行使用中立的 `message.failure.quota` 文案，而不是提供方消息。新追加的 `QUOTA` 或 `ACCOUNT_QUOTA` 产生的瞬时提示来自本包注册在 `shell.overlay` 的全局条目，它不随 Chat 面板消失：该条目把唯一一条实时提示交给 `shell.quota-notice` 链，并在无人接管时回退到自己的警告 Toast，接管该错误码的条目会替换该回退。只有本 Client 已绑定并已物化的 Session 会发布提示；它从未打开的 Session 中的欠费不会发布。更新的提示会替换当前提示，除非认领条目用 `keepOpen()` 保持住当前提示：该调用返回一个由调用方持有、必须在卸载时调用的释放函数，只要存在保持，认领条目就继续挂载，后续提示被丢弃，释放后恢复后续提示但不重放已丢弃的提示。回退 Toast 自身没有延后策略：当 Desktop 账号的不透明原生 Platform 页盖住本页时，它仍会在下方运行，其显示计时器可能在不可见时走完并自行撤下提示，因此只留下持久化失败行。释放只移除自己的保持，因此它在关闭或更新的保持之后执行时不会影响更新的保持。关闭与退出登录会清空所有保持；被丢弃的提示不排队，其对应的持久化失败行仍会渲染。历史替换和分页不会发布提示。中间重试不会创建终止行；输出 token 上限使用琥珀色警告点。重启恢复以 `interrupted` 结束的轮次会渲染本地化的停止行，说明 DSH 进程在轮次中途退出，不显示代码标签，其过程摘要显示“已停止”。
@@ -62,6 +65,7 @@ Assistant 尝试结束且没有可见消息时，Chat 隐藏已发布的 Node，
 -----
 
 <a id="turn-token-usage"></a>
+
 存在可选的 W1 缓存诊断投影时，详细轮次用量还会展示该轮保留的最后一个主循环步骤：C1 规范化结构或 C2 实际 DeepSeek 序列化结构、已观测变化和服务端缓存未知项。辅助调用不参与这些比较。
 
 ## 轮次 token 用量
@@ -77,6 +81,7 @@ Assistant 尝试结束且没有可见消息时，Chat 隐藏已发布的 Node，
 偏好菜单在发布新选择之前，先将焦点还给触发按钮，且不引起滚动。
 
 <a id="completed-turn-footer"></a>
+
 ## 已完成轮次的页脚
 
 产物扩展可通过 `ChatNodeStore.turnDataSource` 订阅一个 Turn 中指定类型的节点数据。来源包含隐藏节点，并按锚点顺序提供其业务数据。成员关系增量更新；只有被订阅的集合才生成有序数组，其他 Turn 或类型的更新不通知该集合。
@@ -86,6 +91,7 @@ Assistant 尝试结束且没有可见消息时，Chat 隐藏已发布的 Node，
 -----
 
 <a id="turn-process-folding"></a>
+
 ## 轮次过程折叠
 
 正常在线时，本地 transcript 与 steering 回显在 Inbox 接受与领取期间保持挂载，直到持久消息到达，不会重复触发跟随底部。跨客户端的待处理 steering 遵循 Inbox 顺序，在匹配位置使用本地回显。已入档的本地 steering 还会排除匹配的旧 Inbox 行，直到领取投影到达；没有本地提交身份的 steering 仍按 Inbox 投影显示。重连后，Host 消息替代已有接收回执的本地回显；已领取但尚未入档时，气泡可能短暂消失。
@@ -99,6 +105,7 @@ Chat 末尾为进行中的 Turn 控制行，且该轮尚无可见输入时，第
 -----
 
 <a id="grouped-rendering"></a>
+
 ## 分组渲染
 
 Chat 通过 `uiConversation.groups` 注册过程 Group Definition。React 通过稳定的 Group 与 Node 容器渲染混合 `node`/`group` 根序列，组头数据与成员数组分别订阅。已结束组的标题独立于实时详情偏好，只有运行中的标题在该偏好变化时更新。[过程分组业务规则](src/client/conversation-nodes/README.zh.md#process-grouping) 定义切分方式与活动摘要。
@@ -128,6 +135,7 @@ Chat 节点 slot 为推理与工具注入绑定重置来源的 `useDisclosure` �
 -----
 
 <a id="scroll-ownership"></a>
+
 ## 滚动归属
 
 Chat 等待初始历史就绪后，才允许自动内容、滚动或尺寸更新初始化阅读状态。进行中的 Session 先恢复初始显隐和位置，再允许折叠动画。
@@ -175,6 +183,7 @@ Chat 会在历史前插与 renderer 重新挂载时恢复语义锚点，并且�
 -----
 
 <a id="model-experience"></a>
+
 ## 模型体验
 
 无，因为本包在浏览器中渲染已记录的对话状态，不注册任何面向模型的内容。
@@ -198,6 +207,7 @@ Chat 会在历史前插与 renderer 重新挂载时恢复语义锚点，并且�
 
 
 <a id="dev-note"></a>
+
 ### 开发备注
 
 <details>

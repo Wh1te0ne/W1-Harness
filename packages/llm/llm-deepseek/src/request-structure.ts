@@ -1,6 +1,9 @@
 /** Content-free fingerprints of the actual serialized Messages request. */
 import { createHash } from 'node:crypto'
 
+/**
+ * Content-free digests and bounds for one serialized Messages request.
+ */
 export interface RequestStructure {
   readonly systemHash: string
   readonly toolsHash: string
@@ -13,7 +16,12 @@ export interface RequestStructure {
 }
 const hash = (value: unknown) => createHash('sha256').update(value === undefined ? 'null' : JSON.stringify(value)).digest('hex')
 
-/** Hash only model-input fields; callers choose the retained message-count bound. */
+/**
+ * Hash only model-input fields; callers choose the retained message-count bound.
+ * @param payload - Serialized Messages request after provider projection.
+ * @param maxMessages - Maximum number of per-message fingerprints retained.
+ * @returns Content-free structural fingerprints and payload bounds.
+ */
 export function requestStructure(payload: string, maxMessages: number): RequestStructure {
   if (!Number.isSafeInteger(maxMessages) || maxMessages < 1) throw new TypeError('maxMessages must be a positive integer')
   const parsed: unknown = JSON.parse(payload)

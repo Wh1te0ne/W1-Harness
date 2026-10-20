@@ -1,5 +1,8 @@
 /** Primary colors read from local Codex 26.1013.4894.0 theme resources; W1 owns the token mapping. */
 import type { W1Palette } from './w1-appearance.ts'
+/**
+ * Named light and dark palettes available in W1 appearance settings.
+ */
 export const W1_PRESETS: readonly { id: string; name: string; light: W1Palette; dark: W1Palette }[] = [
   {
     'id': 'absolutely',

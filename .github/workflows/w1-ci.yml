@@ -1,0 +1,39 @@
+name: W1H checks
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['**/*.md', '**/*.i18n.yaml', 'docs/**']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+env:
+  DSH_GATE_CONCURRENCY: '2'
+  DSH_OXLINT_THREADS: '2'
+concurrency:
+  group: w1-checks-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: '24'
+      - name: Install locked dependencies
+        run: |
+          corepack enable
+          corepack pnpm install --frozen-lockfile
+      - name: Build and check
+        run: corepack pnpm run build
+      - name: Product update and W1 component checks
+        run: |
+          corepack pnpm exec vitest run apps/desktop/tests/w1-product-updates.spec.ts apps/desktop/tests/update-coordinator.spec.ts apps/desktop/tests/update-schedule.spec.ts apps/desktop/tests/w1-upstream.spec.ts apps/desktop/tests/w1-upstream-ui.spec.ts apps/desktop/tests/w1-taskbar.spec.ts packages/w1/browser-use/tests packages/w1/chrome-use/tests packages/w1/tool-selection/tests
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --test apps/w1-remote/tests/remote.test.mjs apps/w1-remote/tests/connection.test.mjs

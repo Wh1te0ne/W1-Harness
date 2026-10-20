@@ -6,6 +6,8 @@ import { W1UpstreamUpdates } from './w1-upstream.ts'
 import { W1Notifications } from './w1-notifications.ts'
 import { manageW1Remote } from './w1-remote-settings.ts'
 import { showW1Upstream } from './w1-upstream-ui.ts'
+import { W1SourceUpdates, w1UpdateChannel } from './w1-product-updates.ts'
+import { showW1ProductUpdate } from './w1-product-update-ui.ts'
 import { WINDOWS_TITLEBAR_HEIGHT } from './windows-layout.ts'
 /** Electron shell: desktop project ownership, custom protocol, windows, and lifecycle. */
 
@@ -38,9 +40,8 @@ import { installMicrophonePermissions } from './microphone-permissions.ts'
 import { DesktopBackendController } from './backend-controller.ts'
 import { DESKTOP_IPC, SCHEME, assertDesktopSender, type DesktopUpdateState } from './ipc.ts'
 import { readDeviceInfo } from './device-info.ts'
-import { desktopUpdateReadyConfirmation, formatDesktopMessage, resolveDesktopLocale, resolveDesktopStartupLocale } from './locale.ts'
+import { desktopUpdateReadyConfirmation, resolveDesktopLocale, resolveDesktopStartupLocale } from './locale.ts'
 import { claimDesktopSingleInstance } from './single-instance.ts'
-import { desktopUpdateChannel } from './update-channel.ts'
 import { DesktopUpdateCoordinator } from './update-coordinator.ts'
 import { DesktopCommandManager } from './command-management.ts'
 import { serveWebDocument, authenticateWebHost, forwardWebRequest } from './web-document.ts'
@@ -70,6 +71,7 @@ import { DesktopBackgroundNotice } from './background-notice.ts'
 markW1Startup('main-loaded')
 const w1Product = configureW1Identity(app)
 const w1Packaged = !isW1Development(app)
+const w1Testing = process.env.W1_TEST_MODE === '1'
 
 let focusPrimaryWindow = (): void => {}
 let stopForRecovery = async (): Promise<void> => {}
@@ -394,7 +396,10 @@ async function main(): Promise<void> {
   // chrome and its content never mix languages.
   const showAbout = async (): Promise<void> => {
     await ordinaryMessageBox({ type: 'info', title: locale.messages.aboutMenu, message: locale.messages.aboutProduct,
-      detail: formatDesktopMessage(locale.messages.aboutVersion, { version: w1Product.version }) + '\n' + w1Product.upstreamTag,
+      detail: `W1H ${w1Product.version}\n${locale.messages.w1Baseline}: ${w1Product.upstreamTag}\n`
+        + `${w1Testing ? locale.messages.w1TestBuild : development ? locale.messages.w1SourceBuild : locale.messages.w1InstalledBuild}\n`
+        + `${locale.messages.w1Build}: ${typeof manifest === 'object' && manifest !== null && 'dshBuildCommit' in manifest
+          ? String(manifest.dshBuildCommit) : process.env.DSH_CLIENT_COMMIT_HASH ?? 'local'}`,
       buttons: [locale.messages.updateAcknowledge], cancelId: 0 })
   }
   const commandManager = new DesktopCommandManager({
@@ -563,7 +568,7 @@ async function main(): Promise<void> {
   }
 
   const manifest: unknown = JSON.parse(await readFile(join(app.getAppPath(), 'package.json'), 'utf8'))
-  const updateChannel = desktopUpdateChannel(manifest)
+  const updateChannel = w1UpdateChannel(w1Product.version)
   const updates = new DesktopUpdateCoordinator(
     publishUpdate,
     async () => {
@@ -615,23 +620,20 @@ async function main(): Promise<void> {
       }
       return true
     },
-    undefined, () => false, undefined,
+    undefined, () => !development && !w1Testing && process.platform === 'win32', () => w1Product.version,
     (success, reason) => { void track('desktop_upgrade_download_result', { is_success: success, ...reason === undefined ? {} : { error_reason: reason } }) },
     updateChannel,
   )
 
-  const updateSchedule = new DesktopUpdateSchedule(updates, resolveDesktopUpdateScheduleConfig(process.env))
+  const sourceUpdates = development || w1Testing ? new W1SourceUpdates(w1Product,
+    (input, init) => net.fetch(input instanceof URL ? input.href : input, init), publishUpdate) : undefined
+  const updateSchedule = new DesktopUpdateSchedule(sourceUpdates ?? updates, resolveDesktopUpdateScheduleConfig(process.env))
   const upstream = new W1UpstreamUpdates(w1Product, join(app.getPath('userData'), 'upstream-releases.json'),
-    (input, init) => net.fetch(input instanceof URL ? input.href : input, init), (state) => {
-      const presentation = state.checking ? { phase: 'checking' as const } : state.error !== null
-        ? { phase: 'error' as const, failure: 'check' as const } : state.releases[0] !== undefined
-          ? { phase: 'available' as const, version: state.releases[0].tag } : { phase: 'idle' as const }
-      if (mainWindow !== undefined && !mainWindow.isDestroyed()) mainWindow.webContents.send(DESKTOP_IPC.updatesPresentation, presentation)
-    }, (release) => {
+    (input, init) => net.fetch(input instanceof URL ? input.href : input, init), () => undefined, (release) => {
       if (!Notification.isSupported() || quitting) return
       const notice = new Notification({ title: w1Product.name,
         body: locale.id === 'zh-CN' ? `DSH 上游发布了 ${release.tag}，点击查看并准备开发跟进。` : `DSH released ${release.tag}. Review the development handoff.` })
-      notice.on('click', () => { focusPrimaryWindow(); void openUpdatePrompt() })
+      notice.on('click', () => { focusPrimaryWindow(); void openUpstreamPrompt(true) })
       notice.show()
     })
 
@@ -644,7 +646,7 @@ async function main(): Promise<void> {
     // A confirmation on a hidden window would go unseen, so it waits for the next show; the mandatory
     // flow keeps its own taskbar and Dock attention instead.
     if (!isMandatory()) await windowShown()
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- A quit can begin while the show is awaited.
+    // oxlint-disable-next-line typescript/no-unnecessary-condition -- A quit can begin while the show is awaited.
     if (quitting) return state
     return updates.install(version)
   }
@@ -766,9 +768,7 @@ async function main(): Promise<void> {
   })
   ipcMain.handle(DESKTOP_IPC.updatesStatus, (event) => {
     assertProductSender(event)
-    const state = upstream.state
-    return state.checking ? { phase: 'checking' } : state.error !== null ? { phase: 'error', failure: 'check' }
-      : state.releases[0] !== undefined ? { phase: 'available', version: state.releases[0].tag } : { phase: 'idle' }
+    return presentDesktopUpdate((sourceUpdates ?? updates).state)
   })
   ipcMain.handle(DESKTOP_IPC.notificationShow, (event, request: unknown) => {
     assertProductSender(event)
@@ -814,10 +814,19 @@ async function main(): Promise<void> {
   let promptOperation: Promise<void> | undefined
   let policyAuthenticationQueued = false
   const openUpdatePrompt = (manual = false): Promise<void> => {
-    promptOperation ??= showW1Upstream(upstream, locale.id, ordinaryMessageBox, manual)
-      .catch((error: unknown) => { console.error('W1 upstream dialog:', error) })
+    promptOperation ??= showW1ProductUpdate({ product: w1Product, locale: locale.id, source: development, testing: w1Testing,
+      check: () => updateSchedule.check(manual, true), notes: () => sourceUpdates?.release?.notes ?? updates.releaseNotes,
+      updates, show: ordinaryMessageBox, openExternal: url => shell.openExternal(url) })
+      .catch((error: unknown) => { console.error('W1 product update dialog:', error) })
       .finally(() => { promptOperation = undefined })
     return promptOperation
+  }
+  let upstreamPrompt: Promise<void> | undefined
+  const openUpstreamPrompt = (manual = false): Promise<void> => {
+    upstreamPrompt ??= showW1Upstream(upstream, locale.id, ordinaryMessageBox, manual)
+      .catch((error: unknown) => { console.error('W1 upstream dialog:', error) })
+      .finally(() => { upstreamPrompt = undefined })
+    return upstreamPrompt
   }
 
   let authenticationOperation: Promise<DesktopPolicyState | undefined> | undefined
@@ -872,11 +881,12 @@ async function main(): Promise<void> {
   }
 
   const automaticCheck = (): void => {
-    if (!quitting) void upstream.check()
+    if (!quitting) { void upstream.check(); void updateSchedule.check() }
   }
   powerMonitor.on('resume', automaticCheck)
   app.on('will-quit', () => {
     upstream.dispose()
+    sourceUpdates?.dispose()
     updateSchedule.dispose()
     powerMonitor.off('resume', automaticCheck)
     updates.dispose()
@@ -913,6 +923,7 @@ async function main(): Promise<void> {
       : { label: currentDesktopLocale().messages.aboutMenu, role: 'about' },
     { type: 'separator' },
     { label: currentDesktopLocale().messages.checkUpdatesMenu, click: () => { void openUpdatePrompt(true) } },
+    { label: currentDesktopLocale().messages.checkUpstreamMenu, click: () => { void openUpstreamPrompt(true) } },
     ...development ? [
       { type: 'separator' as const },
       { label: currentDesktopLocale().messages.reloadPageMenu, role: 'reload' as const },
@@ -944,11 +955,15 @@ async function main(): Promise<void> {
     // The tray is the way back to a hidden window; without it, relaunching the application still focuses it.
     try {
       tray = new DesktopTray({ iconPath: trayIconPath, locale: currentDesktopLocale,
+        updates: () => { focusPrimaryWindow(); void openUpdatePrompt(true) },
+        upstream: () => { focusPrimaryWindow(); void openUpstreamPrompt(true) },
+        about: () => { focusPrimaryWindow(); void showAbout() },
         open: () => { focusPrimaryWindow() }, quit: () => { app.quit() } })
     } catch (error) { console.warn('desktop tray: unavailable', error) }
   }
   if (process.platform === 'win32') {
     const disposeSystemIcons = watchW1SystemIcons({ app, theme: nativeTheme, shell,
+      shortcuts: !w1Testing,
       readDark: () => nativeTheme.shouldUseDarkColors,
       resources: development ? join(app.getAppPath(), 'resources') : process.resourcesPath,
       appId: development ? `${w1Product.appId}.dev` : w1Product.appId,
@@ -1131,7 +1146,7 @@ async function main(): Promise<void> {
     window.focus()
   }
 
-  if (w1Packaged || process.env.DSH_DESKTOP_DEV_APP === '1') app.setAsDefaultProtocolClient(w1Product.protocol)
+  if (!w1Testing && (w1Packaged || process.env.DSH_DESKTOP_DEV_APP === '1')) app.setAsDefaultProtocolClient(w1Product.protocol)
   app.on('open-url', (event, url) => {
     event.preventDefault()
     if (url === `${w1Product.protocol}://open` || url === `${w1Product.protocol}://open/`) focusPrimaryWindow()
@@ -1201,7 +1216,7 @@ async function main(): Promise<void> {
     let wasBlocking = false
     mandatoryPolicy = new DesktopMandatoryUpdatePolicy(policyConfig, {
       platform: process.platform as 'win32' | 'darwin', arch: process.arch as 'x64' | 'arm64',
-      channel: updateChannel,
+      channel: updateChannel === 'latest' ? 'latest' : 'nightly',
       bundledDshVersion: w1Packaged ? readDesktopRuntime(resources.dsh).release.version : app.getVersion(),
     }, (state) => {
       if (state.error !== 'authentication-required') policyAuthenticationQueued = false
@@ -1235,6 +1250,7 @@ async function main(): Promise<void> {
   }
   publishUpdate(updateState)
   void upstream.start()
+  void updateSchedule.check()
 }
 
 const ownsDesktopInstance = claimDesktopSingleInstance(app, () => { focusPrimaryWindow() })

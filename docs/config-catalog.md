@@ -301,7 +301,7 @@ export interface Config {
 ## `@deepseek-ai/dsh-api-workspace-controller`
 
 - `inject`: `remoteAccess` · `typert` · `workspaceRegistry`
-- `source`: [`packages/api/workspace-controller/src/index.ts:37`](../packages/api/workspace-controller/src/index.ts)
+- `source`: [`packages/api/workspace-controller/src/index.ts:39`](../packages/api/workspace-controller/src/index.ts)
 
 ```ts config-catalog
 /** First-use directory policy for the Host account. */
@@ -485,6 +485,8 @@ export interface ConnectionRecoveryConfig {
 ```ts config-catalog
 /** Plugin config, validated by the same-named schemastery schema. */
 export interface Config {
+  /** Watch rebuilt files; disable to keep the activation-time client bundles until the Host restarts. */
+  watchBundles?: boolean
   /** Bundle stat-poll interval in milliseconds (default 500, the build-side watcher's polling default). */
   pollIntervalMs?: number
 }
@@ -3825,7 +3827,7 @@ export interface Config {
 ## `@deepseek-ai/dsh-tool-goal`
 
 - `inject`: `agents` · `goals` · `tools` · `systemPrompt` · `sessionProjections`
-- `source`: [`packages/goal/tool-goal/src/index.ts:32`](../packages/goal/tool-goal/src/index.ts)
+- `source`: [`packages/goal/tool-goal/src/index.ts:49`](../packages/goal/tool-goal/src/index.ts)
 
 ```ts config-catalog
 /** Model policy and hard lower bounds for goal-state updates. */
@@ -4220,7 +4222,7 @@ export interface Config {
 ## `@deepseek-ai/dsh-tools`
 
 - `inject`: `systemPrompt`
-- `source`: [`packages/core/tools/src/index.ts:675`](../packages/core/tools/src/index.ts)
+- `source`: [`packages/core/tools/src/index.ts:677`](../packages/core/tools/src/index.ts)
 
 ```ts config-catalog
 /** Plugin config: how the registered tools are presented to the model. */
@@ -4300,6 +4302,168 @@ export interface Config {
 export type ApprovalPolicy = 'ask' | 'never'
 ```
 <!-- END GENERATED config-catalog:@deepseek-ai/dsh-user-approval -->
+
+<!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-w1-browser-use -->
+<a id="deepseek-aidsh-w1-browser-use"></a>
+
+## `@deepseek-ai/dsh-w1-browser-use`
+
+- `inject`: `tools` · `browserUse` · `systemPrompt`
+- `refs`: `z` (`zod`)
+- `source`: [`packages/w1/browser-use/src/index.ts:16`](../packages/w1/browser-use/src/index.ts)
+
+```ts config-catalog
+/** Desktop composition supplies a private transport; never accepted from a webpage. */
+export interface Config extends BrowserLimits {
+  request(sessionId: string, command: BrowserCommand, limits: BrowserLimits, signal: AbortSignal): Promise<unknown>
+  /** Desktop-owned transport for a conversation's authorized Chrome operation. */
+  chromeRequest?: (sessionId: string, command: ChromeCommand, signal: AbortSignal) => Promise<unknown>
+}
+
+/** Per-call transport bounds supplied by the desktop composition. */
+export interface BrowserLimits {
+  /** Deadline for one desktop browser operation, in milliseconds. */
+  readonly timeoutMs: number
+  /** Maximum page text retained in one observation. */
+  readonly maxTextChars: number
+  /** Maximum actionable elements retained in one observation. */
+  readonly maxElements: number
+}
+
+/** Parsed command, after defaults and validation. */
+export type BrowserCommand = z.infer<typeof browserCommandSchema>
+
+/**
+ * Validated operations accepted by the external Chrome transport.
+ */
+export type ChromeCommand = z.infer<typeof chromeCommandSchema>
+```
+<!-- END GENERATED config-catalog:@deepseek-ai/dsh-w1-browser-use -->
+
+<!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-w1-cache-diagnostics -->
+<a id="deepseek-aidsh-w1-cache-diagnostics"></a>
+
+## `@deepseek-ai/dsh-w1-cache-diagnostics`
+
+- `inject`: `sessions` · `sessionProjections` · `llm`
+- `source`: [`packages/w1/cache-diagnostics/src/index.ts:17`](../packages/w1/cache-diagnostics/src/index.ts)
+
+```ts config-catalog
+/** Bounds for retained digest baselines and the diagnostic projection. */
+export interface Config {
+  /** Enable passive request observations. */
+  readonly enabled: boolean
+  /** Maximum sessions retaining in-memory baselines. */
+  readonly maxSessions: number
+  /** Maximum model/effort routes retained per session. */
+  readonly maxRoutes: number
+  /** Maximum message digests per baseline; larger prefixes become unclassified. */
+  readonly maxMessages: number
+  /** Maximum report rows retained in each session projection. */
+  readonly maxReports: number
+}
+```
+<!-- END GENERATED config-catalog:@deepseek-ai/dsh-w1-cache-diagnostics -->
+
+<!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-w1-goal-review -->
+<a id="deepseek-aidsh-w1-goal-review"></a>
+
+## `@deepseek-ai/dsh-w1-goal-review`
+
+- `inject`: `agents` · `goals` · `llm` · `sessionProjections`
+- `source`: [`packages/w1/goal-review/src/index.ts:21`](../packages/w1/goal-review/src/index.ts)
+
+```ts config-catalog
+/** Deployment-owned review switch and complete-request limits. */
+export interface Config {
+  /** Enable the W1 completion policy; disabled keeps upstream tool behavior. */
+  readonly enabled: boolean
+  /** Maximum UTF-8 bytes in the complete auxiliary request record. */
+  readonly maxInputBytes: number
+  /** Maximum review completion tokens. */
+  readonly maxOutputTokens: number
+  /** Deadline for one review, including model preparation. */
+  readonly timeoutMs: number
+}
+```
+<!-- END GENERATED config-catalog:@deepseek-ai/dsh-w1-goal-review -->
+
+<!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-w1-mcp-tool-catalog -->
+<a id="deepseek-aidsh-w1-mcp-tool-catalog"></a>
+
+## `@deepseek-ai/dsh-w1-mcp-tool-catalog`
+
+- `inject`: `tools` · `agents` · `systemPrompt` · `sessionProjections`
+- `source`: [`packages/w1/mcp-tool-catalog/src/index.ts:19`](../packages/w1/mcp-tool-catalog/src/index.ts)
+
+```ts config-catalog
+/** Bounds for search responses and the session's disclosed MCP schemas. */
+export interface Config {
+  /** Enable Native declaration filtering and the catalog tool. */
+  readonly enabled: boolean
+  /** Maximum search entries per page. */
+  readonly maxResults: number
+  /** Maximum UTF-8 bytes in a complete canonical search or load response. */
+  readonly maxResponseBytes: number
+  /** Maximum simultaneously disclosed MCP tools per session. */
+  readonly maxLoadedTools: number
+  /** Maximum UTF-8 bytes of the complete disclosed MCP schema array. */
+  readonly maxLoadedBytes: number
+}
+```
+<!-- END GENERATED config-catalog:@deepseek-ai/dsh-w1-mcp-tool-catalog -->
+
+<!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-w1-reply-suggestions -->
+<a id="deepseek-aidsh-w1-reply-suggestions"></a>
+
+## `@deepseek-ai/dsh-w1-reply-suggestions`
+
+- `inject`: `sessions` · `sessionProjections` · `llm` · `agents`
+- `source`: [`packages/w1/reply-suggestions/src/index.ts:18`](../packages/w1/reply-suggestions/src/index.ts)
+
+```ts config-catalog
+/** Deployment-owned context, output and time limits. */
+export interface Config extends GenerationLimits {
+  /** Maximum recent conversation characters supplied to the suggestion request. */
+  readonly maxContextCharacters: number
+  /** Maximum recent human and assistant messages supplied to the suggestion request. */
+  readonly maxMessages: number
+}
+
+/** Execution limits supplied by the application composition. */
+export interface GenerationLimits {
+  /** Maximum serialized input size before sending an auxiliary request. */
+  readonly maxInputBytes: number
+  /** Per-request deadline in milliseconds. */
+  readonly timeoutMs: number
+  /** Provider output-token limit for one suggestion request. */
+  readonly maxOutputTokens: number
+  /** Maximum draft text retained for insertion into the composer. */
+  readonly maxSuggestionCharacters: number
+}
+```
+<!-- END GENERATED config-catalog:@deepseek-ai/dsh-w1-reply-suggestions -->
+
+<!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-w1-side-chat -->
+<a id="deepseek-aidsh-w1-side-chat"></a>
+
+## `@deepseek-ai/dsh-w1-side-chat`
+
+- `inject`: `typert` · `llm` · `sessions` · `sessionController`
+- `source`: [`packages/w1/side-chat/src/index.ts:13`](../packages/w1/side-chat/src/index.ts)
+
+```ts config-catalog
+/** Deployment-owned bounds for temporary, tool-free side conversations. */
+export interface Config {
+  /** Maximum serialized request size. */
+  readonly maxInputBytes: number
+  /** Provider output-token limit for each side-chat turn. */
+  readonly maxOutputTokens: number
+  /** Maximum side-chat logs retained by this service. */
+  readonly maxChats: number
+}
+```
+<!-- END GENERATED config-catalog:@deepseek-ai/dsh-w1-side-chat -->
 
 <!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-web -->
 <a id="deepseek-aidsh-web"></a>
@@ -4544,7 +4708,7 @@ export interface Config {
 ## `@deepseek-ai/dsh-working-directory`
 
 - `inject`: `fs` · `sessionProjections` · `systemPrompt`
-- `source`: [`packages/session/working-directory/src/index.ts:56`](../packages/session/working-directory/src/index.ts)
+- `source`: [`packages/session/working-directory/src/index.ts:57`](../packages/session/working-directory/src/index.ts)
 
 ```ts config-catalog
 /** Deployment default for Sessions without an original project directory. */
@@ -4638,6 +4802,7 @@ These load from a `cordis.yml` entry with no `config:` block; they declare no co
 | `@deepseek-ai/dsh-client-ui-settings-subagent` | — | [`packages/client/ui-settings-subagent/src/index.ts`](../packages/client/ui-settings-subagent/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-settings-web-search` | — | [`packages/client/ui-settings-web-search/src/index.ts`](../packages/client/ui-settings-web-search/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-shortcuts` | — | [`packages/client/ui-shortcuts/src/index.ts`](../packages/client/ui-shortcuts/src/index.ts) |
+| `@deepseek-ai/dsh-client-ui-side-chat` | — | [`packages/client/ui-side-chat/src/index.ts`](../packages/client/ui-side-chat/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-sidebar` | — | [`packages/client/ui-sidebar/src/index.ts`](../packages/client/ui-sidebar/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-sidebar-browser` | — | [`packages/client/ui-sidebar-browser/src/index.ts`](../packages/client/ui-sidebar-browser/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-sidebar-files` | — | [`packages/client/ui-sidebar-files/src/index.ts`](../packages/client/ui-sidebar-files/src/index.ts) |
@@ -4695,6 +4860,7 @@ These load from a `cordis.yml` entry with no `config:` block; they declare no co
 | `@deepseek-ai/dsh-tool-subagent-control` | `tools` · `subagents` | [`packages/subagent/tool-subagent-control/src/index.ts`](../packages/subagent/tool-subagent-control/src/index.ts) |
 | `@deepseek-ai/dsh-tool-working-directory` | `tools` · `workingDirectory` | [`packages/session/tool-working-directory/src/index.ts`](../packages/session/tool-working-directory/src/index.ts) |
 | `@deepseek-ai/dsh-user-questions` | — | [`packages/interaction/user-questions/src/index.ts`](../packages/interaction/user-questions/src/index.ts) |
+| `@deepseek-ai/dsh-w1-tool-selection` | `systemPrompt` · `tools` | [`packages/w1/tool-selection/src/index.ts`](../packages/w1/tool-selection/src/index.ts) |
 | `@deepseek-ai/dsh-webhook` | `agents` · `agentDefaultModel` · `agentPresets` · `permissionPresets` · `sessionTitle` · `workspaceRegistry` | [`packages/experimental/webhook/src/index.ts`](../packages/experimental/webhook/src/index.ts) |
 | `@deepseek-ai/dsh-workspace` | `storageDomain` · `sessionPersistence` | [`packages/workspace/workspace/src/index.ts`](../packages/workspace/workspace/src/index.ts) |
 <!-- END GENERATED config-catalog:no-config -->
@@ -4797,5 +4963,6 @@ Imported as libraries by other packages; a `cordis.yml` cannot load them.
 | `@deepseek-ai/dsh-util-time` | — | [`packages/util/time/src/index.ts`](../packages/util/time/src/index.ts) |
 | `@deepseek-ai/dsh-util-values` | — | [`packages/util/values/src/index.ts`](../packages/util/values/src/index.ts) |
 | `@deepseek-ai/dsh-util-workspace-path` | — | [`packages/util/workspace-path/src/index.ts`](../packages/util/workspace-path/src/index.ts) |
+| `@deepseek-ai/dsh-w1-chrome-use` | — | [`packages/w1/chrome-use/src/index.ts`](../packages/w1/chrome-use/src/index.ts) |
 | `@deepseek-ai/dsh-win32-process` | — | [`packages/subprocess/win32-process/src/index.ts`](../packages/subprocess/win32-process/src/index.ts) |
 <!-- END GENERATED config-catalog:library -->

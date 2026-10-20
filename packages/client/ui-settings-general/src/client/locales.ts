@@ -4,7 +4,7 @@
 export const zh = {
   'trigger': '设置',
   'shortcut.open': '打开设置',
-  'desktop.update.available': '上游待跟进',
+  'desktop.update.available': 'W1H 有更新',
   'desktop.update.checking': '正在检查更新…',
   'desktop.update.progress': '{percent}%',
   'desktop.update.verifying': '正在校验更新文件…',
@@ -52,7 +52,7 @@ export type SettingsKey = keyof typeof zh
 export const en = {
   'trigger': 'Settings',
   'shortcut.open': 'Open settings',
-  'desktop.update.available': 'Upstream release',
+  'desktop.update.available': 'W1H update',
   'desktop.update.checking': 'Checking for updates…',
   'desktop.update.progress': '{percent}%',
   'desktop.update.verifying': 'Verifying update files…',

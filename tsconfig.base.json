@@ -39,6 +39,7 @@
       "@deepseek-ai/dsh-w1-goal-review": ["./packages/w1/goal-review/src/index.ts"],
       "@deepseek-ai/dsh-w1-goal-review/types": ["./packages/w1/goal-review/src/types.ts"],
       "@deepseek-ai/dsh-client-ui-side-chat/client": ["./packages/client/ui-side-chat/src/client/index.ts"],
+      "@deepseek-ai/dsh-client-ui-side-chat": ["./packages/client/ui-side-chat/src/index.ts"],
       "@deepseek-ai/dsh-w1-side-chat": ["./packages/w1/side-chat/src/index.ts"],
       "@deepseek-ai/dsh-w1-side-chat/types": ["./packages/w1/side-chat/src/types.ts"],
       "@deepseek-ai/dsh-w1-reply-suggestions": ["./packages/w1/reply-suggestions/src/index.ts"],

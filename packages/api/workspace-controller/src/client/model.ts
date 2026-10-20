@@ -94,19 +94,32 @@ export class ClientWorkspaceModel implements WorkspaceFollowSink {
    * @param input - existing absolute path to adopt.
    * @returns generated Remote result.
    */
-  /** Create a project and immediately install its authoritative row. */
+  /**
+   * Create a project and immediately install its authoritative row.
+   * @param input - Project name, folder roots and primary-folder selection.
+   * @returns The authoritative project result after persistence and local projection.
+   */
   async createProject(input: WorkspaceProjectCreateRequest): Promise<RemoteResult<WorkspaceCreateValue>> {
     const result = await this.remote.createProject(input)
     if (result.ok) this.upsert(result.value.workspace)
     return result
   }
-  /** Update a project and immediately install its authoritative row. */
+  /**
+   * Update a project and immediately install its authoritative row.
+   * @param input - Project name, folder roots and primary-folder selection.
+   * @returns The authoritative project result after persistence and local projection.
+   */
   async updateProject(input: WorkspaceProjectUpdateRequest): Promise<RemoteResult<WorkspaceValue>> {
     const result = await this.remote.updateProject(input)
     if (result.ok) this.upsert(result.value.workspace)
     return result
   }
 
+  /**
+   * Create or resolve a legacy single-folder workspace and merge its authoritative result.
+   * @param input - Existing absolute directory to adopt as a workspace.
+   * @returns The authoritative workspace result and local projection status.
+   */
   async create(input: WorkspaceCreateRequest): Promise<RemoteResult<WorkspaceCreateValue>> {
     const result = await this.remote.create(input)
     if (result.ok) this.upsert(result.value.workspace)

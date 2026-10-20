@@ -1,6 +1,9 @@
 /** Durable auxiliary review records; none are conversation messages. */
 import type { LlmCallConfig, Message } from '@deepseek-ai/dsh-llm'
 
+/**
+ * Bounded objective and progress evidence supplied to the completion reviewer.
+ */
 export interface GoalReviewView {
   readonly goalId: string
   readonly revision: number
@@ -11,6 +14,9 @@ export interface GoalReviewView {
 
 /** Bounded event evidence, separate from the client-visible review verdict. */
 export interface ReviewEvidenceItem { readonly seq: number; readonly type: string; readonly data: string }
+/**
+ * Projected completion-review state retained with its owning goal.
+ */
 export interface GoalReviewState {
   readonly view: GoalReviewView | null
   readonly goalId: string | null

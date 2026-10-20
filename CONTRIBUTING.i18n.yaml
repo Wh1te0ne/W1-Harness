@@ -2,6 +2,6 @@
 # section, a hash of its English and Chinese blocks outside code blocks and generated regions.
 # After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write CONTRIBUTING.md
-/contributing:
-  en: 08d2f421ff3617f4
-  zh: 9d060d70ad186dc5
+/contributing-to-w1-harness:
+  en: f8f10b88e9c80830
+  zh: e6319bf5982a2d7d

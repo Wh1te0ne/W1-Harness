@@ -39,7 +39,11 @@ export class WorkspaceCommands {
   /** @param ctx - Host context containing the Workspace registry. */
   constructor(private readonly ctx: Context) {}
 
-  /** Create a project without conflating its identity with a folder path. */
+  /**
+   * Create a project without conflating its identity with a folder path.
+   * @param request - Validated project creation or update request.
+   * @returns The authoritative project result after persistence and local projection.
+   */
   createProject(request: WorkspaceProjectCreateRequest): Promise<WorkspaceCreateValue> {
     return this.enqueue(async () => {
       this.checkProjectName(request.title)
@@ -48,7 +52,11 @@ export class WorkspaceCommands {
     })
   }
 
-  /** Persist name, folders and primary selection together without moving existing conversations. */
+  /**
+   * Persist name, folders and primary selection together without moving existing conversations.
+   * @param request - Validated project creation or update request.
+   * @returns The authoritative project result after persistence and local projection.
+   */
   updateProject(request: WorkspaceProjectUpdateRequest): Promise<WorkspaceValue> {
     return this.enqueue(async () => {
       const workspace = this.requireWorkspace(request.workspaceId)

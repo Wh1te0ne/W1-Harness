@@ -11,7 +11,11 @@ export interface PreparedRequestObservation {
 
 declare module '@deepseek-ai/cordis' {
   interface Events {
-    /** A synchronous diagnostic observer; failures never change the outgoing request. @mode emit */
+    /**
+     * A synchronous diagnostic observer; failures never change the outgoing request.
+     * @mode emit
+     * @param detail - Lazy request fingerprints and the owning request identity.
+     */
     'llm-deepseek/request-prepared'(detail: PreparedRequestObservation): void
   }
 }

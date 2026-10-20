@@ -19,7 +19,8 @@ export function W1AppearanceControls({ controller }: { controller: W1AppearanceC
   const updateDraft = (value: W1Appearance) => {
     setDraft(value)
     setError('')
-    if (![value.light, value.dark].every(palette => Object.values(palette).every(color => /^#[\da-f]{6}$/iu.test(color)))) return
+    if (![value.light, value.dark].every(palette =>
+      [palette.accent, palette.surface, palette.ink].every(color => /^#[\da-f]{6}$/iu.test(color)))) return
     try { controller.update(value) }
     catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)) }
   }

@@ -1322,7 +1322,7 @@ Source: [`packages/w1/cache-diagnostics/src/types.ts:20`](../packages/w1/cache-d
 'w1/goal-review-attempt': GoalReviewView & { readonly cut: number }
 ```
 
-Source: [`packages/w1/goal-review/src/types.ts:33`](../packages/w1/goal-review/src/types.ts)
+Source: [`packages/w1/goal-review/src/types.ts:39`](../packages/w1/goal-review/src/types.ts)
 
 <a id="w1goal-review-request--log-only"></a>
 
@@ -1338,7 +1338,7 @@ Source: [`packages/w1/goal-review/src/types.ts:33`](../packages/w1/goal-review/s
 }
 ```
 
-Source: [`packages/w1/goal-review/src/types.ts:35`](../packages/w1/goal-review/src/types.ts)
+Source: [`packages/w1/goal-review/src/types.ts:41`](../packages/w1/goal-review/src/types.ts)
 
 <a id="w1goal-review-result--log-only"></a>
 
@@ -1349,7 +1349,7 @@ Source: [`packages/w1/goal-review/src/types.ts:35`](../packages/w1/goal-review/s
 'w1/goal-review-result': GoalReviewView
 ```
 
-Source: [`packages/w1/goal-review/src/types.ts:42`](../packages/w1/goal-review/src/types.ts)
+Source: [`packages/w1/goal-review/src/types.ts:48`](../packages/w1/goal-review/src/types.ts)
 
 <a id="w1mcp-disclosure--log-only"></a>
 
@@ -4026,7 +4026,7 @@ Sources: [`packages/goal/goal/src/types.ts:20`](../packages/goal/goal/src/types.
 
 SHA-256: `d9a40344fee657b278e1781c553962c1debca26288425cbc88a7880d67ef5360`
 
-Sources: [`packages/w1/goal-review/src/types.ts:4`](../packages/w1/goal-review/src/types.ts)
+Sources: [`packages/w1/goal-review/src/types.ts:7`](../packages/w1/goal-review/src/types.ts)
 
 | Property | Presence | Type |
 |---|---|---|
@@ -6640,7 +6640,7 @@ Sources: [`packages/compaction/compaction/src/types.ts:24`](../packages/compacti
 
 SHA-256: `8d566d9e49bbf6916d9c8e201a5c84716e735996c6e823f0d57a75db7f98893a`
 
-Sources: [`packages/w1/goal-review/src/types.ts:35`](../packages/w1/goal-review/src/types.ts)
+Sources: [`packages/w1/goal-review/src/types.ts:41`](../packages/w1/goal-review/src/types.ts)
 
 | Property | Presence | Type |
 |---|---|---|

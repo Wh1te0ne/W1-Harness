@@ -113,13 +113,21 @@ export class WorkspaceController extends TypertRemoteService {
     return workspace === undefined ? undefined : { workspace: workspaceView(workspace) }
   }
 
-  /** Create a named project and its initial folder selection. */
+  /**
+   * Create a named project and its initial folder selection.
+   * @param request - Validated project creation or update request.
+   * @returns The authoritative project result after persistence and local projection.
+   */
   @Remote('createProject')
   createProject(request: WorkspaceProjectCreateRequest): Promise<WorkspaceCreateValue> {
     return this.commands.createProject(request)
   }
 
-  /** Update project folders and name without rebinding existing sessions. */
+  /**
+   * Update project folders and name without rebinding existing sessions.
+   * @param request - Validated project creation or update request.
+   * @returns The authoritative project result after persistence and local projection.
+   */
   @Remote('updateProject')
   updateProject(request: WorkspaceProjectUpdateRequest): Promise<WorkspaceValue> {
     return this.commands.updateProject(request)

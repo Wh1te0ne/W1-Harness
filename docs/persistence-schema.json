@@ -34734,7 +34734,7 @@
       "digest": "8d566d9e49bbf6916d9c8e201a5c84716e735996c6e823f0d57a75db7f98893a",
       "names": [],
       "sources": [
-        "packages/w1/goal-review/src/types.ts:35"
+        "packages/w1/goal-review/src/types.ts:41"
       ]
     },
     {
@@ -35874,7 +35874,7 @@
         "packages/w1/goal-review/src/types.ts#GoalReviewView"
       ],
       "sources": [
-        "packages/w1/goal-review/src/types.ts:4"
+        "packages/w1/goal-review/src/types.ts:7"
       ]
     },
     {

@@ -294,14 +294,14 @@
   en: cba2b429514a5402
   zh: 3728f2230edb0546
 /session-persistence-event-catalog/events/w1/w1-goal-review-attempt-log-only:
-  en: 2a5921ee2fb254b7
-  zh: b4f8f21fe129f3c7
+  en: d68b6a1e663f3f5f
+  zh: 271341550d49e07f
 /session-persistence-event-catalog/events/w1/w1-goal-review-request-log-only:
-  en: dd4af4099d4e843d
-  zh: 705eafbf676c4ca9
+  en: 66f6fb9f473c525b
+  zh: fe37c3fb4db8d1b6
 /session-persistence-event-catalog/events/w1/w1-goal-review-result-log-only:
-  en: d21891f8d58460e5
-  zh: d4b4bce0060bd280
+  en: 4cd42229763a2f08
+  zh: d513f878ad1517aa
 /session-persistence-event-catalog/events/w1/w1-mcp-disclosure-log-only:
   en: 8e9f5406820e5383
   zh: 7ac02f8996870a35
@@ -1173,8 +1173,8 @@
   en: b1574437ffddfede
   zh: b17df81b99ea700d
 /session-persistence-event-catalog/resolved-persistence-types/goalreviewview:
-  en: 846d27114490f032
-  zh: 133256708b3253ff
+  en: 82097ab4ab2c80a4
+  zh: e053b3c2e6b1bd01
 /session-persistence-event-catalog/resolved-persistence-types/goalsnapshot:
   en: 591bb793e7bfc74b
   zh: 5c1347295621f142
@@ -1620,8 +1620,8 @@
   en: f12c2720d014eab8
   zh: e4c7e76757159ff3
 /session-persistence-event-catalog/resolved-persistence-types/config-key-messages-system:
-  en: 0407cda90175dd57
-  zh: 655bdea06c35891d
+  en: c507964b69218b68
+  zh: 2b4834b11e4769f8
 /session-persistence-event-catalog/resolved-persistence-types/config-maxtokens-messages-route:
   en: cc66293690a3b592
   zh: 5ae18c266835e032

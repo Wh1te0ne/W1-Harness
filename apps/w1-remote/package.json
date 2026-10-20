@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "description": "W1 encrypted remote companion transport and standalone NAS relay",
+  "files": ["lib", "host.mjs", "host.d.mts", "crypto.mjs", "client.mjs", "ui-entry.mjs",
+    "presentation.mjs", "presentation.d.mts", "qr.mjs", "qr.d.mts", "README.md"],
   "exports": {
     "./host": {
       "types": "./host.d.mts",

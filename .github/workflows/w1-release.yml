@@ -1,0 +1,77 @@
+name: W1H Windows release
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish the verified assets as a new GitHub Release
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: w1-windows-release
+  cancel-in-progress: false
+jobs:
+  package:
+    runs-on: windows-latest
+    timeout-minutes: 120
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: '24'
+      - name: Install locked dependencies
+        run: |
+          corepack enable
+          corepack pnpm install --frozen-lockfile
+      - name: Build and package W1 Windows
+        run: node scripts/w1/package-release.mjs
+      - name: Collect verified assets
+        run: |
+          node scripts/w1/build-chrome-extension.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/w1/collect-release.mjs
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: w1h-windows-release
+          path: releases/0.*
+          if-no-files-found: error
+  publish:
+    if: inputs.publish
+    needs: package
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8.0.1
+        with:
+          name: w1h-windows-release
+          path: release
+      - name: Publish immutable W1 assets
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SOURCE_COMMIT: ${{ github.sha }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $records = @(Get-ChildItem release -Recurse -Filter components.json)
+          if ($records.Count -ne 1) { throw 'Expected exactly one release record' }
+          $record = Get-Content -LiteralPath $records[0].FullName -Raw | ConvertFrom-Json
+          if ($record.commit -ne $env:SOURCE_COMMIT) { throw 'Release source commit mismatch' }
+          $directory = $records[0].DirectoryName
+          foreach ($line in Get-Content -LiteralPath (Join-Path $directory 'SHA256SUMS')) {
+            $parts = $line -split '  ',2
+            $actual = (Get-FileHash -LiteralPath (Join-Path $directory $parts[1]) -Algorithm SHA256).Hash.ToLowerInvariant()
+            if ($actual -ne $parts[0]) { throw 'Release asset checksum mismatch' }
+          }
+          $tag = 'v' + $record.product
+          $assets = @(Get-ChildItem -LiteralPath $directory -File | ForEach-Object FullName)
+          $arguments = @('release','create',$tag,'--target',$env:SOURCE_COMMIT,'--title',('W1 Harness '+$record.product),
+            '--notes-file',(Join-Path $directory 'RELEASE_NOTES.md')) + $assets
+          if ($record.product.Contains('-')) { $arguments += '--prerelease' }
+          gh @arguments
+          if ($LASTEXITCODE -ne 0) { throw 'Release creation failed; existing versions are never overwritten' }

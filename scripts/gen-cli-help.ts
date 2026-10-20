@@ -207,7 +207,7 @@ async function collectHelp(): Promise<HelpPage[]> {
     } finally {
       signal.removeEventListener('abort', abort)
     }
-  }, topLevelHelpArgs(profiles), defaultParallelism())
+  }, topLevelHelpArgs(profiles), Number(process.env.DSH_GATE_CONCURRENCY ?? defaultParallelism()))
   try {
     return await collectCliHelp(reader.readHelp, profiles)
   } finally {

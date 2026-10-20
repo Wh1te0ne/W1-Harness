@@ -1,8 +1,24 @@
+---
+description: "W1 built-in product features and configuration."
+kind: "package-reference"
+---
+
 # W1 reply suggestions
 
 English | [中文](README.zh.md)
 
+## Summary
+
 After a completed root conversation turn, W1 offers one optional next-user-message draft. The composer shows it only when empty and idle. Tab fills the draft, Escape dismisses it, and the user must separately send it. Existing command menus, modified Tab and IME composition take priority.
+
+## Table of Contents
+
+- [Model selection](#model-selection)
+- [Configuration](#configuration)
+- [Saved suggestions and historical conversations](#saved-suggestions-and-historical-conversations)
+- [Model Experience](#model-experience)
+- [Known Limitations and Deferred Work](#known-limitations-and-deferred-work)
+- [Dev Note](#dev-note)
 
 ## Model selection
 
@@ -22,10 +38,25 @@ An attempt record is flushed before model work, and a successful suggestion is f
 
 ## Model Experience
 
-Selection adds one main-model call when a route decision is missing. Subsequent completed turns normally add one suggestion-model call. Auxiliary input has its own prompt and bounded text context; it does not reuse the main conversation's full prefix or alter its KV-cache history. The selected model's lowest declared reasoning effort is requested. These calls consume usage even when the user ignores the suggestion.
+### Auxiliary selection and draft generation
+
+#### What the model sees
+
+Selection receives the allowed routes and bounded recent conversation; draft generation receives the tool-free `suggestionPrompt` and bounded human/assistant text. The selected model uses its lowest declared reasoning effort.
+
+#### Token effect
+
+A missing route decision adds one main-model call; completed turns normally add one suggestion-model call. These consume usage even when a suggestion is ignored.
+
+#### KV Cache effect
+
+Auxiliary calls do not reuse the main conversation's full prefix or alter its KV-cache history.
 
 ## Known Limitations and Deferred Work
 
-Suggestions depend on model quality and are editable drafts, not evidence of user intent. The model catalog has no verified latency ranking. Unsupported models or empty, truncated, oversized and command-like outputs yield no suggestion. A failed selected route is not retried on another model within that turn. The feature does not infer content from image/file attachments.
+- Suggestions depend on model quality and are editable drafts, not evidence of user intent. The model catalog has no verified latency ranking. Unsupported models or empty, truncated, oversized and command-like outputs yield no suggestion. A failed selected route is not retried on another model within that turn. The feature does not infer content from image/file attachments.
 
 Session compatibility and application rollback requirements are recorded in [the initial persistence change](../../../docs/persistence-changes/2026-10-17-w1-reply-suggestions.md) and [the durable backfill change](../../../docs/persistence-changes/2026-10-17-w1-reply-backfill.md). Older builds without the new event names refuse affected sessions; retain the updated reader or restore the private pre-upgrade session backup when rolling back.
+### Dev Note
+
+Verification evidence and remaining native acceptance items are maintained in [the W1 work log](../../../docs/工作记录.md).

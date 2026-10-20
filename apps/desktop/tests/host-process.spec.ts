@@ -261,7 +261,7 @@ it('completes Host teardown when a descendant still holds its output pipe', asyn
   let timeout: ReturnType<typeof setTimeout> | undefined
   try {
     await Promise.race([stopping, new Promise<never>((_resolve, reject) => {
-      timeout = setTimeout(() => reject(new Error('Host exit waited for a descendant output pipe')), 3000)
+      timeout = setTimeout(() =>{  reject(new Error('Host exit waited for a descendant output pipe')) }, 3000)
     })])
     expect(existsSync(join(runtime, 'release-output'))).toBe(false)
   } finally {

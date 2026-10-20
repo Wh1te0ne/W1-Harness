@@ -56,9 +56,17 @@ The toolbar and extension-management card use the dark-backed W1 application ico
 <a id="model-experience"></a>
 ## Model Experience
 
-[browser-use](../browser-use/README.md) owns the tool schema and Chrome workflow; [tool-selection](../tool-selection/README.md) owns environment selection. `list` can filter by a title/URL substring and returns at most 50 matches with a truncation flag. Page text and JPEG results use the existing durable tool pipeline. This transport library adds no independent prompt or model request, and automatic connection does not modify the stable tool schema.
+None, as this library provides transport while browser-use owns model tools.
 
-<a id="known-limitations-and-deferred-work"></a>
+#### KV Cache effect
+
+The transport adds no independent model request or prompt; tool observations follow browser-use context and cache behavior.
+
 ## Known Limitations and Deferred Work
 
-One Chrome profile connects to a running W1 Host at a time. The extension is unpacked and not published to the Chrome Web Store. Chrome 116 or newer is required; compatibility references are [worker WebSockets](https://developer.chrome.com/docs/extensions/how-to/web-platform/websockets) and [debugger API](https://developer.chrome.com/docs/extensions/reference/api/debugger). DevTools or managed-browser policy may block debugging. Password entry, file upload/download, cross-origin frame targeting, shadow-root discovery and arbitrary JavaScript remain unsupported. Source/loopback tests, built-worker checks and isolated popup screenshots do not establish native installation, live Chrome interaction or real-model quality.
+<a id="known-limitations-and-deferred-work"></a>
+
+- One Chrome profile connects to a running W1 Host at a time. The extension is unpacked and not published to the Chrome Web Store. Chrome 116 or newer is required; compatibility references are [worker WebSockets](https://developer.chrome.com/docs/extensions/how-to/web-platform/websockets) and [debugger API](https://developer.chrome.com/docs/extensions/reference/api/debugger). DevTools or managed-browser policy may block debugging. Password entry, file upload/download, cross-origin frame targeting, shadow-root discovery and arbitrary JavaScript remain unsupported. Source/loopback tests, built-worker checks and isolated popup screenshots do not establish native installation, live Chrome interaction or real-model quality.
+### Dev Note
+
+Verification evidence and remaining native acceptance items are maintained in [the W1 work log](../../../docs/工作记录.md).

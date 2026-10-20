@@ -4,10 +4,11 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { createW1Appearance, validateAppearance, W1_DEFAULT } from '../src/client/w1-appearance.ts'
 import { W1AppearanceControls } from '../src/client/W1Appearance.tsx'
 import { W1_PRESETS } from '../src/client/w1-presets.ts'
+import type { W1Appearance } from '../src/client/w1-appearance.ts'
 const controllers: ReturnType<typeof createW1Appearance>[] = []
-const saved = () => JSON.parse(localStorage.getItem('w1.appearance.v1') ?? 'null')
+const saved = () => JSON.parse(localStorage.getItem('w1.appearance.v1') ?? 'null') as W1Appearance
 afterEach(() => {
-  cleanup(); controllers.splice(0).forEach(c => c.dispose()); localStorage.clear()
+  cleanup(); controllers.splice(0).forEach((c) =>{  c.dispose() }); localStorage.clear()
 })
 function setup(storage?: Pick<Storage, 'getItem' | 'setItem'>) {
   const theme = { overrideTokens: vi.fn(() => vi.fn()) }

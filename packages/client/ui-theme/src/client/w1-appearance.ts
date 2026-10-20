@@ -2,13 +2,29 @@
 import type { ThemeRuntime, ThemeTokenOverrides } from './index.ts'
 import { W1_PRESETS } from './w1-presets.ts'
 
+/**
+ * Primary accent, surface and foreground colors for one application mode.
+ */
 export interface W1Palette { accent: string; surface: string; ink: string }
+/**
+ * Persisted W1 theme selection, mode palettes and local stylesheet.
+ */
 export interface W1Appearance { preset: string; light: W1Palette; dark: W1Palette; css: string }
+/**
+ * Current saved appearance and the latest local editing status.
+ */
 export interface W1AppearanceSnapshot { saved: W1Appearance; message: string }
+/**
+ * Default W1 appearance used before a valid local override exists.
+ */
 export const W1_DEFAULT: W1Appearance = { preset: 'w1', light: { accent: '#4d6bfe', surface: '#ffffff', ink: '#171717' }, dark: { accent: '#7c8dff', surface: '#1b1b1c', ink: '#eeeeee' }, css: '' }
 const KEY = 'w1.appearance.v1'
 const hex = /^#[\da-f]{6}$/iu
-/** Validate persisted/imported colors and local stylesheet input before applying it. */
+/**
+ * Validate persisted/imported colors and local stylesheet input before applying it.
+ * @param value - Stored or imported appearance settings to validate or project.
+ * @returns Validated appearance settings with normalized mode palettes.
+ */
 export function validateAppearance(value: unknown): W1Appearance {
   if (typeof value !== 'object' || value === null) throw new Error('外观配置格式不正确')
   const item = value as Record<string, unknown>
@@ -23,7 +39,11 @@ export function validateAppearance(value: unknown): W1Appearance {
   }
   return { preset: item.preset, light: palette('light'), dark: palette('dark'), css: item.css }
 }
-/** Map three primary colors to W1's existing light/dark token layer. */
+/**
+ * Map three primary colors to W1's existing light/dark token layer.
+ * @param value - Stored or imported appearance settings to validate or project.
+ * @returns Light and dark overrides for the existing theme tokens.
+ */
 export function appearanceTokens(value: W1Appearance): ThemeTokenOverrides {
   if (value.preset === 'w1') return {}
   const tokens: ThemeTokenOverrides = {}
@@ -47,10 +67,15 @@ export function appearanceTokens(value: W1Appearance): ThemeTokenOverrides {
   }
   return tokens
 }
-/** Own one immediately applied theme layer and persist valid edits for the plugin lifetime. */
+/**
+ * Own one immediately applied theme layer and persist valid edits for the plugin lifetime.
+ * @param theme - Application theme service that owns the override layer.
+ * @param storage - Local settings storage, defaulting to the document storage.
+ * @returns Subscription, editing and disposal operations for this appearance layer.
+ */
 export function createW1Appearance(
   theme: Pick<ThemeRuntime, 'overrideTokens'>, storage?: Pick<Storage, 'getItem' | 'setItem'>,
-) {
+): W1AppearanceController {
   try { storage ??= globalThis.localStorage } catch { /* Storage may be unavailable in restricted documents. */ }
   let saved = structuredClone(W1_DEFAULT)
   try {
@@ -82,4 +107,13 @@ export function createW1Appearance(
     dispose() { retract?.(); style?.remove(); listeners.clear() },
   }
 }
-export type W1AppearanceController = ReturnType<typeof createW1Appearance>
+/**
+ * Subscription and editing operations for one immediately applied appearance layer.
+ */
+export type W1AppearanceController = {
+  readonly getSnapshot: () => W1AppearanceSnapshot
+  readonly subscribe: (listener: () => void) => () => void
+  readonly update: (value: W1Appearance) => void
+  readonly reset: () => void
+  readonly dispose: () => void
+}

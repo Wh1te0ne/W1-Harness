@@ -359,9 +359,9 @@ describe('Session working directories', () => {
 
 it('includes associated project folders in the recorded prompt context without changing the session directory', async () => {
   await using f = await fixture(undefined, true)
-  f.ctx.provide('workspaceRegistry', {list: () => [{title:'Two roots',sessionIds:[f.agent.session.id],folderRoots:[{id:'a',path:'/source-a'},{id:'b',path:'/source-b'}],primaryFolderId:'b'}]} as never)
+  f.ctx.provide('workspaceRegistry', { list: () => [{ title:'Two roots',sessionIds:[f.agent.session.id],folderRoots:[{ id:'a',path:'/source-a' },{ id:'b',path:'/source-b' }],primaryFolderId:'b' }] } as never)
   await setImmediate()
-  const assembled = await f.ctx.systemPrompt.assemble({agent:f.agent,scope:f.agent})
+  const assembled = await f.ctx.systemPrompt.assemble({ agent:f.agent,scope:f.agent })
   expect(assembled.contexts.find(item => item.name === 'workspace:project-folders')?.text).toMatchSnapshot()
   expect(f.ctx.workingDirectory.get(f.agent.session)).toBe(f.root)
   expect(f.agent.session.header.cwd).toBe(f.root)

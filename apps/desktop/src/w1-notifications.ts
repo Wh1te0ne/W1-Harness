@@ -31,7 +31,7 @@ export class W1Notifications {
         this.notices.set(id, entry)
         notice.once('show', () => { settle({ status: 'shown' }) })
         notice.once('failed', (_event, error) => {
-          settle({ status: 'failed', message: String(error).slice(0, 300) })
+          settle({ status: 'failed', message: error.slice(0, 300) })
           if (this.notices.get(id) === entry) this.notices.delete(id)
         })
         notice.once('click', () => {

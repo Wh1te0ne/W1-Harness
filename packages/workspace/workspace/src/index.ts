@@ -226,7 +226,11 @@ export class WorkspaceRegistry extends Service {
     this.reportFilteredCandidates()
   }
 
-  /** Create an independently named project, even when another project uses the same folders. */
+  /**
+   * Create an independently named project, even when another project uses the same folders.
+   * @param input - Project name, folder roots and primary-folder selection.
+   * @returns The authoritative project result after persistence and local projection.
+   */
   async createProject(input: WorkspaceProjectInput): Promise<Workspace> {
     const folderRoots = await normalizeProjectFolders(input)
     const primary = folderRoots.find(folder => folder.id === input.primaryFolderId)
@@ -518,7 +522,9 @@ export class WorkspaceRegistry extends Service {
     return undefined
   }
 
-  private async createCanonical(canonical: string, title?: string, firstUse = false, project?: WorkspaceProjectInput, projectId?: WorkspaceId): Promise<WorkspaceEntity> {
+  private async createCanonical(
+    canonical: string, title?: string, firstUse = false, project?: WorkspaceProjectInput, projectId?: WorkspaceId,
+  ): Promise<WorkspaceEntity> {
     for (const entity of this.entities.values()) {
       if (project === undefined && entity.path === canonical) return entity
     }

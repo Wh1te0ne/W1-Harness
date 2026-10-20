@@ -7,6 +7,9 @@ import { browserResultSchema } from '@deepseek-ai/dsh-w1-browser-use/protocol'
 import { EXTENSION_ORIGIN, BRIDGE_PORTS } from './identity.ts'
 import { clientMessageSchema, webOrigin, type SharedTab } from './protocol.ts'
 
+/**
+ * Desktop-owned extension identity, transport limits and connection lifecycle inputs.
+ */
 export interface ChromeBridgeOptions { readonly port: number; readonly connectWaitMs: number; readonly timeoutMs: number }
 interface Pending {
   readonly session: string
@@ -40,7 +43,10 @@ export class ChromeBridge {
     }
   }
 
-  /** Listen without touching the browser. The enabled extension connects itself. */
+  /**
+   * Listen without touching the browser. The enabled extension connects itself.
+   * @returns The selected listening port after the loopback bridge is ready.
+   */
   start(): Promise<number> {
     if (this.disposed) return Promise.reject(new Error('Chrome bridge disposed'))
     return this.starting ??= new Promise<number>((resolve, reject) => {
@@ -243,6 +249,9 @@ export class ChromeBridge {
     connection.socket.terminate()
   }
 
+  /**
+   * Release owned listeners and transports and cancel pending operations.
+   */
   async dispose(): Promise<void> {
     this.disposed = true
     if (this.heartbeat) clearInterval(this.heartbeat)

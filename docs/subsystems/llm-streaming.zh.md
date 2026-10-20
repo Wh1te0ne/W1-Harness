@@ -1199,4 +1199,25 @@ Waterfall around every streaming model call (retry, replay, routing). Bound to t
 ```
 
 Source: [`packages/llm/llm/src/index.ts`](../../packages/llm/llm/src/index.ts)
+
+<a id="llm-deepseek-events"></a>
+
+### `llm-deepseek/*` events
+
+<a id="llm-deepseekrequest-prepared--emit"></a>
+
+#### `llm-deepseek/request-prepared` — emit
+
+A synchronous diagnostic observer; failures never change the outgoing request.
+
+```ts cordis-catalog
+/**
+ * A synchronous diagnostic observer; failures never change the outgoing request.
+ * @mode emit
+ * @param detail - Lazy request fingerprints and the owning request identity.
+ */
+'llm-deepseek/request-prepared'(detail: PreparedRequestObservation): void
+```
+
+Source: [`packages/llm/llm-deepseek/src/types.ts`](../../packages/llm/llm-deepseek/src/types.ts)
 <!-- END GENERATED cordis-surface -->

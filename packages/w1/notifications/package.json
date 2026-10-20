@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "description": "W1 built-in task notifications and Windows attention",
+  "files": ["index.mjs", "lib", "README.md"],
   "exports": {
     ".": "./index.mjs",
     "./client": "./lib/client.js",

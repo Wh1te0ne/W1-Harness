@@ -135,7 +135,10 @@ export class BrowserController implements HostObservable<BrowserControllerState>
     if (sandbox !== undefined) this.command(() => { sandbox.setEnabled(enabled) })
   }
 
-  /** @param enabled - user's per-tab control choice. */
+  /**
+   * Set the visible automation state for this browser page.
+   * @param enabled - user's per-tab control choice.
+   */
   setAutomation(enabled: boolean): void { this.page.frame.automation?.setEnabled(enabled) }
 
   /**

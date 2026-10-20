@@ -4,10 +4,12 @@ W1 Mobile 0.1.0 与连接模块/中继 0.1.1 兼容。手机客户端是本机�
 
 ## 部署参数
 
+应用中已有的中继地址属于维护者自用部署；公开源码不表示提供共享中继服务，其他使用者应自行部署并填写自己的 HTTPS 地址。
+
 | 项目 | 值 |
 |---|---|
-| 公网入口 | `https://w1hrelay.whiteone.cn:8112` |
-| WebSocket | `wss://w1hrelay.whiteone.cn:8112/v1/connect` |
+| 公网入口 | `https://relay.example.com` |
+| WebSocket | `wss://relay.example.com/v1/connect` |
 | 容器 / NAS 映射端口 | `28981/TCP` |
 | 反向代理后端 | `http://NAS内网IP:28981`；代理在 NAS 本机时可用 `http://127.0.0.1:28981` |
 | 健康检查 | `GET /healthz`，成功返回 `{"ok":true,"service":"w1h-relay","protocol":1}` |
@@ -16,9 +18,9 @@ W1 Mobile 0.1.0 与连接模块/中继 0.1.1 兼容。手机客户端是本机�
 
 在 NAS 创建独立项目目录，解压中继交付包后执行 `docker compose up -d --build`，或在 NAS 的 Docker Compose 界面导入此目录。Compose 使用已有的默认 bridge 网络，不分配新子网；镜像为非 root 用户固定程序文件的读取权限，兼容 NAS 上传文件的严格权限。该服务独占 `28981`；如已有服务占用，只修改 Compose 的宿主机端口，不修改容器内部端口。初次构建需要能够拉取 Node 官方镜像及 npm 包。可通过 `docker compose ps` 和 `docker compose logs --tail=50` 查看状态。
 
-域名入口必须有手机信任的有效 HTTPS 证书，并把整个路径转发到中继后端，保留 `/v1/connect`，开启 WebSocket Upgrade。不要把后端填写为 HTTPS；本容器的 TLS 由 NAS 反向代理终止。公网路由器只需暴露你的 HTTPS 入口 `8112`，不需要把 `28981` 额外映射到公网，也不需要给电脑开放端口。长连接空闲超时建议至少 120 秒，中继每 25 秒做一次心跳。
+域名入口必须有手机信任的有效 HTTPS 证书，并把整个路径转发到中继后端，保留 `/v1/connect`，开启 WebSocket Upgrade。不要把后端填写为 HTTPS；本容器的 TLS 由 NAS 反向代理终止。公网路由器只需暴露自己的 HTTPS 入口，通常为 `443`；使用自定义端口时，将端口写入中继地址。不需要把 `28981` 额外映射到公网，也不需要给电脑开放端口。长连接空闲超时建议至少 120 秒，中继每 25 秒做一次心跳。
 
-Nginx `location /` 的对应设置如下，证书和 `listen 8112 ssl` 由现有域名入口配置：
+Nginx `location /` 的对应设置如下，证书和 `listen 443 ssl` 由自己的域名入口配置：
 
 ```nginx
 location / {
@@ -57,7 +59,7 @@ location / {
 
 ## 开发与验证
 
-`desktop-ui.js` 是侧栏入口，经受限 IPC 打开桌面自有设备管理窗口；build-desktop-ui.mjs 生成客户端模块，桌面构建会自动执行。`host.mjs` 是连接管理器；`crypto.mjs` 与 `client.mjs` 由 Node 测试和手机共用；`relay.mjs` 是独立 NAS 转发基础设施，不启动 Harness；`mobile/` 保存手机界面；`android/` 保存原生壳、相机扫码及 Keystore；电脑适配位于 `apps/desktop-host/src/w1-remote.ts`，设备管理窗口位于 `apps/desktop/src/w1-remote-window.ts`。
+远程连接入口位于电脑设置页，经受限 IPC 调用 Host；build-desktop-ui.mjs 生成客户端模块，桌面构建会自动执行。`host.mjs` 是连接管理器；`crypto.mjs` 与 `client.mjs` 由 Node 测试和手机共用；`relay.mjs` 是独立 NAS 转发基础设施，不启动 Harness；`mobile/` 保存手机界面；`android/` 保存原生壳、相机扫码及 Keystore；电脑适配位于 `apps/desktop-host/src/w1-remote.ts`，设备管理窗口位于 `apps/desktop/src/w1-remote-window.ts`。
 
 ```powershell
 # 在 W1 仓库根目录执行

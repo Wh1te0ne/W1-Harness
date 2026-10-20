@@ -23,6 +23,10 @@
     "docs/远程访问与NAS中继.md",
     "apps/w1-remote/README.md",
     "packages/w1/notifications/README.md",
-    "docs/Harness三阶段改造.md"
+    "docs/Harness三阶段改造.md",
+    "docs/版本与发布.md",
+    "docs/发布操作.md",
+    "CHANGELOG.md",
+    "SECURITY.md"
   ]
 }

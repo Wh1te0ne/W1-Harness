@@ -1324,7 +1324,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 'w1/goal-review-attempt': GoalReviewView & { readonly cut: number }
 ```
 
-来源：[`packages/w1/goal-review/src/types.ts:33`](../packages/w1/goal-review/src/types.ts)
+来源：[`packages/w1/goal-review/src/types.ts:39`](../packages/w1/goal-review/src/types.ts)
 
 <a id="w1goal-review-request--log-only"></a>
 
@@ -1340,7 +1340,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 }
 ```
 
-来源：[`packages/w1/goal-review/src/types.ts:35`](../packages/w1/goal-review/src/types.ts)
+来源：[`packages/w1/goal-review/src/types.ts:41`](../packages/w1/goal-review/src/types.ts)
 
 <a id="w1goal-review-result--log-only"></a>
 
@@ -1351,7 +1351,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 'w1/goal-review-result': GoalReviewView
 ```
 
-来源：[`packages/w1/goal-review/src/types.ts:42`](../packages/w1/goal-review/src/types.ts)
+来源：[`packages/w1/goal-review/src/types.ts:48`](../packages/w1/goal-review/src/types.ts)
 
 <a id="w1mcp-disclosure--log-only"></a>
 
@@ -4028,7 +4028,7 @@ SHA-256: `0b6d718c693fdf7f06dcccb0bcbbabe78cc63514eafc62d6b2a3899735279d6f`
 
 SHA-256: `d9a40344fee657b278e1781c553962c1debca26288425cbc88a7880d67ef5360`
 
-来源：[`packages/w1/goal-review/src/types.ts:4`](../packages/w1/goal-review/src/types.ts)
+来源：[`packages/w1/goal-review/src/types.ts:7`](../packages/w1/goal-review/src/types.ts)
 
 | 属性 | 存在性 | 类型 |
 |---|---|---|
@@ -6642,7 +6642,7 @@ SHA-256: `3e4e7683b0192c9f0e6a75c59076108f017892cdb302a98032c2632fd79c356f`
 
 SHA-256: `8d566d9e49bbf6916d9c8e201a5c84716e735996c6e823f0d57a75db7f98893a`
 
-来源：[`packages/w1/goal-review/src/types.ts:35`](../packages/w1/goal-review/src/types.ts)
+来源：[`packages/w1/goal-review/src/types.ts:41`](../packages/w1/goal-review/src/types.ts)
 
 | 属性 | 存在性 | 类型 |
 |---|---|---|

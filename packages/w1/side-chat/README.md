@@ -10,6 +10,15 @@ English | [中文](README.zh.md)
 
 The right sidebar Start page offers Side chat after Files, Terminal and Browser. Each tab has independent messages, draft, model selection, streaming response and Stop control. Main-session history, queue, Agent and draft are never mutated.
 
+## Table of Contents
+
+- [Use this package](#use-this-package)
+- [Implementation](#implementation)
+- [Verification](#verification)
+- [Model Experience](#model-experience)
+- [Known Limitations and Deferred Work](#known-limitations-and-deferred-work)
+- [Dev Note](#dev-note)
+
 ## Use this package
 
 Open a Side chat tab to freeze the main session's admitted message context. The W1 Client always includes this opening snapshot and exposes no context switch. The default model is the main session's selected route; choosing another model affects this tab only. Shift+Enter inserts a newline; plain Enter sends after IME composition finishes.
@@ -51,8 +60,11 @@ The side request has its own instruction and context prefix; subsequent question
 
 ## Known Limitations and Deferred Work
 
-Synthetic tests do not establish native display-scale or real-provider acceptance.
-
+- Synthetic tests do not establish native display-scale or real-provider acceptance.
 ### Dev Note
 
 See [the implementation decision](../../../.agents/notes/implemented/feature/2026-10-19-w1-side-chat.md). W1 local delivery and remaining verification are recorded in [the work log](../../../docs/工作记录.md).
+
+### Dev Note
+
+Verification evidence and remaining native acceptance items are maintained in [the W1 work log](../../../docs/工作记录.md).

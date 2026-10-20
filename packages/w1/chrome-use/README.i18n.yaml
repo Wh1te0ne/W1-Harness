@@ -30,8 +30,14 @@
   en: 12b3343e27c12e1c
   zh: 5807fe8fdf5875d3
 /deepseek-ai-dsh-w1-chrome-use/model-experience:
-  en: efdd629df4dabc57
-  zh: 4770262c499695fb
+  en: 7fe8e0733b05d9bb
+  zh: 345938ca0ca90f70
+/deepseek-ai-dsh-w1-chrome-use/model-experience/kv-cache-effect:
+  en: 310e1e0f8cdb6f04
+  zh: 44601f188e1a4470
 /deepseek-ai-dsh-w1-chrome-use/known-limitations-and-deferred-work:
-  en: 633c0d2bae104c99
-  zh: 7d1f42c01b7606fa
+  en: 0eee18bdd5f56388
+  zh: 2430c1f31203f453
+/deepseek-ai-dsh-w1-chrome-use/known-limitations-and-deferred-work/dev-note:
+  en: 5efe72384679fd2d
+  zh: 568748f5320f678d

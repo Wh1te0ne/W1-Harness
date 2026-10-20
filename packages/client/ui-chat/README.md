@@ -31,6 +31,7 @@ File-mention providers receive the viewed Session ID with the closing-turn owner
 -----
 
 <a id="reference-previews"></a>
+
 ## Reference previews
 
 Sent generic-file attachments retain the draft's [file-card radius](../../../docs/ui-radius.md#radius-scale).
@@ -48,6 +49,7 @@ Standalone Markdown images show contained previews and open the shared image lig
 Settings → General → Open chat links in selects the destination for ordinary clicks on Chat HTTP(S) links: In-App Sidebar (default) opens a new right-Sidebar Browser tab, while Default Browser opens an external tab. The setting follows Keyboard shortcuts and is shown only while the Sidebar Browser is available. If the Sidebar Browser is not registered, both choices use the external browser; modified clicks retain native behavior. The `ui-chat.linkOpening` preference persists on the Host for authenticated browsers and stays process-local when settings cannot persist writes. Sent file references and skills confirmed by the message’s logged invocation also open in the right Sidebar. File paths use the viewed Session; skill names resolve through its current input-trigger source. Both use the prose file-link dotted underline on hover or focus. Sessions, directories, and command labels remain non-navigating references.
 
 <a id="system-prompt-row"></a>
+
 ## Hidden Chat rows
 
 Chat omits system-prompt, ordinary Context injection, and `permission` command rows in every work-details mode. Context containing tool additions or removals remains visible. The filter changes neither recorded Session events nor Trajectory inspection. Non-human Turn triggers remain independent, bordered notices with a contrasting neutral background; other command rows remain in Chat.
@@ -55,6 +57,7 @@ Chat omits system-prompt, ordinary Context injection, and `permission` command r
 When an Assistant attempt retires without a visible message, Chat hides its already-published Node instead of removing its key. A retry in the same Step reuses that key when visible content returns. This also applies when the loaded window lacks the Step start.
 
 <a id="command-and-failure-rows"></a>
+
 ## Command and failure rows
 
 Generic command rows retain the ordinary command glyph in every lifecycle state; failure remains explicit through the row state and summary. Every terminal Turn failure renders its inline red-dot row; a quota failure's row states the neutral `message.failure.quota` copy instead of the provider message. The transient notice for a newly appended `QUOTA` or `ACCOUNT_QUOTA` comes from this package's frame-wide entry in `shell.overlay`, which outlives the Chat panel: it offers the one live notice to the `shell.quota-notice` chain and falls back to its own warning Toast, while an entry that claims the code replaces that fallback. Only Sessions this Client has bound and materialized publish; quota failures in Sessions it never opened do not. A newer notice replaces the current one unless a claiming entry retains it with `keepOpen()`: that call returns a release the caller owns and must run on unmount, any live hold keeps the claiming entry mounted and drops later notices, and releasing resumes later notices without replaying the dropped ones. The fallback Toast has no deferral of its own: while the Desktop account's opaque native Platform page covers the document, it still runs underneath and its display timer may elapse unseen, dismissing the notice itself, so only the persistent failure row remains. A release drops only its own hold, so one that runs after a dismissal or a newer hold leaves that newer hold intact. Dismissal and sign-out clear every hold, and dropped notices are not queued while their persistent failure rows still render. History replacement and pagination never publish a notice. Intermediate retries do not create a terminal row; output-token limits use the amber warning dot. A Turn that restart recovery closed as `interrupted` renders a localized stopped row stating that the DSH process exited mid-Turn, without a code chip, and its process summary reads Stopped.
@@ -62,6 +65,7 @@ Generic command rows retain the ordinary command glyph in every lifecycle state;
 -----
 
 <a id="turn-token-usage"></a>
+
 With the optional W1 cache-diagnostic projection, detailed turn usage also shows the last retained main-loop step: C1 normalized structure or C2 actual DeepSeek serialized structure, observed changes and unknown server-cache facts. Auxiliary calls do not enter these comparisons.
 
 ## Turn token usage
@@ -77,6 +81,7 @@ Explicit selections update every consumer immediately; accepted Host settings re
 Preference menus restore focus to their trigger without scrolling before publishing a new selection.
 
 <a id="completed-turn-footer"></a>
+
 ## Completed-turn footer
 
 Artifact extensions can subscribe to one Turn and Node kind through `ChatNodeStore.turnDataSource`. The source includes hidden Nodes and exposes their business data in anchor order. Membership updates incrementally; only observed collections materialize ordered arrays, and unrelated Turns or kinds do not notify them.
@@ -86,6 +91,7 @@ The completed-turn action footer follows the recorded Turn end. Its action row s
 -----
 
 <a id="turn-process-folding"></a>
+
 ## Turn Process Folding
 
 During uninterrupted following, local transcript and steering echoes remain mounted through Inbox acceptance and claim until the durable message arrives, without triggering tail following twice. Pending steering follows Inbox order across clients, using matching local echoes in place. Admitted local steering also suppresses matching stale Inbox rows until the claim projection arrives; steering without a locally tracked submission continues to follow the Inbox projection. After reconnect, Host-owned rows replace receipt-confirmed local echoes; a claim awaiting admission may briefly have no bubble.
@@ -99,6 +105,7 @@ The Appearance settings row below Work details offers an [independent collapse-t
 -----
 
 <a id="grouped-rendering"></a>
+
 ## Grouped rendering
 
 Chat registers its process Group Definition through `uiConversation.groups`. React renders the mixed `node`/`group` root sequence through stable Group and Node seats; group headers subscribe to data separately from member arrays. Settled group titles remain independent of the live-detail preference; only running titles update when that preference changes. [Process-group business rules](src/client/conversation-nodes/README.md#process-grouping) define segmentation and activity summaries.
@@ -128,6 +135,7 @@ Process rows share one text and icon color in every Work details mode: tertiary 
 -----
 
 <a id="scroll-ownership"></a>
+
 ## Scroll ownership
 
 Chat waits for initial history before automatic content, scroll, or size updates initialize reading state. Running Sessions restore their initial visibility and position before fold animations become eligible.
@@ -175,6 +183,7 @@ Active-Turn highlighting is approximate: `readVisibleTurn` binary-searches the f
 -----
 
 <a id="model-experience"></a>
+
 ## Model Experience
 
 None, as this package renders logged conversation state in the browser and registers nothing model-facing.
@@ -198,6 +207,7 @@ None; Chat presentation does not assemble or mutate provider requests.
 
 
 <a id="dev-note"></a>
+
 ### Dev Note
 
 <details>

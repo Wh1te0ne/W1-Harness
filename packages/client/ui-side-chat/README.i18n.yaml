@@ -11,12 +11,15 @@
 /w1-side-chat-interface/summary:
   en: bb140b660ed271c3
   zh: cfba0b912cadb49f
+/w1-side-chat-interface/table-of-contents:
+  en: 3f4fec82f2049b1b
+  zh: 8c1cc76f8996032b
 /w1-side-chat-interface/behavior:
   en: a62203a1d11bc499
-  zh: 688e8696a7bcbe14
+  zh: 9108b716e928027f
 /w1-side-chat-interface/verification:
   en: 33072c5d822630a0
-  zh: 5c8668784c6ab321
+  zh: 4c890efc53978e37
 /w1-side-chat-interface/model-experience:
   en: 215e7ba838619b7b
   zh: a311da3843709f90
@@ -31,10 +34,10 @@
   zh: 0e2c34710c9edadf
 /w1-side-chat-interface/model-experience/side-chat-submissions/kv-cache-effect:
   en: b553b4f44ddbfd6f
-  zh: bfe3969e837d7096
+  zh: 0365dccc714da242
 /w1-side-chat-interface/known-limitations-and-deferred-work:
-  en: 68674f0d974ef0ed
-  zh: 8b183a3d842100a2
+  en: 09e6ed6ed29f436e
+  zh: d32244957329ca37
 /w1-side-chat-interface/known-limitations-and-deferred-work/dev-note:
-  en: a97ae5daba7cec0d
-  zh: ed8469c36f8467e9
+  en: 5efe72384679fd2d
+  zh: 568748f5320f678d

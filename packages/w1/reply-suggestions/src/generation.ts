@@ -7,9 +7,13 @@ import type { ReplyRoute } from './types.ts'
 
 /** Execution limits supplied by the application composition. */
 export interface GenerationLimits {
+  /** Maximum serialized input size before sending an auxiliary request. */
   readonly maxInputBytes: number
+  /** Per-request deadline in milliseconds. */
   readonly timeoutMs: number
+  /** Provider output-token limit for one suggestion request. */
   readonly maxOutputTokens: number
+  /** Maximum draft text retained for insertion into the composer. */
   readonly maxSuggestionCharacters: number
 }
 

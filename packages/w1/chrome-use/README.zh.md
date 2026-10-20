@@ -56,9 +56,17 @@ Desktop Host 与扩展在本机回环端口 17832–17839 内自动选择对应�
 <a id="model-experience"></a>
 ## 模型体验
 
-[browser-use](../browser-use/README.zh.md) 维护工具声明和 Chrome 流程；[tool-selection](../tool-selection/README.zh.md) 负责环境选择。`list` 支持标题/网址子串筛选，最多返回 50 个结果及截断标记。页面正文与 JPEG 结果经过既有持久化工具链。本传输库不增加独立提示词或模型请求，自动连接不改变稳定的工具声明。
+本库只提供传输，模型工具由 browser-use 维护，不独立提供模型上下文。
 
-<a id="known-limitations-and-deferred-work"></a>
+#### KV 缓存影响
+
+传输库不增加独立模型请求或提示；工具观察沿用 browser-use 的上下文与缓存行为。
+
 ## 已知限制与后续工作
 
-每个运行中的 W1 Host 同时连接一个 Chrome 配置。扩展以解压目录交付，未上架 Chrome 商店。要求 Chrome 116 或更高版本，兼容依据为[工作线程 WebSocket](https://developer.chrome.com/docs/extensions/how-to/web-platform/websockets)及[调试 API](https://developer.chrome.com/docs/extensions/reference/api/debugger)。DevTools 或受管浏览器策略可能阻止调试。不支持密码输入、上传下载、跨来源框架定位、Shadow DOM 发现或任意 JavaScript。源码/回环测试、构建工作线程检查及隔离面板截图不代表原生安装、实际 Chrome 交互或真实模型质量验收。
+<a id="known-limitations-and-deferred-work"></a>
+
+- 每个运行中的 W1 Host 同时连接一个 Chrome 配置。扩展以解压目录交付，未上架 Chrome 商店。要求 Chrome 116 或更高版本，兼容依据为[工作线程 WebSocket](https://developer.chrome.com/docs/extensions/how-to/web-platform/websockets)及[调试 API](https://developer.chrome.com/docs/extensions/reference/api/debugger)。DevTools 或受管浏览器策略可能阻止调试。不支持密码输入、上传下载、跨来源框架定位、Shadow DOM 发现或任意 JavaScript。源码/回环测试、构建工作线程检查及隔离面板截图不代表原生安装、实际 Chrome 交互或真实模型质量验收。
+### 开发备注
+
+验证证据与待原生验收事项见 [W1 工作记录](../../../docs/工作记录.md)。

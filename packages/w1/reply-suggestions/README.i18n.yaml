@@ -2,21 +2,45 @@
 # section, a hash of its English and Chinese blocks outside code blocks and generated regions.
 # After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/w1/reply-suggestions/README.md
+/:
+  en: 07bb3dbfd2c2d116
+  zh: ca7044ab0f93f4f3
 /w1-reply-suggestions:
-  en: 1b6bc97b38301093
-  zh: db36fbb6d27bbeb2
+  en: fd633a6bed404800
+  zh: 3bbf57d83fcb0b24
+/w1-reply-suggestions/summary:
+  en: b36b08da284ce3f5
+  zh: 6f37d85dcc93623d
+/w1-reply-suggestions/table-of-contents:
+  en: 3dd9e573bc241cdd
+  zh: 4d44e23077c05060
 /w1-reply-suggestions/model-selection:
   en: db92e970593ec239
-  zh: 8783773c0e3a51da
+  zh: 0b5e4d0da83e946e
 /w1-reply-suggestions/configuration:
   en: 31d93b97b53a0075
-  zh: a6af4a208f241990
+  zh: d84d1eeef0fc8b55
 /w1-reply-suggestions/saved-suggestions-and-historical-conversations:
   en: a586bd76ce4390d1
-  zh: df452152be13b85a
+  zh: c7bbcfa917008047
 /w1-reply-suggestions/model-experience:
-  en: 22e4bb6fc5b9e380
-  zh: 8c8037bfe6e21f9d
+  en: 215e7ba838619b7b
+  zh: a311da3843709f90
+/w1-reply-suggestions/model-experience/auxiliary-selection-and-draft-generation:
+  en: 9ee90c7a59be8b53
+  zh: 6b1cae8dac9fc134
+/w1-reply-suggestions/model-experience/auxiliary-selection-and-draft-generation/what-the-model-sees:
+  en: adce44c24eff480b
+  zh: 1a5d3bc7b9696150
+/w1-reply-suggestions/model-experience/auxiliary-selection-and-draft-generation/token-effect:
+  en: bd4fef62c5ff78e1
+  zh: 1e2fd97dfc7761e1
+/w1-reply-suggestions/model-experience/auxiliary-selection-and-draft-generation/kv-cache-effect:
+  en: a03bb93bfc29aaa9
+  zh: fd3cd77d19748a62
 /w1-reply-suggestions/known-limitations-and-deferred-work:
-  en: 3140e88cfec41892
-  zh: a848a139ca411a65
+  en: 7cc2f236813474e1
+  zh: 7575b8333a4a69c8
+/w1-reply-suggestions/known-limitations-and-deferred-work/dev-note:
+  en: 5efe72384679fd2d
+  zh: 568748f5320f678d

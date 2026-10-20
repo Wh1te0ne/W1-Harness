@@ -109,3 +109,7 @@ Return only JSON: {"verdict":"satisfied|needs-work|insufficient-evidence","reaso
 ### 开发备注
 
 无。
+
+### 开发备注
+
+验证证据与待原生验收事项见 [W1 工作记录](../../../docs/工作记录.md)。

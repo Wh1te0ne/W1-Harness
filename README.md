@@ -1,79 +1,84 @@
-# DeepSeek Harness
-
-W1 Harness maintains this downstream checkout. See the [W1 project entry](docs/W1-Harness.md) for the local plan and isolated build verification. The application code currently follows the upstream baseline.
+# W1 Harness
 
 English | [中文](README.zh.md)
 
-DeepSeek Harness (`dsh`) is an open-source agent harness developed by [DeepSeek AI](https://deepseek.com).
+<img src="assets/w1/exports/app-icon-light-128.png" alt="W1 Fold mark" width="80">
 
-It is built on an **everything-is-a-plugin** architecture and powered by [Cordis](https://github.com/cordiverse/cordis), whose design is described in [_A Programming Paradigm for Spatiotemporal Composability_](https://arxiv.org/abs/2608.25512).
+**A personal AI workspace for coding, research, and everyday tasks, built on DeepSeek Harness.**
 
-Documentation: [https://deepseek-harness.github.io/deepseek-harness/](https://deepseek-harness.github.io/deepseek-harness/)
+[Releases](https://github.com/Wh1te0ne/W1-Harness/releases) · [Product guide](docs/W1-Harness.md) · [Remote deployment](apps/w1-remote/README.md) · [Contributing](CONTRIBUTING.md) · [MIT license](LICENSE)
 
-## Developer preview
+W1 Harness (W1H) is an independent downstream product, retaining the Cordis plugin architecture of [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness), with its own desktop identity, releases, and user data. It is not an official DeepSeek application.
 
-DeepSeek Harness is in _developer preview_ and iterating rapidly. **THERE WILL BE COMPATIBILITY-BREAKING CHANGES.**
+## Status
 
-Review the [safety notice](SAFETY.md) before running the project.
+W1H is an early developer preview. Windows x64 is the maintained desktop target. Some features have isolated runtime evidence but still need broader real-device validation; see [release notes](CHANGELOG.md). macOS and Linux retain upstream source without a W1 binary support commitment.
 
-## Run
+## Features
 
-### Run from `npm`
+| Area | What you can do |
+| --- | --- |
+| Workspace | Organize projects with multiple folders and a primary directory; keep conversations and artifacts locally. |
+| Models | Use your own provider credentials; enter the workspace without a DeepSeek account. |
+| Workflows | Use goals, plans, approvals, tools, and delegated agents through the plugin framework. |
+| Conversation | Get editable reply suggestions, open a side chat, inspect usage, and customize appearance. |
+| Browser | Operate the embedded browser or connect the W1 Chrome extension to existing tabs. |
+| Notifications | Receive Windows notifications, unread indicators, and taskbar attention. |
+| Remote | Pair an Android companion through a self-hosted encrypted WebSocket relay. |
 
-Install `Node.js`, then run:
+Browser control follows current permissions and conversation ownership. Phone access requires the desktop to remain running. The relay forwards messages; models, credentials, files, and task execution remain on the desktop.
 
-```sh
-npx @deepseek-ai/dsh web
+<a id="run"></a>
+
+## Install and update
+
+Download the Windows x64 installer from [W1H Releases](https://github.com/Wh1te0ne/W1-Harness/releases). Preview installers are currently unsigned. Configure your own model API key; downloads contain no credentials.
+
+W1H and DSH have independent versions and update actions:
+
+| Entry | Purpose |
+| --- | --- |
+| Check W1H Updates | Read W1H release notes, download a verified package, then confirm installation and restart. |
+| DSH Upstream Releases | Review source releases and copy a development handoff; integration requires development and validation. |
+
+Both entries are in the Windows tray menu. About shows the W1H version, integrated DSH baseline, and build identity. Source builds discover releases without overwriting their checkout. Read [versions and environments](docs/版本与发布.md) before switching between source, test, and installed builds.
+
+## Components and deployment
+
+| Component | Instructions |
+| --- | --- |
+| Desktop and Host | [Development workflow](docs/开发与上游维护.md) |
+| Android companion and Docker relay | [Build, deployment, pairing, and limitations](apps/w1-remote/README.md) |
+| Chrome MV3 extension | [Installation and permissions](packages/w1/chrome-use/README.md) |
+| W1 plugins | [Product documentation](docs/W1-Harness.md) |
+
+Deploy the relay with Docker Compose from `apps/w1-remote/`, using your own HTTPS domain and WebSocket forwarding. [Remote operations](docs/远程访问与NAS中继.md) covers checks and recovery. Chrome extensions are distributed as unpacked-extension ZIPs; there is no Chrome Web Store listing.
+
+<a id="run-from-source"></a>
+
+## Develop
+
+Use Node.js `^22.19.0 || >=24.0.0`, the pnpm version pinned in `package.json`, and PowerShell 7 on Windows.
+
+```powershell
+git clone https://github.com/Wh1te0ne/W1-Harness.git
+cd W1-Harness
+corepack pnpm install --frozen-lockfile
+corepack pnpm run build
 ```
 
-The command starts the Web UI at `http://127.0.0.1:3080` by default and opens it in the default browser for a local launch. An SSH launch only prints the host URL because the SSH client or editor owns the local forwarded address. Pass `--no-open` to run the server without opening a browser. See [Web UI guide](docs/user/guide/index.md).
+Follow [local development](docs/开发与上游维护.md) for desktop preparation and source launch. After the initial build, build only changed modules. Release packaging is separate from daily development.
 
-### Run from source
+Keep the W1 instance doing development separate from the candidate it builds. Test profiles have their own data and identity; real API keys stay outside Git. See [self-development and testing](docs/版本与发布.md).
 
-To run from a repository checkout:
+## Roadmap
 
-```sh
-git clone https://github.com/deepseek-ai/deepseek-harness.git
-cd deepseek-harness
-pnpm install
-pnpm run build
-pnpm dsh web
-```
+See [the project plan](docs/项目规划.md) for upcoming work and acceptance status. Priorities are reproducible releases, broader desktop and Android validation, and browser reliability. A listed component or passing test does not imply every native workflow has been accepted.
 
-`pnpm run build` prepares the repository artifacts. `pnpm dsh web` uses those built artifacts without rebuilding.
+## Feedback and security
 
-## Community and support
+Report W1H problems and proposals in this repository's [Issues](https://github.com/Wh1te0ne/W1-Harness/issues), including W1H version, DSH baseline, environment, and reproduction steps. Read [contribution guidance](CONTRIBUTING.md) and [security reporting](SECURITY.md); remove keys, pairing codes, personal sessions, and private file content.
 
-- Submit feedback or bug reports through [GitHub Discussions](https://github.com/deepseek-ai/deepseek-harness/discussions).
-- Add the [`dsh-plugin`](https://github.com/topics/dsh-plugin) topic to your plugin repository for discoverability.
-- Join <a href="https://discord.gg/4MrtZUhpxg">DeepSeek Harness Discord community</a>.
+## License and upstream
 
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md).
-
-## Development
-
-Start with the [development guide](docs/development.md) and [architecture documentation](docs/architecture.md).
-
-`pnpm run dev:web` builds, serves, and rebuilds client bundles on source edits in one terminal, and `make help` lists the matching Make targets for Web and Desktop; the guide's application commands section owns the full table.
-
-For agents, follow [AGENTS.md](AGENTS.md).
-
-## Citation
-
-```bibtex
-@misc{deepseek-harness2026,
-  title={DeepSeek Harness: Everything is a Plugin},
-  author={DeepSeek-AI},
-  year={2026},
-  publisher={GitHub},
-  howpublished={\url{https://github.com/deepseek-ai/deepseek-harness}},
-}
-```
-
-## License
-
-[MIT](LICENSE)
-
-Third-party dependencies and their licenses are disclosed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+W1H uses the [MIT License](LICENSE), retaining DeepSeek's copyright notice. Cordis, runtimes, fonts, and other dependencies retain their own licenses. See [upstream architecture](docs/architecture.md) and [vendor notices](vendor/README.md) for technical references and ownership.

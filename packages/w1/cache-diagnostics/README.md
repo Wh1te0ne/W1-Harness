@@ -99,3 +99,7 @@ The observer forwards the original frozen request and stream. It compares existi
 ### Dev Note
 
 None.
+
+### Dev Note
+
+Verification evidence and remaining native acceptance items are maintained in [the W1 work log](../../../docs/工作记录.md).

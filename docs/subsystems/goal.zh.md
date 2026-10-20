@@ -289,6 +289,27 @@ Process-local goal activation changed for one session.
 
 Source: [`packages/goal/goal/src/types.ts`](../../packages/goal/goal/src/types.ts)
 
+<a id="goalbefore-model-complete--waterfall"></a>
+
+#### `goal/before-model-complete` — waterfall
+
+Review an authorized completion before its compare-and-set mutation. No listener preserves upstream completion. Rejections leave the goal incomplete.
+
+```ts cordis-catalog
+/**
+ * Review an authorized completion before its compare-and-set mutation.
+ * No listener preserves upstream completion. Rejections leave the goal incomplete.
+ * @param payload - exact live agent, validated goal revision and calling tool cancellation.
+ * @param next - downstream completion policies; defaults to allow.
+ * @mode waterfall
+ */
+'goal/before-model-complete'(payload: { agent: Agent; goal: GoalView; signal: AbortSignal }, next: () => Promise<ModelCompletionDecision>): Promise<ModelCompletionDecision>
+```
+
+Types: [Agent](core.zh.md)
+
+Source: [`packages/goal/tool-goal/src/index.ts`](../../packages/goal/tool-goal/src/index.ts)
+
 <a id="goalchanged--emit"></a>
 
 #### `goal/changed` — emit

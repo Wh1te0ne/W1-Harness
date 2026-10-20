@@ -93,7 +93,9 @@ export function createElectronBuilderConfig(
   if (windowsSigner !== undefined) {
     installWindowsNsisBootstrapSigner({ sign: windowsSigner })
   }
-  const update = undefined
+  const channel = w1.version.includes('-') ? w1.version.split('-')[1].split('.')[0] : 'latest'
+  if (!['alpha', 'beta', 'latest'].includes(channel)) throw new Error('W1 release channel must be alpha, beta or latest')
+  const update = packagesWindows ? { channel } : undefined
   if (preparedRuntime !== undefined) buildPaths.dsh = preparedRuntime
   // electron-builder merges extraMetadata into the packaged manifest, so a build version here reaches
   // the artifact names, the update feed, and the installed app.getVersion() the updater compares against.
@@ -111,7 +113,10 @@ export function createElectronBuilderConfig(
     extraMetadata: {
       name: 'w1-harness',
       dshDesktopAppId: appId,
-      dshDesktopUpdateChannel: update?.channel ?? 'nightly',
+      dshDesktopUpdateChannel: channel === 'latest' ? 'latest' : 'nightly',
+      w1hVersion: w1.version,
+      w1hUpstreamTag: w1.upstreamTag,
+      w1hUpdateChannel: channel,
       ...(policy === undefined ? {} : { dshMandatoryUpdatePolicy: policy }),
       version: w1.version,
       ...packaged === undefined ? {} : { dshBuildCommit: packaged.commit, dshBuildDirty: packaged.dirty },
@@ -272,6 +277,7 @@ export function createElectronBuilderConfig(
       differentialPackage: true,
     },
     detectUpdateChannel: false,
-    publish: update === undefined ? null : [{ provider: 'generic', url: update.publicUrl, channel: update.channel }],
+    publish: update === undefined ? null : [{ provider: 'github', owner: 'Wh1te0ne', repo: 'W1-Harness',
+      channel: update.channel, releaseType: channel === 'latest' ? 'release' : 'prerelease' }],
   }
 }

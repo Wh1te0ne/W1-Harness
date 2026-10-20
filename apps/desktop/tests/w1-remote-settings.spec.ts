@@ -10,7 +10,7 @@ it('rejects unknown actions before contacting the Host', async () => {
 it('returns pairing as an image and rejects expired copy requests', async () => {
   const manage = vi.fn(async () => ({ pairing: { url: 'w1h://pair?fixture=1' } }))
   const state = await manageW1Remote('status', undefined, manage)
-  expect(state).toMatchObject({ qrDataUrl: expect.stringMatching(/^data:image\/svg\+xml;base64,/) })
+  expect(state).toHaveProperty('qrDataUrl', expect.stringMatching(/^data:image\/svg\+xml;base64,/))
   await manageW1Remote('copy', undefined, manage)
   expect(writeText).toHaveBeenCalledWith('w1h://pair?fixture=1')
   await expect(manageW1Remote('copy', undefined, async () => ({ pairing: null }))).rejects.toThrow('已过期')

@@ -46,9 +46,7 @@ The executor rejects overlapping operations on one tab. Pausing, closing, discon
 
 #### What the model sees
 
-The tool description documents supported actions, fresh element refs, untrusted page content and verification. The generic tool card displays the action and result. Observations include labels and non-sensitive form values; password and file values are excluded. Screenshots require an image-capable model and attachment storage.
-
-The `w1:browser-workflow` prompt section asks the Agent to list and reuse the intended tab, read fresh refs, perform dependent actions sequentially, and read again to verify the outcome. Visual changes require screenshot inspection when supported. Pause, refusal, unsupported operations, and uncertain outcomes must be reported rather than bypassed or blindly retried. The section is absent when this tool is restricted, shadowed, or unloaded. [Product-level selection](../tool-selection/README.md) owns the choice between tools and browser environments.
+The tool description documents supported actions, fresh element refs, untrusted page content and verification. The generic tool card displays the action and result. Observations include labels and non-sensitive form values; password and file values are excluded. Screenshots require an image-capable model and attachment storage. The `w1:browser-workflow` prompt section asks the Agent to list and reuse the intended tab, read fresh refs, perform dependent actions sequentially, and read again to verify the outcome. Visual changes require screenshot inspection when supported. Pause, refusal, unsupported operations, and uncertain outcomes must be reported rather than bypassed or blindly retried. The section is absent when this tool is restricted, shadowed, or unloaded. [Product-level selection](../tool-selection/README.md) owns the choice between tools and browser environments.
 
 #### Token effect
 
@@ -58,9 +56,13 @@ The tool schema, workflow guidance and observations consume context. Observation
 
 The unchanged tool schema and workflow supply a stable request prefix. New observations append to conversation history; changing tool visibility changes its guidance and tool prefix.
 
-<a id="known-limitations-and-deferred-work"></a>
 ## Known Limitations and Deferred Work
 
-The built-in tool reads the main document's light DOM. Cross-origin frames, shadow-root element discovery, uploads, downloads, password input and arbitrary JavaScript are unsupported; external tabs use the separate Chrome tool. Built-in website storage remains process-local. Opening a built-in tab requires an adopted conversation in the desktop client; an unavailable view times out instead of redirecting the operation to another conversation. Canvas element targeting is deferred. Clicks and keys use the guest debugger; an already occupied debugger causes an explicit refusal without detaching the other client.
+<a id="known-limitations-and-deferred-work"></a>
+
+- The built-in tool reads the main document's light DOM. Cross-origin frames, shadow-root element discovery, uploads, downloads, password input and arbitrary JavaScript are unsupported; external tabs use the separate Chrome tool. Built-in website storage remains process-local. Opening a built-in tab requires an adopted conversation in the desktop client; an unavailable view times out instead of redirecting the operation to another conversation. Canvas element targeting is deferred. Clicks and keys use the guest debugger; an already occupied debugger causes an explicit refusal without detaching the other client.
 
 Validation uses synthetic pages, real Cordis/Agent-loop composition, a keyless shipped-headless-profile recording and fake Electron guests. These tests do not establish native acceptance or actual model performance. Local build and acceptance status are in the [W1 work log](../../../docs/工作记录.md).
+### Dev Note
+
+Verification evidence and remaining native acceptance items are maintained in [the W1 work log](../../../docs/工作记录.md).

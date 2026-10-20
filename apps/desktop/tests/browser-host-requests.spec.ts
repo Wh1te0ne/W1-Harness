@@ -7,7 +7,10 @@ it('dispatches only private browser messages and validates limits before calling
   const host = browserHostRequests(send, execute)
   expect(host.receive({ type: 'ready' })).toBe(false)
   expect(host.receive({ type: 'w1-browser-call', id: 'bad', sessionId: 's', command: { action: 'list' }, limits: {} })).toBe(true)
-  await vi.waitFor(() => { expect(send).toHaveBeenCalledWith(expect.objectContaining({ id: 'bad', error: expect.stringContaining('invalid-request') })) })
+  await vi.waitFor(() => {
+    expect(send).toHaveBeenCalledWith(expect.objectContaining({ id: 'bad' }))
+    expect(send.mock.calls[0]?.[0]).toHaveProperty('error', expect.stringContaining('invalid-request'))
+  })
   expect(execute).not.toHaveBeenCalled()
   host.receive({ type: 'w1-browser-call', id: 'good', sessionId: 's', command: { action: 'list' },
     limits: { timeoutMs: 1000, maxTextChars: 1000000, maxElements: 1000 } })

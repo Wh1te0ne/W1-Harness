@@ -33,7 +33,7 @@ export function createW1RemoteAdapter(ctx: Context): RemoteAdapter {
           const baseline = opening.value.value
           const visible = list.items.filter(item => !baseline.archivedSessionIds.includes(item.sessionId) && item.origin !== 'subagent')
           return { projects: baseline.items.map(item => ({ id: item.workspaceId, title: item.title, sessionIds: item.sessionIds })),
-            sessions: visible.map(item => ({ id: item.sessionId, title: String(item.projections?.values.title || '新会话'), running: item.running, updatedAt: item.updatedAt })) }
+            sessions: visible.map(item => ({ id: item.sessionId, title: item.projections?.values.title || '新会话', running: item.running, updatedAt: item.updatedAt })) }
         } finally { controller.abort(); await iterator.return?.() }
       }
       if (action === 'create') return sessions.create({ workspaceId: stringArgument(args, 'workspaceId') as WorkspaceId })

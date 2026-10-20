@@ -99,3 +99,7 @@ Selected declarations remain loaded within a session while their identity, schem
 ### Dev Note
 
 None.
+
+### Dev Note
+
+Verification evidence and remaining native acceptance items are maintained in [the W1 work log](../../../docs/工作记录.md).

@@ -732,7 +732,9 @@ export type ToolCatalog = CatalogPackage[]
  * `scanRoot` defaults to the repo root; a test may point it at a fixture tree.
  */
 export function assertManifestComplete(packages: ToolPackage[] = TOOL_PACKAGES, scanRoot: string = root): void {
-  const onDisk = globSync('packages/*/tool-*', { cwd: scanRoot }).map(p => basename(p)).sort()
+  // W1 tool-selection contributes prompt guidance only; it registers no tools or schemas.
+  const onDisk = globSync('packages/*/tool-*', { cwd: scanRoot })
+    .filter(path => path.replaceAll('\\', '/') !== 'packages/w1/tool-selection').map(p => basename(p)).sort()
   const listed = new Set(packages.map(p => p.dir))
   const missing = onDisk.filter(dir => !listed.has(dir))
   if (missing.length > 0) {

@@ -48,7 +48,7 @@ The Desktop Host mounts the plugin automatically alongside the existing prompt a
 
 #### What the model sees
 
-The section starts with “Choose tools proactively when they help complete the user's current task; the user need not name a tool.” It distinguishes separate built-in state from the user's regular Chrome profile and requires checking the automatic connection and selecting an available tab before use. The [built-in recording](../../../snapshots/session/w1-browser-use/system-prompt.expected.md) and [Chrome recording](../../../snapshots/session/w1-chrome-use/system-prompt.expected.md) pin the available environments and workflows.
+The `w1:tool-selection` section starts with “Choose tools proactively when they help complete the user's current task; the user need not name a tool.” It distinguishes separate built-in state from the user's regular Chrome profile and requires checking the automatic connection and selecting an available tab before use. The [built-in recording](../../../snapshots/session/w1-browser-use/system-prompt.expected.md) and [Chrome recording](../../../snapshots/session/w1-chrome-use/system-prompt.expected.md) pin the available environments and workflows.
 
 #### Token effect
 
@@ -58,7 +58,11 @@ Guidance adds system-prompt text to model requests. It does not expose extra too
 
 The text remains stable for the same visible capabilities. A scope gaining or losing either browser tool changes its browser guidance. The normal prompt assembly and Session logging own request updates.
 
-<a id="known-limitations-and-deferred-work"></a>
 ## Known Limitations and Deferred Work
 
-These are model instructions, not a deterministic router or permission grant. Synthetic composition and keyless replay verify delivery, scope filtering, and persistence; they do not measure a real model's tool-selection accuracy or native browser behavior. [Chrome connection and extension](../chrome-use/README.md) are owned separately; tool visibility alone does not imply connection; user pauses and other conversations’ tab leases remain enforced. Desktop control is not implemented here.
+<a id="known-limitations-and-deferred-work"></a>
+
+- These are model instructions, not a deterministic router or permission grant. Synthetic composition and keyless replay verify delivery, scope filtering, and persistence; they do not measure a real model's tool-selection accuracy or native browser behavior. [Chrome connection and extension](../chrome-use/README.md) are owned separately; tool visibility alone does not imply connection; user pauses and other conversations’ tab leases remain enforced. Desktop control is not implemented here.
+### Dev Note
+
+Verification evidence and remaining native acceptance items are maintained in [the W1 work log](../../../docs/工作记录.md).

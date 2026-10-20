@@ -2,6 +2,27 @@
 # section, a hash of its English and Chinese blocks outside code blocks and generated regions.
 # After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/w1/usage/README.md
+/:
+  en: 07bb3dbfd2c2d116
+  zh: ca7044ab0f93f4f3
 /w1-built-in-usage:
-  en: d44ab5757d48dfd7
-  zh: 0ec16833d220c47c
+  en: 1f90728566cf8ae4
+  zh: f4a004d9c95b1d9b
+/w1-built-in-usage/summary:
+  en: b51d1728e22b60ea
+  zh: 8c1c3347a6b4702d
+/w1-built-in-usage/table-of-contents:
+  en: 638dd73bc5b9dc7a
+  zh: 38d6c3e11e4ebb62
+/w1-built-in-usage/model-experience:
+  en: 245b1f1895a6daed
+  zh: 90a68d24cf72fe7d
+/w1-built-in-usage/model-experience/kv-cache-effect:
+  en: c6c45faf18293256
+  zh: 2491c08b9709906b
+/w1-built-in-usage/known-limitations-and-deferred-work:
+  en: fca6062bce399ff8
+  zh: 661513c7ef302be6
+/w1-built-in-usage/known-limitations-and-deferred-work/dev-note:
+  en: 2fb4eb82ae78758d
+  zh: 0358991307583914

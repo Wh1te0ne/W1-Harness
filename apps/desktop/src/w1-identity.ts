@@ -31,10 +31,17 @@ export function isW1Development(application: Pick<App, 'isPackaged'>): boolean {
  * @param application - Electron application before ready.
  * @returns W1 build identity; development-only overrides stay explicit to W1.
  */
-export function configureW1Identity(application: App): W1Product {
-  const product = JSON.parse(readFileSync(join(application.getAppPath(), 'w1-product.json'), 'utf8')) as W1Product
-  const home = isW1Development(application) && process.env.W1_HOME !== undefined ? process.env.W1_HOME : join(application.getPath('home'), '.w1-harness')
-  const userData = isW1Development(application) && process.env.W1_USER_DATA !== undefined ? process.env.W1_USER_DATA : join(application.getPath('appData'), product.name)
+export function configureW1Identity(application: Pick<App,
+  'getAppPath' | 'getPath' | 'setName' | 'setPath' | 'setAppUserModelId' | 'isPackaged'>): W1Product {
+  const build = JSON.parse(readFileSync(join(application.getAppPath(), 'w1-product.json'), 'utf8')) as W1Product
+  const testing = process.env.W1_TEST_MODE === '1'
+  const product = testing ? { ...build, name: `${build.name} Test`, appId: `${build.appId}.test` } : build
+  const home = testing ? join(application.getPath('home'), '.w1-harness-test')
+    : isW1Development(application) && process.env.W1_HOME !== undefined ? process.env.W1_HOME
+      : join(application.getPath('home'), '.w1-harness')
+  const userData = testing ? join(application.getPath('appData'), product.name)
+    : isW1Development(application) && process.env.W1_USER_DATA !== undefined ? process.env.W1_USER_DATA
+      : join(application.getPath('appData'), product.name)
   if (!isAbsolute(home) || !isAbsolute(userData)) throw new Error('W1 data paths must be absolute')
   mkdirSync(home, { recursive: true })
   mkdirSync(userData, { recursive: true })
@@ -52,7 +59,7 @@ export function configureW1Identity(application: App): W1Product {
   }
   process.env.BILI_CONFIG_FILE = join(home, 'xdg', 'config', 'billion-context', 'billion-context.json')
   process.env.BILI_SESSIONS_DIR = join(home, 'xdg', 'data', 'billion-context', 'sessions')
-  process.env.BILI_ZONE_PORT = '28787'
+  process.env.BILI_ZONE_PORT = testing ? '28788' : '28787'
   process.env.BILI_NATIVE_ATTACH_EXTERNAL = '0'
   delete process.env.BILLION_CONTEXT_ATTACH
   delete process.env.BILLION_CONTEXT_PROXY
@@ -71,7 +78,7 @@ export function configureW1Taskbar(
   window: Pick<BrowserWindow, 'setIcon' | 'setAppDetails'>,
   product: W1Product,
 ): void {
-  if (process.platform !== 'win32' || !isW1Development(application)) return
+  if (process.env.W1_TEST_MODE === '1' || process.platform !== 'win32' || !isW1Development(application)) return
   const icon = join(application.getAppPath(), 'resources', 'icon-windows.png')
   window.setIcon(icon)
   const launcher = process.env.W1_DESKTOP_LAUNCHER
@@ -98,7 +105,7 @@ export function configureW1StartMenu(
   desktopShell: Pick<Shell, 'readShortcutLink' | 'writeShortcutLink'>,
   product: W1Product,
 ): void {
-  if (process.platform !== 'win32' || !isW1Development(application)) return
+  if (process.env.W1_TEST_MODE === '1' || process.platform !== 'win32' || !isW1Development(application)) return
   const launcher = process.env.W1_DESKTOP_LAUNCHER
   if (launcher === undefined || !isAbsolute(launcher) || !existsSync(launcher)) return
   const appId = `${product.appId}.dev`

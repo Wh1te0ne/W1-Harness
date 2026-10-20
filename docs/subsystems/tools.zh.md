@@ -25,6 +25,8 @@ interface ToolOutputDefinition {
 ```ts type-equiv
 /** A registered tool: its schema plus the execution function. */
 interface ToolDefinition extends ToolSchema {
+  /** Provider identity for discovery. Runtime-only; never part of the wire schema or an execution grant. */
+  readonly origin?: { readonly kind: 'mcp'; readonly serverName: string; readonly rawName: string }
   /** Mandatory canonical output declaration. */
   readonly output: ToolOutputDefinition
   /**

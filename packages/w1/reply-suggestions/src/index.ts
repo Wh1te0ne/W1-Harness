@@ -16,7 +16,9 @@ export const inject = ['sessions', 'sessionProjections', 'llm', 'agents']
 
 /** Deployment-owned context, output and time limits. */
 export interface Config extends GenerationLimits {
+  /** Maximum recent conversation characters supplied to the suggestion request. */
   readonly maxContextCharacters: number
+  /** Maximum recent human and assistant messages supplied to the suggestion request. */
   readonly maxMessages: number
 }
 

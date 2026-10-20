@@ -23,7 +23,8 @@ export default defineConfig(({ env }) => {
   const client = isBuildFaceClient(env?.DSH_BUILD_FACE)
   const packages = workspacePackageGlobs(globSync(['vendor/*/package.json', 'packages/*/*/package.json'], { cwd: import.meta.dirname }))
   return {
-    workspace: [...packages, 'apps/cli', ...client ? [] : ['apps/desktop-host']],
+    workspace: [...packages.filter(directory => !['packages/w1/notifications', 'packages/w1/usage'].includes(directory)),
+      'apps/cli', ...client ? [] : ['apps/desktop-host']],
     entry: client ? '' : ['lib/types/{index,startup}.js'],
     outDir: 'lib',
     format: ['esm'],

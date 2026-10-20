@@ -2,6 +2,8 @@
 
 ## W1 Harness downstream workspace
 
+Product versions, DSH baselines, daily/test/release environments and self-development: [versions](docs/版本与发布.md). Windows release packaging, assets and verification: [release operations](docs/发布操作.md). Keep the active daily source runtime separate from full release builds. W1H binary updates and DSH source updates must retain separate sources and product entries.
+
 Read the [W1 project](docs/W1-Harness.md). Use [local development](scripts/w1/Start-W1.ps1) for daily use; [baseline isolation](scripts/w1/Start-W1Baseline.ps1) is for disposable experiments. Preserve installed DSH and plugins. Never put real credentials or runtime data in this repository. User-authorized migration between private application data directories requires a backup and preserves the original application. Use PowerShell 7.
 
 W1 is currently for one local user. Follow [the local iteration workflow](docs/开发与上游维护.md): default to a targeted build and checks for the changed surface. Do not run packaging, installer cycles, or repository-wide gates by default; use them only when the requested delivery or affected contracts require them. The translation manifest lists Chinese-only W1 internal documents; maintain their [work record](docs/工作记录.md). Upstream product documentation keeps its bilingual rules.
@@ -90,30 +92,21 @@ Package groups: [packages/README.md](packages/README.md). [Experimental status](
 
 ## Commands
 
+Use [development](docs/development.md) and package.json for commands. Daily W1 builds follow [the local workflow](docs/开发与上游维护.md); release builds run in an isolated checkout.
+
 ```sh
-pnpm install            # pnpm workspaces, node ^22.19 || >=24
-pnpm run clean           # remove build outputs and safe residue from deleted packages
-pnpm run test           # unit tests
-pnpm run test:coverage  # CI coverage gate: per-file 100% on packages/*/*/src
-pnpm run test:e2e       # real-API tests; self-skip without DEEPSEEK_API_KEY
-pnpm run test:expected  # owner-local process expectations
-pnpm run test:snapshot  # keyless recorded-session replay through shipped profiles; filter: -t <name>
-pnpm run test:snapshot:record  # re-record expected outputs (needs key)
+pnpm install
+pnpm run build          # artifacts plus aggregate checks
+pnpm run build:artifacts
+pnpm run build:check
 pnpm run typecheck
+pnpm run test           # unit tests; CI coverage uses test:coverage
+pnpm run test:snapshot
+pnpm run test:e2e       # requires provider credentials
 pnpm run lint
-pnpm run duplication    # cross-file TypeScript clone detection
-pnpm run build          # build:artifacts + build:check, concurrently
-pnpm run build:artifacts # artifacts: tsc emits lib/types, tsdown bundles runtime, Web
-pnpm run build:check    # typecheck aggregate tests/scripts against current build:artifacts output
-pnpm run hygiene        # publint + workspace/package/dependency checks + NodeNext consumer check
-pnpm run check:windows-wine  # ONLY when diagnosing a known Windows failure (needs wine); CI owns this signal
-pnpm run doc-sync       # documentation gates (scripts/run-gates.ts)
-pnpm run test:docs      # quick documentation checks (no build; doc-quick aggregate)
-pnpm run website:build  # VitePress build (doubles as dead-link check)
-pnpm dsh --profile headless "task"  # run one task from source (needs DEEPSEEK_API_KEY)
-pnpm run demo:ptc -- "task"  # headless PTC mode run (needs key)
-pnpm run dev:web | dev:desktop  # build:artifacts, then launch; Web also rebuilds client bundles on edits. start:web | start:desktop skip the build
-make web|dev-web|desktop|dev-desktop|build  # the same commands; ARGS='--no-open' forwards options
+pnpm run doc-sync
+pnpm run test:docs
+pnpm run hygiene
 ```
 
 ### Host sandbox failures

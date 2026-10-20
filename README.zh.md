@@ -1,98 +1,84 @@
-# DeepSeek Harness
-
-W1 Harness 使用此独立衍生仓库。[W1 项目入口](docs/W1-Harness.md)记录本地规划和隔离构建验证；当前应用代码沿用上游基线。
+# W1 Harness
 
 [English](README.md) | 中文
 
-DeepSeek Harness（`dsh`）是由 [DeepSeek AI](https://deepseek.com) 开发的开源 agent harness（智能体框架）。
+<img src="assets/w1/exports/app-icon-light-128.png" alt="W1 Fold 标志" width="80">
 
-它构建于**一切皆插件**的架构之上，由 [Cordis](https://github.com/cordiverse/cordis) 驱动，其设计参见论文 [_A Programming Paradigm for Spatiotemporal Composability_](https://arxiv.org/abs/2608.25512)。
+**面向编程、研究和日常任务的个人 AI 工作区，基于 DeepSeek Harness 开发。**
 
-文档：[https://deepseek-harness.github.io/deepseek-harness/](https://deepseek-harness.github.io/deepseek-harness/)
+[下载发行版](https://github.com/Wh1te0ne/W1-Harness/releases) · [产品说明](docs/W1-Harness.md) · [远程部署](apps/w1-remote/README.md) · [参与贡献](CONTRIBUTING.zh.md) · [MIT 许可](LICENSE)
 
-## 开发者预览
+W1 Harness（W1H）是独立衍生产品，保留 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的 Cordis 插件架构，拥有独立桌面身份、产品发布和用户数据。它并非 DeepSeek 官方应用。
 
-DeepSeek Harness 处于 _开发者预览_ 阶段，正在快速迭代。**未来将出现破坏兼容性的变更。**
+## 当前状态
 
-运行本项目前，请阅读[安全说明](SAFETY.zh.md)。
+W1H 处于早期开发预览阶段，桌面维护目标为 Windows x64。部分功能已有隔离运行证据，仍需扩大真实设备验证，具体见[版本说明](CHANGELOG.md)。macOS 和 Linux 保留上游源码，尚无 W1 二进制支持承诺。
+
+## 功能
+
+| 领域 | 可以做什么 |
+| --- | --- |
+| 工作区 | 为项目设置多个目录与主要目录，在本地保留聊天与产物。 |
+| 模型 | 使用自己的供应商凭据，无需 DeepSeek 账号即可进入工作区。 |
+| 任务流程 | 通过插件框架使用目标、计划、审批、工具和子智能体。 |
+| 对话 | 获得可编辑回复建议，打开侧聊，查看用量并自定义外观。 |
+| 浏览器 | 操控内置浏览器，或通过 W1 Chrome 扩展连接既有标签。 |
+| 通知 | 接收 Windows 通知、未读标记和任务栏提醒。 |
+| 远程 | 通过自行部署的加密 WebSocket 中继配对 Android 客户端。 |
+
+浏览器操控遵守当前授权和聊天归属。手机访问要求电脑保持运行；中继只转发消息，模型、凭据、文件和任务执行留在电脑。
 
 <a id="run"></a>
 
-## 运行
+## 安装与更新
 
-### 通过 `npm` 运行
+从 [W1H Releases](https://github.com/Wh1te0ne/W1-Harness/releases) 下载 Windows x64 安装器。当前预览安装包未进行代码签名。使用时配置自己的模型 API Key，下载包不含凭据。
 
-安装 `Node.js`，然后运行：
+W1H 和 DSH 使用独立版本与更新操作：
 
-```sh
-npx @deepseek-ai/dsh web
-```
+| 入口 | 用途 |
+| --- | --- |
+| 检查 W1H 更新 | 查看 W1H 版本说明，下载校验后的程序包，再确认安装并重启。 |
+| DSH 上游更新 | 查看源码发布并复制开发任务；整合仍需开发与验证。 |
 
-该命令默认会在 `http://127.0.0.1:3080` 启动 Web UI，本机启动时还会用默认浏览器打开页面。通过 SSH 启动时只打印宿主机 URL，因为本地转发地址由 SSH 客户端或编辑器持有。传入 `--no-open` 可仅运行服务器而不打开浏览器。详见 [Web UI 指南](docs/user/guide/index.zh.md)。
+Windows 托盘菜单同时提供两个入口。「关于」显示 W1H 版本、已整合 DSH 基线和构建信息。源码版发现发行版时不会覆盖开发仓库。在源码版、测试版和安装版之间切换前，请阅读[版本与环境](docs/版本与发布.md)。
+
+## 组成与部署
+
+| 组件 | 说明 |
+| --- | --- |
+| 桌面与 Host | [开发工作流](docs/开发与上游维护.md) |
+| Android 客户端与 Docker 中继 | [构建、部署、配对与限制](apps/w1-remote/README.md) |
+| Chrome MV3 扩展 | [安装与权限](packages/w1/chrome-use/README.zh.md) |
+| W1 插件 | [产品文档](docs/W1-Harness.md) |
+
+在 `apps/w1-remote/` 使用 Docker Compose 部署中继，配置自己的 HTTPS 域名与 WebSocket 转发。[远程运维](docs/远程访问与NAS中继.md) 说明检查和恢复。Chrome 扩展通过可解压加载的 ZIP 发布，尚未上架 Chrome 应用商店。
 
 <a id="run-from-source"></a>
 
-### 从源码运行
-
-如需从仓库源码运行：
-
-```sh
-git clone https://github.com/deepseek-ai/deepseek-harness.git
-cd deepseek-harness
-pnpm install
-pnpm run build
-pnpm dsh web
-```
-
-`pnpm run build` 会准备仓库产物。`pnpm dsh web` 会直接使用这些已构建产物，不会重新构建。
-
-## 社区与支持
-
-- 通过 [GitHub Discussions](https://github.com/deepseek-ai/deepseek-harness/discussions) 提交反馈或 bug 报告。
-- 为你的插件仓库添加 [`dsh-plugin`](https://github.com/topics/dsh-plugin) 话题，便于被发现。
-- 欢迎加入 DeepSeek Harness 企微群！扫描下方二维码填写入群问卷，小助手会定期发送入群邀请。
-
-<table>
-  <thead>
-    <tr>
-      <th align="center">入群问卷</th>
-      <th align="center">微信公众号</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td align="center"><a href="https://trtgsjkv6r.feishu.cn/share/base/form/shrcnIt5twSVdLGD52KJBckGCgg"><img src="https://cdn.deepseek.com/harness/readme/community-wecom-survey.png" alt="DeepSeek Harness 入群问卷二维码" width="180" height="180"></a></td>
-      <td align="center"><img src="https://cdn.deepseek.com/harness/readme/community-wechat-official-account.png" alt="DeepSeek Harness 团队微信公众号二维码" width="180" height="180"></td>
-    </tr>
-  </tbody>
-</table>
-
-## 参与贡献
-
-参见 [CONTRIBUTING.md](CONTRIBUTING.zh.md)。
-
 ## 开发
 
-请先阅读[开发指南](docs/development.zh.md)与[架构文档](docs/architecture.zh.md)。
+使用 Node.js `^22.19.0 || >=24.0.0`，pnpm 版本以 `package.json` 为准，Windows 使用 PowerShell 7。
 
-`pnpm run dev:web` 会在一个终端里完成构建、启动，并在源码修改时重建 client bundle；`make help` 列出 Web 与 Desktop 对应的 Make target。完整表格见开发指南的「应用命令」一节。
-
-面向 agent：请遵循 [AGENTS.md](AGENTS.md)。
-
-## 引用
-
-```bibtex
-@misc{deepseek-harness2026,
-  title={DeepSeek Harness: Everything is a Plugin},
-  author={DeepSeek-AI},
-  year={2026},
-  publisher={GitHub},
-  howpublished={\url{https://github.com/deepseek-ai/deepseek-harness}},
-}
+```powershell
+git clone https://github.com/Wh1te0ne/W1-Harness.git
+cd W1-Harness
+corepack pnpm install --frozen-lockfile
+corepack pnpm run build
 ```
 
-## 许可证
+桌面准备与源码启动见[本机开发](docs/开发与上游维护.md)。首次完整构建后，只构建涉及的模块。发布打包独立于日常开发。
 
-[MIT](LICENSE)
+保持负责开发的 W1 实例与它构建的候选程序分开。测试配置具有独立数据与身份，真实 API Key 放在 Git 之外。见[自开发与测试](docs/版本与发布.md)。
 
-第三方依赖及其许可证见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+## 路线图
+
+后续工作与验收状态见[项目规划](docs/项目规划.md)。重点为可复现发布、扩大桌面与 Android 验证，以及浏览器可靠性。列出组件或测试通过不代表所有原生流程均已验收。
+
+## 反馈与安全
+
+W1H 问题与建议请提交到本仓库的 [Issues](https://github.com/Wh1te0ne/W1-Harness/issues)，提供 W1H 版本、DSH 基线、环境与复现步骤。请阅读[贡献说明](CONTRIBUTING.zh.md)和[安全报告](SECURITY.md)，移除 Key、配对码、私人聊天和私密文件内容。
+
+## 许可与上游
+
+W1H 采用 [MIT 许可](LICENSE)，保留 DeepSeek 版权声明。Cordis、运行时、字体和其他依赖继续使用各自许可。[上游架构](docs/architecture.zh.md)与 [vendor 说明](vendor/README.md)提供技术参考和归属。

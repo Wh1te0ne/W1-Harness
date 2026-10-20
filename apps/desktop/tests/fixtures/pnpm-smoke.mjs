@@ -1,7 +1,8 @@
 /** Install and use a local dependency with the packaged pnpm and Electron Node launcher. */
 
 import assert from 'node:assert/strict'
-import { execFileSync } from 'node:child_process'
+import { execFile } from 'node:child_process'
+import { promisify } from 'node:util'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -43,7 +44,7 @@ console.log('desktop-node-script-ok')
 `)
     const environment = Object.fromEntries(Object.entries(process.env).filter(([name]) => /^(?:systemroot|windir|comspec|LD_LIBRARY_PATH)$/iu.test(name)))
     const systemBin = process.platform === 'win32' ? join(process.env.SystemRoot, 'System32') : '/usr/bin:/bin'
-    const run = args => execFileSync(process.execPath, ['--expose-internals', pnpm, ...args], {
+    const run = async args => (await promisify(execFile)(process.execPath, ['--expose-internals', pnpm, ...args], {
       cwd: scratch, encoding: 'utf8', timeout: 45_000, windowsHide: true,
       env: { ...environment, pnpm_config_verify_deps_before_run: 'false',
         ELECTRON_RUN_AS_NODE: '1', DSH_DESKTOP_NODE_EXECUTABLE: process.execPath,
@@ -53,10 +54,10 @@ console.log('desktop-node-script-ok')
         npm_config_userconfig: join(scratch, 'npmrc'), npm_config_globalconfig: join(scratch, 'npmrc'),
         npm_config_store_dir: join(scratch, 'store'), npm_config_enable_global_virtual_store: 'false',
         npm_config_update_notifier: 'false' },
-    })
-    assert.equal(run(['--version']).trim(), versions.pnpm)
-    run(['install', '--offline', '--ignore-scripts'])
-    assert.match(run(['run', 'check']), /desktop-node-script-ok/u)
+    })).stdout
+    assert.equal((await run(['--version'])).trim(), versions.pnpm)
+    await run(['install', '--offline', '--ignore-scripts'])
+    assert.match(await run(['run', 'check']), /desktop-node-script-ok/u)
   } finally {
     await rm(scratch, { recursive: true, force: true, maxRetries: 20, retryDelay: 50 })
   }

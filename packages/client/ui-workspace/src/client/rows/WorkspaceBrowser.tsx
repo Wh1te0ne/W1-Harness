@@ -576,7 +576,9 @@ function SessionTree({
           actions={group.workspaceId === undefined
             ? undefined
             : {
-              ...(onEditProject === undefined ? {} : { editProject: () => { if (group.workspaceId !== undefined) onEditProject(group.workspaceId) } }),
+              ...(onEditProject === undefined ? {} : { editProject: () => {
+                if (group.workspaceId !== undefined) onEditProject(group.workspaceId)
+              } }),
               rename: () => {
               /* v8 ignore next -- narrowing guard: the actions object exists only for real-workspace groups. */
                 if (group.workspaceId !== undefined) onRenameRequest(group.workspaceId, group.label)
@@ -1368,7 +1370,10 @@ export function WorkspaceBrowser({
         {/* Add flow + its error dialog (same package — direct composition). */}
         {createProject !== undefined && pickProjectFolder !== undefined ? (wsPickerOpen && <ProjectEditor
           t={t} pickFolder={pickProjectFolder} close={closeAddWorkspace}
-          save={async input => { const workspace = await createProject(input); startSession(workspace.workspaceId, { clearPreviousDraft: false }) }}
+          save={async (input) => {
+            const workspace = await createProject(input)
+            startSession(workspace.workspaceId, { clearPreviousDraft: false })
+          }}
         />) : <WorkspacePickFlow
           t={t}
           open={wsPickerOpen}
@@ -1525,7 +1530,7 @@ export function WorkspaceBrowser({
       {editingProject !== null && updateProject !== undefined && pickProjectFolder !== undefined && <ProjectEditor
         key={editingProject} project={storedWorkspaces.find(item => item.workspaceId === editingProject)} t={t}
         pickFolder={pickProjectFolder} close={() => { setEditingProject(null) }}
-        save={async input => { await updateProject({ ...input, workspaceId: editingProject }) }}
+        save={async (input) => { await updateProject({ ...input, workspaceId: editingProject }) }}
       />}
 
       <Modal

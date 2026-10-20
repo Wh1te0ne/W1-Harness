@@ -16,6 +16,7 @@ export class DesktopUpdateCoordinator {
   private current: DesktopUpdateState = { phase: 'idle' }
   private candidate: string | undefined
   private downloaded = false
+  private notes = ''
   private disposed = false
   private checkOperation: Promise<DesktopUpdateState> | undefined
   private downloadOperation: Promise<DesktopUpdateState> | undefined
@@ -55,7 +56,7 @@ export class DesktopUpdateCoordinator {
     private readonly enabled: () => boolean = () => app.isPackaged && existsSync(join(process.resourcesPath, 'app-update.yml')),
     private readonly currentVersion: () => string = () => app.getVersion(),
     private readonly downloadResult?: (success: boolean, reason?: string) => void,
-    private readonly channel: 'nightly' | 'latest' = 'nightly',
+    private readonly channel: 'nightly' | 'alpha' | 'beta' | 'latest' = 'nightly',
   ) {
     if (updater === autoUpdater) {
       // electron-updater omits this internal transport property from its public declarations.
@@ -69,7 +70,7 @@ export class DesktopUpdateCoordinator {
     this.updater.autoDownload = false
     this.updater.autoInstallOnAppQuit = false
     this.updater.channel = channel
-    this.updater.allowPrerelease = channel === 'nightly'
+    this.updater.allowPrerelease = channel !== 'latest'
     // Selecting a channel can enable downgrade in electron-updater.
     this.updater.allowDowngrade = false
     this.updater.on('download-progress', this.onProgress)
@@ -79,6 +80,8 @@ export class DesktopUpdateCoordinator {
 
   /** Latest observable state; complete download identity remains main-process-owned. */
   get state(): DesktopUpdateState { return this.current }
+  /** Release text belongs to the checked target and is sanitized by the dialog renderer. */
+  get releaseNotes(): string { return this.notes }
 
   /**
    * Check metadata without downloading, joining any current check.
@@ -188,6 +191,9 @@ export class DesktopUpdateCoordinator {
       const result = await this.updater.checkForUpdates()
       if (result === null) throw new Error('desktop update: no check result was returned')
       const version = result.updateInfo.version
+      const notes = result.updateInfo.releaseNotes
+      this.notes = typeof notes === 'string' ? notes.slice(0, 12000)
+        : notes?.map(note => note.note).join('\n').slice(0, 12000) ?? ''
       if (valid(version) === null) throw new Error('desktop update: feed version is invalid')
       if (this.channel === 'latest' && version.includes('-')) throw new Error('desktop update: latest feed contains a prerelease')
       this.candidate = result.isUpdateAvailable && gt(version, this.currentVersion()) ? version : undefined

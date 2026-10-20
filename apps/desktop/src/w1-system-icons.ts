@@ -18,6 +18,7 @@ export interface W1SystemIconsOptions {
   readonly windows: () => IconWindow[]
   readonly tray: Pick<DesktopTray, 'setIcon'> | undefined
   readonly report: (error: unknown) => void
+  readonly shortcuts?: boolean
 }
 
 /**
@@ -28,7 +29,7 @@ export interface W1SystemIconsOptions {
 export function watchW1SystemIcons(options: W1SystemIconsOptions): () => void {
   const { app, theme, shell } = options
   let dark = options.readDark()
-  const shortcuts = [
+  const shortcuts = options.shortcuts === false ? [] : [
     join(app.getPath('desktop'), 'W1 Harness.lnk'),
     join(app.getPath('appData'), 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'W1 Harness.lnk'),
     join(app.getPath('appData'), 'Microsoft', 'Internet Explorer', 'Quick Launch', 'User Pinned', 'TaskBar', 'W1 Harness.lnk'),

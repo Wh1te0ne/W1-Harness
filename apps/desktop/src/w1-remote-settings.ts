@@ -12,6 +12,6 @@ export async function manageW1Remote(
   const state = result as Record<string, unknown>
   const pairing = state.pairing
   const url = typeof pairing === 'object' && pairing !== null && 'url' in pairing && typeof pairing.url === 'string' ? pairing.url : undefined
-  if (action === 'copy') { if (!url) throw new Error('配对信息已过期，请重新生成二维码'); clipboard.writeText(url); return null }
+  if (action === 'copy') { if (!url) throw new Error('配对信息已过期，请重新生成二维码'); await clipboard.writeText(url); return null }
   return { ...state, qrDataUrl: url ? 'data:image/svg+xml;base64,' + Buffer.from(pairingQr(url)).toString('base64') : null }
 }

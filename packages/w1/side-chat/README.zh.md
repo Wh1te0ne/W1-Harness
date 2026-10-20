@@ -6,9 +6,20 @@ kind: "package-reference"
 
 [English](README.md) | 中文
 
+## 目录
+
+- [使用本包](#use-this-package)
+- [实现](#implementation)
+- [验证](#verification)
+- [模型体验](#model-experience)
+- [已知限制与后续工作](#known-limitations-and-deferred-work)
+- [开发备注](#dev-note)
+
 ## 概述
 
 右侧栏开始页在工作区文件、终端和浏览器后提供侧边聊天。每个标签独立保存消息、草稿、模型选择、流式回复和停止控制，不修改主会话历史、队列、Agent 或草稿。
+
+<a id="use-this-package"></a>
 
 ## 使用本包
 
@@ -16,11 +27,15 @@ kind: "package-reference"
 
 隐藏或切换标签时保留侧聊。有历史的标签关闭前由客户端确认；确认关闭、连接断开、刷新页面或退出 W1 后丢弃临时聊天。侧聊仅回答问题，不提供工具、文件修改、自动合并主会话或持久历史。模型错误会显示，发送不会自动重试。
 
+<a id="implementation"></a>
+
 ## 实现
 
 `SideChatService` 管理独立内存 Session 日志，记录精确请求和已结束响应；日志不注册到 Session 存储、不进入主会话。Remote 保持流管理标签生命周期，取消后关闭临时日志。每次请求使用独立取消信号，只停止该侧聊回复。所有方法校验主会话资源权限；读取冷会话不会激活 Agent。
 
 W1 Web bundle 配置输入字节数、最大输出 Token 和并存标签上限。超出输入上限时明确报错，不静默截断。侧栏注册复用已有开始页、标签生命周期和注入的按键状态源。组件复用产品 Markdown 渲染器、图标和主题令牌。
+
+<a id="verification"></a>
 
 ## 验证
 
@@ -49,10 +64,17 @@ You are a side-chat assistant. Answer the user directly in their language. The o
 
 侧聊请求有独立指令和上下文前缀，后续问题追加到侧聊历史，不修改主会话前缀；不假定服务端缓存键或保留时长。
 
+<a id="known-limitations-and-deferred-work"></a>
+
 ## 已知限制与后续工作
 
-合成测试不代表原生显示缩放或真实供应商验收。
-
+- 合成测试不代表原生显示缩放或真实供应商验收。
 ### 开发备注
 
 见[实现决策](../../../.agents/notes/implemented/feature/2026-10-19-w1-side-chat.zh.md)。W1 本机交付与剩余验证记录在[工作记录](../../../docs/工作记录.md)。
+
+<a id="dev-note"></a>
+
+### 开发备注
+
+验证证据与待原生验收事项见 [W1 工作记录](../../../docs/工作记录.md)。

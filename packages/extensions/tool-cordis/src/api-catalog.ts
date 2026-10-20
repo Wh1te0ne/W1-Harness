@@ -3814,6 +3814,18 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         returns: 'the durable Workspace, or undefined when first-use initialization is ineligible; creates no Session or message.',
       },
       {
+        signature: '@Remote(\'createProject\') createProject(request: WorkspaceProjectCreateRequest): Promise<WorkspaceCreateValue>',
+        description: 'Create a named project and its initial folder selection.',
+        parameters: [{ name: 'request', description: 'Validated project creation or update request.' }],
+        returns: 'The authoritative project result after persistence and local projection.',
+      },
+      {
+        signature: '@Remote(\'updateProject\') updateProject(request: WorkspaceProjectUpdateRequest): Promise<WorkspaceValue>',
+        description: 'Update project folders and name without rebinding existing sessions.',
+        parameters: [{ name: 'request', description: 'Validated project creation or update request.' }],
+        returns: 'The authoritative project result after persistence and local projection.',
+      },
+      {
         signature: '@Remote(\'rename\') rename(request: WorkspaceRenameRequest): Promise<WorkspaceValue>',
         description: 'Rename one Workspace to a unique non-blank title.',
         parameters: [{ name: 'request', description: 'Workspace identity and proposed title.' }],
@@ -3912,6 +3924,12 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     summary: 'Durable workspace registry.',
     description: 'Durable workspace registry. Startup waits for `sessionPersistence`, builds one canonical-cwd header index, and completes the one-time history bootstrap before the service becomes active. The persistence dependency is mandatory so an unavailable peer can never be mistaken for an empty history and commit the initialized marker.',
     methods: [
+      {
+        signature: 'async createProject(input: WorkspaceProjectInput): Promise<Workspace>',
+        description: 'Create an independently named project, even when another project uses the same folders.',
+        parameters: [{ name: 'input', description: 'Project name, folder roots and primary-folder selection.' }],
+        returns: 'The authoritative project result after persistence and local projection.',
+      },
       {
         signature: 'async create(path: string, title?: string): Promise<Workspace>',
         description: 'Create or reuse a workspace for an existing directory. The fully qualified path is canonicalized through `fs.realpath`; a relative, nonexistent, or non-directory path rejects. Repeated calls for the same canonical path return the existing entity without changing its title. A newly created workspace is prepended to the durable registry order. Different canonical paths may share a display title.',
@@ -4334,6 +4352,14 @@ export const EVENT_API: readonly EventApiEntry[] = [
     parameters: [{ name: 'payload', description: 'session id and the exact current goal activation, or no goal after a clear.' }],
   },
   {
+    name: 'goal/before-model-complete',
+    mode: 'waterfall',
+    signature: '\'goal/before-model-complete\'(payload: { agent: Agent; goal: GoalView; signal: AbortSignal }, next: () => Promise<ModelCompletionDecision>): Promise<ModelCompletionDecision>',
+    summary: 'Review an authorized completion before its compare-and-set mutation.',
+    description: 'Review an authorized completion before its compare-and-set mutation. No listener preserves upstream completion. Rejections leave the goal incomplete.',
+    parameters: [{ name: 'payload', description: 'exact live agent, validated goal revision and calling tool cancellation.' }, { name: 'next', description: 'downstream completion policies; defaults to allow.' }],
+  },
+  {
     name: 'goal/changed',
     mode: 'emit',
     signature: '\'goal/changed\'(this: import(\'@deepseek-ai/dsh-scope\').Scoped<Agent>, payload: { agent: Agent; change: GoalChanged }): void',
@@ -4356,6 +4382,14 @@ export const EVENT_API: readonly EventApiEntry[] = [
     summary: 'Module replacements have finished loading.',
     description: 'Module replacements have finished loading.',
     parameters: [{ name: 'reloads', description: 'Replaced plugins and their module locations.' }],
+  },
+  {
+    name: 'llm-deepseek/request-prepared',
+    mode: 'emit',
+    signature: '\'llm-deepseek/request-prepared\'(detail: PreparedRequestObservation): void',
+    summary: 'A synchronous diagnostic observer; failures never change the outgoing request.',
+    description: 'A synchronous diagnostic observer; failures never change the outgoing request.',
+    parameters: [{ name: 'detail', description: 'Lazy request fingerprints and the owning request identity.' }],
   },
   {
     name: 'llm/adapters-updated',
@@ -6230,6 +6264,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface ModelCatalogModel {\n    readonly id: string;\n    readonly name: string;\n    readonly description?: string;\n    readonly reasoning?: ModelReasoning;\n}',
   },
   {
+    name: 'ModelCompletionDecision',
+    declaration: 'export type ModelCompletionDecision = {\n    readonly kind: \'allow\';\n} | {\n    readonly kind: \'deny\';\n    readonly reason: string;\n};',
+  },
+  {
     name: 'ModelMessageSource',
     declaration: 'export interface ModelMessageSource extends AssistantProviderMetadata {\n    kind: \'model\';\n}',
   },
@@ -6468,6 +6506,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'PreparedReferencedMessage',
     declaration: 'export interface PreparedReferencedMessage {\n    content: ContentBlock[];\n    additionalContext?: UserMessage;\n}',
+  },
+  {
+    name: 'PreparedRequestObservation',
+    declaration: 'export interface PreparedRequestObservation {\n    readonly options: GenerateOptions;\n    readonly summarize: (maxMessages: number) => RequestStructure;\n}',
   },
   {
     name: 'PrepareSessionOptions',
@@ -6784,6 +6826,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'RequestRunOutcome',
     declaration: 'export type RequestRunOutcome = \'approved\' | \'completed\' | \'rejected\' | \'cancelled\' | \'failed\';',
+  },
+  {
+    name: 'RequestStructure',
+    declaration: 'export interface RequestStructure {\n    readonly systemHash: string;\n    readonly toolsHash: string;\n    readonly settingsHash: string;\n    readonly messagesHash: string;\n    readonly messageDigests: readonly string[];\n    readonly messageCount: number;\n    readonly payloadBytes: number;\n    readonly bounded: boolean;\n}',
   },
   {
     name: 'RequestUserInput',
@@ -8219,7 +8265,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'ToolDefinition',
-    declaration: 'export interface ToolDefinition extends ToolSchema {\n    readonly output: ToolOutputDefinition;\n    execute(args: unknown, exec: ToolRunContext): Promise<unknown>;\n    projectContent?(exec: Readonly<ToolExecution>, result: Readonly<ToolExecutionResult>): ContentBlock[] | undefined;\n    finalizeContent?(exec: Readonly<ToolExecution>, result: Readonly<ToolExecutionResult>): ContentBlock[] | undefined;\n    timeoutMs?: number;\n    isConcurrencySafe?(args: unknown): boolean;\n    presentCall?(args: unknown): ToolCallView | undefined;\n    presentResult?(args: unknown, result: ToolResult): ToolResultView | undefined;\n}',
+    declaration: 'export interface ToolDefinition extends ToolSchema {\n    readonly origin?: {\n        readonly kind: \'mcp\';\n        readonly serverName: string;\n        readonly rawName: string;\n    };\n    readonly output: ToolOutputDefinition;\n    execute(args: unknown, exec: ToolRunContext): Promise<unknown>;\n    projectContent?(exec: Readonly<ToolExecution>, result: Readonly<ToolExecutionResult>): ContentBlock[] | undefined;\n    finalizeContent?(exec: Readonly<ToolExecution>, result: Readonly<ToolExecutionResult>): ContentBlock[] | undefined;\n    timeoutMs?: number;\n    isConcurrencySafe?(args: unknown): boolean;\n    presentCall?(args: unknown): ToolCallView | undefined;\n    presentResult?(args: unknown, result: ToolResult): ToolResultView | undefined;\n}',
   },
   {
     name: 'ToolDispatchExecution',
@@ -8731,7 +8777,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'Workspace',
-    declaration: 'export interface Workspace {\n    readonly id: WorkspaceId;\n    readonly path: string;\n    readonly title: string;\n    readonly createdAt: string;\n    readonly updatedAt: string;\n    readonly sessionIds: readonly SessionId[];\n    setTitle(title: string): Promise<void>;\n    attachSession(sessionId: SessionId): Promise<void>;\n    insertSessionBefore(sessionId: SessionId, beforeSessionId?: SessionId): Promise<void>;\n    detachSession(sessionId: SessionId): Promise<void>;\n    status(): Promise<\'ok\' | \'missing-dir\'>;\n}',
+    declaration: 'export interface Workspace {\n    readonly id: WorkspaceId;\n    readonly path: string;\n    readonly folderRoots: readonly WorkspaceFolder[];\n    readonly primaryFolderId: string | null;\n    configureProject(input: WorkspaceProjectInput): Promise<void>;\n    readonly title: string;\n    readonly createdAt: string;\n    readonly updatedAt: string;\n    readonly sessionIds: readonly SessionId[];\n    setTitle(title: string): Promise<void>;\n    attachSession(sessionId: SessionId): Promise<void>;\n    insertSessionBefore(sessionId: SessionId, beforeSessionId?: SessionId): Promise<void>;\n    detachSession(sessionId: SessionId): Promise<void>;\n    status(): Promise<\'ok\' | \'missing-dir\'>;\n}',
   },
   {
     name: 'WorkspaceArchiveSessionRequest',
@@ -8822,6 +8868,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export type WorkspaceFileWatchFrame = {\n    readonly kind: \'ready\';\n} | {\n    readonly kind: \'change\';\n    readonly change: WorkspaceFileChange;\n};',
   },
   {
+    name: 'WorkspaceFolder',
+    declaration: 'export interface WorkspaceFolder {\n    readonly id: string;\n    readonly path: string;\n}',
+  },
+  {
     name: 'WorkspaceFollowFrame',
     declaration: 'export type WorkspaceFollowFrame = {\n    readonly type: \'baseline\';\n    readonly value: WorkspaceBaseline;\n} | WorkspaceFollowIncrement;',
   },
@@ -8850,6 +8900,18 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface WorkspacePinValue {\n    readonly pinnedSessionIds: readonly SessionId[];\n}',
   },
   {
+    name: 'WorkspaceProjectCreateRequest',
+    declaration: 'export interface WorkspaceProjectCreateRequest extends WorkspaceProjectInput {\n}',
+  },
+  {
+    name: 'WorkspaceProjectInput',
+    declaration: 'export interface WorkspaceProjectInput {\n    readonly title: string;\n    readonly folderRoots: readonly WorkspaceFolder[];\n    readonly primaryFolderId: string | null;\n}',
+  },
+  {
+    name: 'WorkspaceProjectUpdateRequest',
+    declaration: 'export interface WorkspaceProjectUpdateRequest extends WorkspaceProjectInput {\n    readonly workspaceId: WorkspaceId;\n}',
+  },
+  {
     name: 'WorkspaceRenameRequest',
     declaration: 'export interface WorkspaceRenameRequest {\n    readonly workspaceId: WorkspaceId;\n    readonly title: string;\n}',
   },
@@ -8867,7 +8929,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'WorkspaceView',
-    declaration: 'export interface WorkspaceView {\n    readonly workspaceId: WorkspaceId;\n    readonly path: string;\n    readonly title: string;\n    readonly sessionIds: readonly SessionId[];\n    readonly createdAt: string;\n    readonly updatedAt: string;\n}',
+    declaration: 'export interface WorkspaceView {\n    readonly workspaceId: WorkspaceId;\n    readonly path: string;\n    readonly folderRoots?: readonly WorkspaceFolder[];\n    readonly primaryFolderId?: string | null;\n    readonly title: string;\n    readonly sessionIds: readonly SessionId[];\n    readonly createdAt: string;\n    readonly updatedAt: string;\n}',
   },
 ]
 

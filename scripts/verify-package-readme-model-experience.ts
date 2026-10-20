@@ -45,6 +45,9 @@ const NO_MODEL_EXPERIENCE_SECTION: Readonly<Record<string, string>> = {
  * blocks. A package moves on or off this list with its context behavior.
  */
 const SENTENCE_MODEL_EXPERIENCE: Readonly<Record<string, SentenceContract>> = {
+  'packages/w1/chrome-use': { kind: 'none', reason: 'The library transports scoped browser operations; W1 browser-use owns model tools and guidance.' },
+  'packages/w1/notifications': { kind: 'none', reason: 'The built-in feature delivers local notifications without model requests or prompt contributions.' },
+  'packages/w1/usage': { kind: 'none', reason: 'The built-in feature displays recorded usage and local estimates without initiating model requests.' },
   'packages/experimental/client-ui-cot-translation': { kind: 'indirect', reason: 'The translator owns optional paid queries; normal Session activation delegates startup context to the preset.' },
   'packages/experimental/cot-translation-bundle': { kind: 'indirect', reason: 'The GUI consumer delegates paid query prompts to the translator and normal activation context to the Session preset.' },
   'packages/client/product-analytics': { kind: 'none', reason: 'Desktop analytics observes selected interactions without contributing model context or Session events.' },

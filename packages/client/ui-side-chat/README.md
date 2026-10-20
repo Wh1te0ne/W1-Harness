@@ -10,6 +10,14 @@ English | [中文](README.zh.md)
 
 Registers Side chat in the existing sidebar Start page and renders independent chat tabs. The [Host service](../../w1/side-chat/README.md) owns model requests, context snapshots and temporary logs. This package owns tab-local drafts, streaming presentation, model choice and input handling.
 
+## Table of Contents
+
+- [Behavior](#behavior)
+- [Verification](#verification)
+- [Model Experience](#model-experience)
+- [Known Limitations and Deferred Work](#known-limitations-and-deferred-work)
+- [Dev Note](#dev-note)
+
 ## Behavior
 
 Hidden tabs retain their state. The opening main-conversation snapshot is always included; there is no context checkbox. Empty tabs close immediately. Closing or replacing a populated tab asks for confirmation; Cancel and Escape retain history, draft and the live request. Confirm disposes only that tab. A late confirmation cannot act on a replaced occurrence. Every tab receives its own model instance; no main-session submit, stop, queue or draft action is called.
@@ -38,8 +46,9 @@ The Client never rewrites the main request prefix. The Host owns the side prefix
 
 ## Known Limitations and Deferred Work
 
-Real desktop rendering and provider availability require separate verification.
-
-### Dev Note
+- Real desktop rendering and provider availability require separate verification.
 
 Feature scope and limitations live in the Host README linked above.
+### Dev Note
+
+Verification evidence and remaining native acceptance items are maintained in [the W1 work log](../../../docs/工作记录.md).

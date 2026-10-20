@@ -46,9 +46,17 @@ export interface WorkspaceSource {
 
 /** Workspace Controller's Client service face. */
 export interface IWorkspaces {
-  /** Create an independent project with an explicit name and folder selection. */
+  /**
+   * Create an independent project with an explicit name and folder selection.
+   * @param input - Name, folder roots and primary-folder selection.
+   * @returns The authoritative project view after creation.
+   */
   createProject(input: WorkspaceProjectCreateRequest): Promise<WorkspaceView>
-  /** Atomically update a project without changing its session memberships. */
+  /**
+   * Atomically update a project without changing its session memberships.
+   * @param input - Project identity and replacement folder selection.
+   * @returns The authoritative project view after persistence.
+   */
   updateProject(input: WorkspaceProjectUpdateRequest): Promise<WorkspaceView>
   /** Host-authoritative Workspace rows, order, archive set, and follow lifecycle. */
   readonly list: WorkspaceSource

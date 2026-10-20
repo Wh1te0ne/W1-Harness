@@ -1515,9 +1515,9 @@ describe('UiWorkspaceService', () => {
 
 it('restores an existing blank after its project changes primary, and creates new sessions in the new primary', async () => {
   persistSelection({ sessionId: sid('saved') })
-  const b = bench({sessions:sessionState([summary('saved',{blank:true,cwd:'/former'})]),workspaces:workspaceState([workspace('a',[sid('saved')])])})
-  expect(b.sessions.retain).toHaveBeenCalledExactlyOnceWith(sid('saved'),{source:'mainView'})
+  const b = bench({ sessions:sessionState([summary('saved',{ blank:true,cwd:'/former' })]),workspaces:workspaceState([workspace('a',[sid('saved')])]) })
+  expect(b.sessions.retain).toHaveBeenCalledExactlyOnceWith(sid('saved'),{ source:'mainView' })
   expect(b.sessions.create).not.toHaveBeenCalled()
   await b.uiWorkspace.connectWorkspace(wid('a'))
-  expect(b.sessions.create).toHaveBeenCalledExactlyOnceWith({workspaceId:wid('a')})
+  expect(b.sessions.create).toHaveBeenCalledExactlyOnceWith({ workspaceId:wid('a') })
 })

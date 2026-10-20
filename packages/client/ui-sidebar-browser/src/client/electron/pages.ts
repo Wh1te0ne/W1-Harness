@@ -10,6 +10,7 @@ import { ElectronWebviewPresentation } from './ElectronWebviewPresentation.ts'
  * @param bridge - desktop-only transport.
  * @param workspace - storage account resolver.
  * @returns separate navigation and presentation faces.
+ * @param sessionId - Parent conversation whose access authorizes this operation.
  */
 export function createElectronPage(options: BrowserPageOptions, bridge: DesktopBrowserBridge,
   workspace: (signal: AbortSignal) => Promise<string>, sessionId?: string): BrowserPage {

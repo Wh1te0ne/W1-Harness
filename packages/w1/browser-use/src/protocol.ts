@@ -23,10 +23,20 @@ export type BrowserCommand = z.infer<typeof browserCommandSchema>
 export const chromeCommandSchema = z.union([
   z.object({ action: z.literal('list'), query: z.string().max(200).optional() }).strict(), browserCommandSchema,
   z.object({ action: z.literal('connect') }).strict(), z.object({ action: z.literal('disconnect') }).strict()])
+/**
+ * Validated operations accepted by the external Chrome transport.
+ */
 export type ChromeCommand = z.infer<typeof chromeCommandSchema>
 /** Text and optional JPEG returned by the desktop, prior to durable attachment storage. */
 export const browserResultSchema = z.object({ text: z.string().max(100000), screenshot: z.string().max(8000000).optional() })
 /** Provider result validated again at the Host IPC boundary. */
 export type BrowserResult = z.infer<typeof browserResultSchema>
 /** Per-call transport bounds supplied by the desktop composition. */
-export interface BrowserLimits { readonly timeoutMs: number; readonly maxTextChars: number; readonly maxElements: number }
+export interface BrowserLimits {
+  /** Deadline for one desktop browser operation, in milliseconds. */
+  readonly timeoutMs: number
+  /** Maximum page text retained in one observation. */
+  readonly maxTextChars: number
+  /** Maximum actionable elements retained in one observation. */
+  readonly maxElements: number
+}

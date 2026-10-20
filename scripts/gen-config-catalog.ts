@@ -708,6 +708,8 @@ export function collectConfigCatalog(scanRoot: string = root): CatalogEntry[] {
     }
     pkgDirByName.set(pkg, dir)
     pkgExportsByName.set(pkg, manifest.exports)
+    // These W1 JavaScript modules have no TypeScript Config; their READMEs own the settings.
+    if (pkg === '@w1h/notifications' || pkg === 'dsh-usage-manager') continue
     manifests.push({ dir, pkg })
   }
   const world: World = { scanRoot, cache, pkgDirByName, pkgExportsByName }

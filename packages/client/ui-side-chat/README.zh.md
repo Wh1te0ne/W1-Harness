@@ -10,15 +10,29 @@ kind: "package-reference"
 
 在现有右侧栏开始页注册侧边聊天入口，呈现独立聊天标签。[Host 服务](../../w1/side-chat/README.zh.md)管理模型请求、上下文快照与临时日志。本包管理标签草稿、流式呈现、模型选择和输入操作。
 
+## 目录
+
+- [行为](#behavior)
+- [验证](#verification)
+- [模型体验](#model-experience)
+- [已知限制与后续工作](#known-limitations-and-deferred-work)
+- [开发备注](#dev-note)
+
+<a id="behavior"></a>
+
 ## 行为
 
 隐藏标签时保留状态，固定携带打开时的主会话快照，不提供上下文复选框。空标签直接关闭；关闭或替换有历史的标签时先确认，取消和 Escape 保留历史、草稿及在途请求，确认只释放该标签。迟到的确认不能作用于已替换的 occurrence。每个标签有独立模型实例，不调用主会话的发送、停止、队列或草稿操作。
 
 侧聊沿用主会话的背景与输入框设计，统一面板圆角、阴影描边、文字尺寸、工具栏间距和蓝色发送按钮；内容与卡片上限采用嵌入会话的 920px / 952px。侧聊底部不展示 Token 统计，现有主会话统计继续留在主输入框下方。标签标题跟随首个问题。主聊天与侧聊共同渲染 [ui-model-selection](../ui-model-selection/README.zh.md) 的 `model.selector` Factory，复用提供方分组、搜索、窗口边界、键盘操作、模型标签和模型声明的推理档位。每个侧聊标签传入独立状态与选择回调，切换模型或推理档位不调用主会话的 `selectModel`。客户端明确声明 `remote.w1SideChat` 和 `remote.session`，由 Remote 组合模块挂载后再激活。模型目录加载失败仍保留打开时的路由，并在共用选择器中提供重试。
 
+<a id="verification"></a>
+
 ## 验证
 
 `tests/apply.client.spec.ts` 组合真实 Cordis 服务追踪、SlotRegistry 和侧栏控制器，覆盖命名空间注入及关闭流程。模型与界面测试覆盖独立多轮、目录失败与重试、共用选择器搜索与推理档位、请求路由、默认上下文、草稿、输入法按键、停止和确认弹窗。浏览器组件检查使用合成对话。
+
+<a id="model-experience"></a>
 
 ## 模型体验
 
@@ -36,10 +50,15 @@ kind: "package-reference"
 
 客户端不重写主请求前缀，侧聊前缀由 Host 管理；选择另一模型可能改变侧聊请求的缓存行为。
 
+<a id="known-limitations-and-deferred-work"></a>
+
 ## 已知限制与后续工作
 
-真实桌面呈现及供应商可用性需单独验证。
-
-### 开发备注
+- 真实桌面呈现及供应商可用性需单独验证。
 
 功能范围及限制以以上链接的 Host README 为准。
+
+<a id="dev-note"></a>
+### 开发备注
+
+验证证据与待原生验收事项见 [W1 工作记录](../../../docs/工作记录.md)。

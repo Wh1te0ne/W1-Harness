@@ -48,7 +48,7 @@ Desktop Host 自动在现有提示词与工具服务旁挂载本插件；没有�
 
 #### 模型看到的内容
 
-段落以“Choose tools proactively when they help complete the user's current task; the user need not name a tool.”开头。区分内置浏览器独立状态与用户日常 Chrome 配置，并要求使用前检查自动连接并自行选择可用标签。[内置浏览器记录](../../../snapshots/session/w1-browser-use/system-prompt.expected.md)及 [Chrome 记录](../../../snapshots/session/w1-chrome-use/system-prompt.expected.md)固定可用环境与操作流程。
+`w1:tool-selection` 段落以“Choose tools proactively when they help complete the user's current task; the user need not name a tool.”开头。区分内置浏览器独立状态与用户日常 Chrome 配置，并要求使用前检查自动连接并自行选择可用标签。[内置浏览器记录](../../../snapshots/session/w1-browser-use/system-prompt.expected.md)及 [Chrome 记录](../../../snapshots/session/w1-chrome-use/system-prompt.expected.md)固定可用环境与操作流程。
 
 #### Token 影响
 
@@ -58,7 +58,11 @@ Desktop Host 自动在现有提示词与工具服务旁挂载本插件；没有�
 
 可见能力相同时文本稳定；作用域获得或失去任一浏览器工具时，浏览器指引变化。请求更新由既有提示词组装与 Session 日志负责。
 
-<a id="known-limitations-and-deferred-work"></a>
 ## 已知限制与后续工作
 
-这些是模型指令，不是确定性路由或权限授予。模拟组合与无密钥回放验证指令送达、作用域过滤和持久化，不衡量真实模型的工具选择准确率或原生浏览器行为。[Chrome 连接与扩展](../chrome-use/README.zh.md)由独立模块维护；工具可见不代表已连接，用户暂停与其他聊天的标签占用仍会被执行层检查。本包不实现桌面操控。
+<a id="known-limitations-and-deferred-work"></a>
+
+- 这些是模型指令，不是确定性路由或权限授予。模拟组合与无密钥回放验证指令送达、作用域过滤和持久化，不衡量真实模型的工具选择准确率或原生浏览器行为。[Chrome 连接与扩展](../chrome-use/README.zh.md)由独立模块维护；工具可见不代表已连接，用户暂停与其他聊天的标签占用仍会被执行层检查。本包不实现桌面操控。
+### 开发备注
+
+验证证据与待原生验收事项见 [W1 工作记录](../../../docs/工作记录.md)。

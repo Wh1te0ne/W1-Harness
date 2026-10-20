@@ -24,22 +24,25 @@ Consumers see only the `Workspace` interface; the implementation stays package-p
 
 ```ts type-equiv
 /**
- * One workspace: a stable id over an existing directory, a display title, and
- * an ordered candidate account of sessions. Membership validates header cwd
- * against the workspace path, but preserves an existing account when its
- * fully qualified cwd is missing. Consumers only see this interface; the
- * implementation stays private.
+ * A durable project identity, folder selection and session membership account.
  */
 interface Workspace {
   /** Stable record id (generated uuid). */
   readonly id: WorkspaceId
 
   /**
-   * Canonical directory path: the `fs.realpath` of the path given at create
-   * time (trailing slashes, `..`, and symlinks all resolved). Never rewritten
-   * afterwards, even when the directory disappears (see {@link status}).
+   * Canonical default directory for new sessions: the primary source folder,
+   * or the project-owned working directory when no source folders are linked.
+   * Changing it never rewrites existing Session headers.
    */
   readonly path: string
+
+  /** Associated source folders; the legacy path is exposed as one folder. */
+  readonly folderRoots: readonly WorkspaceFolder[]
+  /** Selected folder, or null when the project uses its private working directory. */
+  readonly primaryFolderId: string | null
+  /** Change project metadata without relocating existing sessions or files. */
+  configureProject(input: WorkspaceProjectInput): Promise<void>
 
   /** Display title. Defaults to the final path segment, or a filesystem root's own spelling; duplicates are allowed. */
   readonly title: string
@@ -51,15 +54,16 @@ interface Workspace {
   readonly updatedAt: string
 
   /**
-   * Header-validated sessions in manually owned order: a new session is
+   * Sessions in manually owned order: a new session is
    * prepended at attach, explicit reordering goes through
    * `insertSessionBefore`, and activity never reorders. The durable candidate
-   * account is filtered synchronously: missing headers, invalid cwd values,
+   * account in legacy single-directory records is filtered synchronously: missing headers, invalid cwd values,
    * and canonical cwd mismatches are never returned. A fully qualified cwd
    * whose realpath or directory stat fails with ENOENT preserves an existing
    * candidate, including a dangling symlink; other filesystem failures do not.
    * A subsequent mutation prunes filtered candidates, not missing-directory
-   * candidates. This does not admit new sessions or recreate directories.
+   * candidates. Explicit projects retain membership across folder changes; only absent sessions
+   * are filtered. This does not admit new sessions or recreate directories.
    */
   readonly sessionIds: readonly SessionId[]
 
@@ -75,7 +79,8 @@ interface Workspace {
    * accounted id resolves without writing, aside from the durable
    * filtered-candidate prune every accepted mutation performs. A new id's
    * live or persisted
-   * header cwd must resolve to an existing directory equal to {@link path};
+   * header cwd must resolve to the primary directory, an associated folder, or
+   * a historical directory already owned by an explicit project;
    * unknown ids, missing or invalid cwd values, and mismatches reject without
    * writing.
    * @param sessionId - The session to record.
@@ -331,6 +336,20 @@ Host service backing the generated `ctx.remote.workspace` namespace.
 @Remote('initializeDefault') async initializeDefault(signal: AbortSignal): Promise<WorkspaceValue | undefined>
 
 /**
+ * Create a named project and its initial folder selection.
+ * @param request - Validated project creation or update request.
+ * @returns The authoritative project result after persistence and local projection.
+ */
+@Remote('createProject') createProject(request: WorkspaceProjectCreateRequest): Promise<WorkspaceCreateValue>
+
+/**
+ * Update project folders and name without rebinding existing sessions.
+ * @param request - Validated project creation or update request.
+ * @returns The authoritative project result after persistence and local projection.
+ */
+@Remote('updateProject') updateProject(request: WorkspaceProjectUpdateRequest): Promise<WorkspaceValue>
+
+/**
  * Rename one Workspace to a unique non-blank title.
  * @param request - Workspace identity and proposed title.
  * @returns the updated Workspace projection.
@@ -468,6 +487,13 @@ Source: [`packages/api/workspace-files/src/index.ts`](../../packages/api/workspa
 Durable workspace registry. Startup waits for `sessionPersistence`, builds one canonical-cwd header index, and completes the one-time history bootstrap before the service becomes active. The persistence dependency is mandatory so an unavailable peer can never be mistaken for an empty history and commit the initialized marker.
 
 ```ts cordis-catalog
+/**
+ * Create an independently named project, even when another project uses the same folders.
+ * @param input - Project name, folder roots and primary-folder selection.
+ * @returns The authoritative project result after persistence and local projection.
+ */
+async createProject(input: WorkspaceProjectInput): Promise<Workspace>
+
 /**
  * Create or reuse a workspace for an existing directory. The fully qualified
  * path is canonicalized through `fs.realpath`; a relative, nonexistent, or

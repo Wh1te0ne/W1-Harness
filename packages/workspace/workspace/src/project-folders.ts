@@ -5,13 +5,24 @@ import { join } from 'node:path'
 import type { WorkspaceFolder, WorkspaceProjectInput } from './types.ts'
 import { realpathNormalize } from './paths.ts'
 
-/** Read legacy records as one primary folder without rewriting their identities. */
+/**
+ * Read legacy records as one primary folder without rewriting their identities.
+ * @param record - Stored project row, including legacy single-folder records.
+ * @returns Associated folders, projecting legacy records to one primary folder.
+ */
 export function projectFolders(record: { path: string; folderRoots?: readonly WorkspaceFolder[] | undefined }): readonly WorkspaceFolder[] {
   return record.folderRoots ?? [{ id: 'primary', path: record.path }]
 }
 
-/** Validate a complete folder selection; unchanged unavailable folders remain associated. */
-export async function normalizeProjectFolders(input: WorkspaceProjectInput, existing: readonly WorkspaceFolder[] = []): Promise<WorkspaceFolder[]> {
+/**
+ * Validate a complete folder selection; unchanged unavailable folders remain associated.
+ * @param input - Project name, folder roots and primary-folder selection.
+ * @param existing - Previously associated folders that may remain unavailable.
+ * @returns Validated canonical folder roots with their stable identifiers.
+ */
+export async function normalizeProjectFolders(
+  input: WorkspaceProjectInput, existing: readonly WorkspaceFolder[] = [],
+): Promise<WorkspaceFolder[]> {
   const ids = new Set<string>()
   const paths = new Set<string>()
   const folders: WorkspaceFolder[] = []
@@ -30,7 +41,11 @@ export async function normalizeProjectFolders(input: WorkspaceProjectInput, exis
   return folders
 }
 
-/** Create the private working directory for a project without associated source folders. */
+/**
+ * Create the private working directory for a project without associated source folders.
+ * @param id - Stable identifier within the owning project or side-chat connection.
+ * @returns Absolute private working directory for the project.
+ */
 export async function projectWorkingDirectory(id: string): Promise<string> {
   const root = process.env.W1_DOCUMENTS_DIR ?? join(homedir(), '.w1-harness', 'projects')
   const directory = join(root, id)

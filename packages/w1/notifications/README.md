@@ -1,6 +1,23 @@
+---
+description: "W1 built-in product features and configuration."
+kind: "package-reference"
+---
+
 # W1 内置通知
 
+## Summary
+
 W1 的 Windows 任务提醒属于默认应用组成，入口为「设置 → 通知」，导航使用独立铃铛图标，无需安装通知插件。客户端只决定任务提醒策略，Electron 主进程负责 Windows 系统通知、任务栏高亮和未读角标；不再启动 PowerShell/C# 辅助程序。手机后台推送不属于本模块。
+
+## Table of Contents
+
+- [行为](#行为)
+- [存储与迁移](#存储与迁移)
+- [开发和验证](#开发和验证)
+- [实现入口](#实现入口)
+- [Model Experience](#model-experience)
+- [Known Limitations and Deferred Work](#known-limitations-and-deferred-work)
+- [Dev Note](#dev-note)
 
 ## 行为
 
@@ -30,3 +47,18 @@ W1 的 Windows 任务提醒属于默认应用组成，入口为「设置 → 通
 - scripts/w1/migrate-notifications.mjs：W1 专用备份迁移，不删除旧插件文件。
 
 参考：[Electron 通知](https://www.electronjs.org/docs/latest/tutorial/notifications)。
+
+## Model Experience
+
+None, as this feature displays local notifications or recorded usage without initiating model requests.
+
+#### KV Cache effect
+
+This feature adds no model prompt or tool declaration and does not alter the model request prefix.
+
+## Known Limitations and Deferred Work
+
+- Notification delivery and recorded usage do not establish that a user saw a banner or that an estimate equals provider billing.
+### Dev Note
+
+Verification evidence and remaining native acceptance items are maintained in [the W1 work log](../../../docs/工作记录.md).

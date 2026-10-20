@@ -106,6 +106,7 @@ Every package below exports a Cordis plugin that a bundle patch can name in a Lo
 | `@deepseek-ai/dsh-client-ui-settings-subagent` | no | Settings page of Subagent delegation on the dsh web client's Plugins page: recursion depth, parallel capacity, and the models agents may choose for subagents |
 | `@deepseek-ai/dsh-client-ui-settings-web-search` | no | Settings page of the DeepSeek web-search provider on the dsh web client's Plugins page: its API key, endpoint, and per-request search budget |
 | `@deepseek-ai/dsh-client-ui-shortcuts` | no | Keyboard shortcut reference, recording, and local preference editing |
+| `@deepseek-ai/dsh-client-ui-side-chat` | no | W1 right-sidebar side-chat interface |
 | `@deepseek-ai/dsh-client-ui-sidebar` | no | Sidebar plugin: session multi-level tree, search, grouping, state dots |
 | `@deepseek-ai/dsh-client-ui-sidebar-browser` | no | Sandboxed Web browser tabs for the right Sidebar |
 | `@deepseek-ai/dsh-client-ui-sidebar-documentpreview` | yes | Extensible Sidebar previews for Office documents, spreadsheets, Markdown, code, images, PDF, HTML, and plain text |
@@ -487,6 +488,18 @@ Every package below exports a Cordis plugin that a bundle patch can name in a Lo
 | Package | Config | Description |
 |---|---|---|
 | `@deepseek-ai/dsh-typert-loader` | yes | Loader integration for generated Typert package contributions |
+
+## w1
+
+| Package | Config | Description |
+|---|---|---|
+| `@deepseek-ai/dsh-w1-browser-use` | yes | Conversation-scoped control of W1 built-in browser tabs |
+| `@deepseek-ai/dsh-w1-cache-diagnostics` | yes | W1 content-free main-loop cache diagnostics |
+| `@deepseek-ai/dsh-w1-goal-review` | yes | W1 evidence review before model-proposed goal completion |
+| `@deepseek-ai/dsh-w1-mcp-tool-catalog` | yes | W1 bounded Native MCP operation discovery and schema disclosure |
+| `@deepseek-ai/dsh-w1-reply-suggestions` | yes | W1 automatic model selection and optional composer reply drafts |
+| `@deepseek-ai/dsh-w1-side-chat` | yes | Independent temporary W1 sidebar conversations |
+| `@deepseek-ai/dsh-w1-tool-selection` | no | W1 product guidance for selecting available tools and browser environments |
 
 ## web
 

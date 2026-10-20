@@ -3175,7 +3175,7 @@ export function apply(ctx) {
   // 必须先于监听器/投影注册，避免延迟历史修复期间的新调用仍使用旧默认谷价。
   prepareDefaultPeakPrice(ledger)
   prepareSeptemberPrices(ledger)
-  console.log(`[dsh-usage-manager] 已加载,账本:${ledger.path}`)
+  ctx.logger?.debug?.('[usage-manager] loaded')
 
   // 卸载/退出前最终落盘。
   ctx.effect(() => () => ledger.close(), 'usage-manager: ledger close')

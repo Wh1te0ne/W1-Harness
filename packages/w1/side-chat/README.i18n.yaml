@@ -10,13 +10,16 @@
   zh: 2bed3cb17dc7a8ec
 /w1-side-chat/summary:
   en: 79a411d737257c13
-  zh: a54bad35bc4a6134
+  zh: 9c56b54d9bb59951
+/w1-side-chat/table-of-contents:
+  en: d48b68721aec7908
+  zh: e7c0469b025874d5
 /w1-side-chat/use-this-package:
   en: 077af5fd44976c3d
-  zh: 71adbec959c398cc
+  zh: e5d8e73d6252b500
 /w1-side-chat/implementation:
   en: a3e8971e9726f993
-  zh: 2326ce0b6992489b
+  zh: bc71e765d3893709
 /w1-side-chat/verification:
   en: 72bc34a778b66cc1
   zh: 1ebf3bfeb54a4df7
@@ -37,10 +40,13 @@
   zh: 06676d98023c7271
 /w1-side-chat/model-experience/independent-side-request/kv-cache-effect:
   en: 0b9b7874c719c298
-  zh: aee2b68a512b7e64
+  zh: c1aaa96de338f77d
 /w1-side-chat/known-limitations-and-deferred-work:
-  en: 0772acec4688161d
-  zh: 5a9b21ea74e02775
+  en: 804b9d321e21db2d
+  zh: e47ae09580833d58
 /w1-side-chat/known-limitations-and-deferred-work/dev-note:
   en: 782bcd2c0492fe88
-  zh: e17a35faa6ec6544
+  zh: 5ea6458de8741717
+/w1-side-chat/known-limitations-and-deferred-work/dev-note~2:
+  en: 5efe72384679fd2d
+  zh: 568748f5320f678d

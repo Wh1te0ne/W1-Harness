@@ -109,3 +109,7 @@ The auxiliary request has an independent prefix. Its records do not rewrite the 
 ### Dev Note
 
 None.
+
+### Dev Note
+
+Verification evidence and remaining native acceptance items are maintained in [the W1 work log](../../../docs/工作记录.md).
