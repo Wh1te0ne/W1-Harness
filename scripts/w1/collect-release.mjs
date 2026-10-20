@@ -27,7 +27,9 @@ mkdirSync(output, { recursive: true })
 const notes = readFileSync(join(root, 'CHANGELOG.md'), 'utf8')
   .replaceAll('](docs/', '](https://github.com/Wh1te0ne/W1-Harness/blob/main/docs/')
 writeFileSync(join(output, 'RELEASE_NOTES.md'), notes)
-for (const file of readdirSync(artifacts).filter(name => /\.(?:exe|blockmap|yml)$/u.test(name))) {
+const updateAssets = new Set([`${channel}.yml`, ...feed.files.flatMap(file =>
+  [file.url, ...existsSync(join(artifacts, `${file.url}.blockmap`)) ? [`${file.url}.blockmap`] : []])])
+for (const file of updateAssets) {
   copyFileSync(join(artifacts, file), join(output, file))
 }
 const chrome = JSON.parse(readFileSync(join(root, 'packages/w1/chrome-use/extension/manifest.json'), 'utf8'))

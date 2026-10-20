@@ -1,6 +1,6 @@
 /** Compile the fixed npm DevTools sources locally and publish the complete static frontend. */
 import { createHash } from 'node:crypto'
-import { mkdir, mkdtemp, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises'
+import { cp, mkdir, mkdtemp, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { setTimeout } from 'node:timers/promises'
 import { fileURLToPath } from 'node:url'
@@ -48,8 +48,21 @@ async function compile(): Promise<{ files: number; bytes: number }> {
     for (let attempt = 0; ; attempt++) {
       try { await rename(temporary, output); break }
       catch (error) {
-        if (process.platform !== 'win32' || attempt >= 5 || !(error instanceof Error) || !('code' in error)
+        if (process.platform !== 'win32' || !(error instanceof Error) || !('code' in error)
           || (error.code !== 'EPERM' && error.code !== 'EBUSY')) throw error
+        if (attempt >= 5) {
+          // Some Windows readers retain a directory handle after all writers close.
+          // This is private build output; verify every copied byte before publishing success.
+          await cp(temporary, output, { recursive: true, force: false, errorOnExist: true })
+          for (const file of files) {
+            const copied = await readFile(join(output, file.path))
+            if (createHash('sha256').update(copied).digest('hex') !== file.sha256) {
+              throw new Error(`DevTools publication mismatch: ${file.path}`)
+            }
+          }
+          console.log('DevTools: verified Windows directory-copy fallback')
+          break
+        }
         await setTimeout(500)
       }
     }
