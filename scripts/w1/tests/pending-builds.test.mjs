@@ -39,6 +39,19 @@ test('desktop and Host bundles use the same stopped-only publication', t => {
   assert.equal(readFileSync(join(f.root, 'apps/desktop/lib/client.js'), 'utf8'), 'new')
   assert.throws(() => queuePackageBuild(f.root, 'apps/other', f.stage), /Expected/)
 })
+
+test('the web frontend is published to dist only after W1 has stopped', t => {
+  const f = fixture(t)
+  const active = join(f.root, 'apps/web/dist/client.js')
+  f.put(active, 'old web')
+  queuePackageBuild(f.root, 'apps/web', f.stage)
+  assert.equal(readFileSync(active, 'utf8'), 'old web')
+  assert.throws(() => publishPendingBuilds(f.root, () => true), /Exit W1/)
+  assert.equal(readFileSync(active, 'utf8'), 'old web')
+  assert.equal(publishPendingBuilds(f.root, () => false), 1)
+  assert.equal(readFileSync(active, 'utf8'), 'new')
+  assert.equal(existsSync(join(f.root, 'apps/web/lib')), false)
+})
 test('partial builds are ignored and only the latest completed build is queued', t => {
   const f = fixture(t)
   assert.equal(publishPendingBuilds(f.root, () => false), 0)

@@ -6,7 +6,7 @@ import { dirname, join, relative, resolve, sep } from 'node:path'
 const queueDirectory = root => join(root, '.work/local-dev/pending-builds')
 const hash = file => createHash('sha256').update(readFileSync(file)).digest('hex')
 const validTarget = target => /^packages[/][a-z0-9-]+[/][a-z0-9-]+$/u.test(target)
-  || target === 'apps/desktop' || target === 'apps/desktop-host'
+  || target === 'apps/desktop' || target === 'apps/desktop-host' || target === 'apps/web'
 function inside(base, path) {
   const resolved = resolve(base, path)
   if (!resolved.startsWith(resolve(base) + sep)) throw new Error('Pending build path escapes its directory')
@@ -43,7 +43,7 @@ export function publishPendingBuilds(root, isRunning) {
     const item = JSON.parse(raw)
     if (!validTarget(item.target)) throw new Error('Invalid pending build target')
     const stage = inside(join(root, '.work/local-dev/pending-artifacts'), relative(join(root, '.work/local-dev/pending-artifacts'), resolve(root, item.stage)))
-    const destination = join(root, item.target, 'lib')
+    const destination = join(root, item.target, item.target === 'apps/web' ? 'dist' : 'lib')
     const entries = item.entries.map(entry => {
       const source = inside(stage, entry.file)
       const target = inside(destination, entry.file)

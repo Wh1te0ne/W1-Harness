@@ -6,6 +6,8 @@ if ($PrepareOnly) {
     exit $LASTEXITCODE
 }
 $env:W1_TEST_MODE = '1'
+$env:W1_TEST_LAUNCHER = $PSCommandPath
+$env:W1_TEST_POWERSHELL = Join-Path $PSHOME 'pwsh.exe'
 foreach ($name in @('W1_HOME','W1_USER_DATA','W1_DESKTOP_EXECUTABLE','W1_DESKTOP_LAUNCHER','DSH_HOME',
     'DSH_DESKTOP_DSH_DIR','DSH_DESKTOP_USER_DATA_DIR','DSH_DESKTOP_PRIMARY_RUNTIME_DIR','ELECTRON_RUN_AS_NODE','NODE_OPTIONS')) {
     Remove-Item -LiteralPath ('Env:' + $name) -ErrorAction SilentlyContinue

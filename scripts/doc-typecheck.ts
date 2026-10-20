@@ -189,7 +189,7 @@ function compileBlocksStandalone(blocks: Block[]): string | undefined {
       return remapBlockPaths(`${failed.stdout?.toString() ?? ''}${failed.stderr?.toString() ?? ''}`, blocks)
     }
   } finally {
-    rmSync(tmp, { recursive: true, force: true })
+    rmSync(tmp, { recursive: true, force: true, maxRetries: 20, retryDelay: 50 })
   }
 }
 

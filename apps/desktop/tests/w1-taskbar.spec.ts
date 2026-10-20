@@ -11,6 +11,24 @@ const owned: string[] = []
 afterEach(() => { vi.unstubAllEnvs(); for (const dir of owned.splice(0)) rmSync(dir, { recursive: true, force: true }) })
 
 describe.skipIf(process.platform !== 'win32')('W1 Windows taskbar relaunch', () => {
+  it('keeps a packaged test pin on the isolated launcher after its original environment is gone', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'w1-test-pin-'))
+    owned.push(directory)
+    const launcher = join(directory, 'Start W1 Test.ps1'), powershell = join(directory, 'pwsh.exe')
+    writeFileSync(launcher, '')
+    writeFileSync(powershell, '')
+    vi.stubEnv('W1_TEST_MODE', '1')
+    vi.stubEnv('W1_TEST_LAUNCHER', launcher)
+    vi.stubEnv('W1_TEST_POWERSHELL', powershell)
+    vi.stubEnv('W1_DESKTOP_EXECUTABLE', undefined)
+    const window = { setIcon: vi.fn(), setAppDetails: vi.fn() }
+    const identity = { ...product, name: 'W1 Harness Test', appId: 'local.w1.harness.test' }
+    configureW1Taskbar({ isPackaged: true, getAppPath: () => directory }, window, identity)
+    expect(window.setAppDetails).toHaveBeenCalledWith({ appId: identity.appId, appIconPath: process.execPath,
+      appIconIndex: 0, relaunchCommand: '"' + powershell
+        + '" -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "' + launcher
+        + '" -Executable "' + process.execPath + '"', relaunchDisplayName: identity.name })
+  })
   it('isolates test identity and paths even with inherited daily overrides, without touching daily shortcuts', () => {
     const directory = mkdtempSync(join(tmpdir(), 'w1-identity-'))
     owned.push(directory)

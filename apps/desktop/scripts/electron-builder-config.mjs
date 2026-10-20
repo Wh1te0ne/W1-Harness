@@ -20,6 +20,7 @@ import {
 } from './windows-sign.mjs'
 import { resolveDesktopBuildCommit } from './desktop-build-commit.mjs'
 import { resolveDesktopBuildVersion } from './desktop-build-version.mjs'
+import { retryWindowsFuses } from './windows-fuse-retry.mjs'
 import { desktopArtifactOutput, desktopTargetBuildPaths, resolveDesktopBuildTarget } from './desktop-build-paths.mjs'
 import { installWindowsDirectoryInstaller } from './windows-directory-installer.mjs'
 import { preserveWindowsRuntimeSignature, signWindowsCode } from './windows-runtime-signature.mjs'
@@ -195,6 +196,11 @@ export function createElectronBuilderConfig(
       writeUpdateInfo: false,
     },
     beforePack: async context => {
+      if (packagesWindows) {
+        const applyFuses = context.packager.addElectronFuses.bind(context.packager)
+        context.packager.addElectronFuses = (packContext, settings) =>
+          retryWindowsFuses(() => applyFuses(packContext, settings))
+      }
       const office = await officePackageDirectories(buildPaths.dsh, { platform: resolvedPlatform, arch: resolvedArch })
       const patterns = office.map(directory => `**/${relative(buildPaths.dsh, directory).split(sep).join('/')}/**/*`)
       const existing = context.packager.config.asarUnpack ?? []

@@ -197,6 +197,8 @@ async function collectHelp(): Promise<HelpPage[]> {
       cwd: root, env: environment, encoding: 'utf8', timeout: 30_000,
       killSignal: 'SIGKILL', maxBuffer: 2 * 1024 * 1024,
     })
+    // Help is non-interactive; never leave an ACP/profile reader waiting for input.
+    help.child.stdin?.end()
     // Killing directly, not through execFile's signal option, settles the read only after the child closes.
     const abort = (): void => { help.child.kill('SIGKILL') }
     signal.addEventListener('abort', abort, { once: true })

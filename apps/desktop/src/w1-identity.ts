@@ -67,8 +67,8 @@ export function configureW1Identity(application: Pick<App,
 }
 
 /**
- * Route development taskbar pins through the installed W1 launcher.
- * Packaged apps and development without the launcher keep their existing relaunch behavior.
+ * Keep test pins on their isolated launcher and development pins on the W1 publisher.
+ * Ordinary packaged apps and development without a launcher retain their default relaunch behavior.
  * @param application - current Electron application.
  * @param window - newly created desktop window, before it becomes visible.
  * @param product - W1 identity shared with the installed shortcuts.
@@ -78,7 +78,23 @@ export function configureW1Taskbar(
   window: Pick<BrowserWindow, 'setIcon' | 'setAppDetails'>,
   product: W1Product,
 ): void {
-  if (process.env.W1_TEST_MODE === '1' || process.platform !== 'win32' || !isW1Development(application)) return
+  if (process.platform !== 'win32') return
+  if (process.env.W1_TEST_MODE === '1') {
+    const launcher = process.env.W1_TEST_LAUNCHER
+    const powershell = process.env.W1_TEST_POWERSHELL
+    if (!launcher || !powershell || !isAbsolute(launcher) || !isAbsolute(powershell)
+      || !existsSync(launcher) || !existsSync(powershell)) return
+    window.setAppDetails({
+      appId: isW1Development(application) ? `${product.appId}.dev` : product.appId,
+      appIconPath: process.execPath,
+      appIconIndex: 0,
+      relaunchCommand: '"' + powershell + '" -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "'
+        + launcher + '" -Executable "' + process.execPath + '"',
+      relaunchDisplayName: product.name,
+    })
+    return
+  }
+  if (!isW1Development(application)) return
   const icon = join(application.getAppPath(), 'resources', 'icon-windows.png')
   window.setIcon(icon)
   const launcher = process.env.W1_DESKTOP_LAUNCHER
