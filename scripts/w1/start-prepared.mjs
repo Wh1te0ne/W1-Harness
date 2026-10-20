@@ -1,5 +1,7 @@
 /** Fast daily launch; refresh links through the original development script only when needed. */
 import { spawn, execFileSync } from 'node:child_process'
+// Runs before the application imports build output, so an interrupted publication is undone first.
+import './recover-before-launch.mjs'
 import { publishPendingBuilds } from './pending-builds.mjs'
 import { createRequire } from 'node:module'
 import { join } from 'node:path'
