@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom'
 import { IconDatabaseOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { TurnTokenUsage } from '../contract/chat-nodes.ts'
 import type { ChatViewSlotProps } from '../contract/slots.ts'
+import type { CacheDiagnostic } from '@deepseek-ai/dsh-w1-cache-diagnostics/types'
 import { formatCacheHitPercent, formatExactTokens, formatTokens } from './token-format.ts'
 import { MEASURE_STYLE, useStatDialog } from './stat-dialog.ts'
 import css from './TurnUsagePanel.module.css'
@@ -11,6 +12,8 @@ import dialogCss from './stat-dialog.module.css'
 
 export interface TurnUsagePanelProps {
   usage: TurnTokenUsage
+  /** Last main-loop step observed for this turn; auxiliary calls are excluded. */
+  cacheDiagnostic?: CacheDiagnostic | undefined
   /** The owning view's locale seat, passed down as a plain prop. */
   t: ChatViewSlotProps['t']
 }
@@ -28,7 +31,7 @@ function formatExactCount(value: number, t: ChatViewSlotProps['t']): string {
  * @param props - Turn usage buckets and locale seat.
  * @returns The trigger and, while open, its portaled dialog anchored above the trigger.
  */
-export function TurnUsagePanel({ usage, t }: TurnUsagePanelProps) {
+export function TurnUsagePanel({ usage, cacheDiagnostic, t }: TurnUsagePanelProps) {
   const { open, setOpen, rootRef, panelRef, pos } = useStatDialog()
 
   const cacheHit = usage.cacheReadTokens === undefined
@@ -101,6 +104,17 @@ export function TurnUsagePanel({ usage, t }: TurnUsagePanelProps) {
                 </span>
               )}
             </dd>
+            {cacheDiagnostic !== undefined && <>
+              <dt>{t('cache.title')}</dt>
+              <dd data-cache-diagnostic>{t(`cache.status.${cacheDiagnostic.status}`)}</dd>
+              <dt>{t('cache.source')}</dt>
+              <dd>{t(`cache.channel.${cacheDiagnostic.channel}`)}</dd>
+              <dt>{t('cache.changes')}</dt>
+              <dd>{cacheDiagnostic.causes.length === 0 ? t('cache.noChanges')
+                : cacheDiagnostic.causes.map(cause => t(`cache.cause.${cause}`)).join(' · ')}</dd>
+              <dt>{t('cache.scope')}</dt>
+              <dd>{t('cache.lastStep', { step: String(cacheDiagnostic.step) })} · {t('cache.serverUnknown')}</dd>
+            </>}
           </dl>
         </div>,
         document.body,

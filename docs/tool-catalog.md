@@ -7,7 +7,7 @@ Every model-facing tool a shipped plugin contributes to `ctx.tools`: the `name`,
 
 This file is GENERATED and verified fresh by `pnpm run verify-tool-catalog` (part of `doc-sync`) — do not edit it by hand. Unlike the cordis catalog (a pure source-AST pass), this generator BOOTS each tool plugin on a real context and reads `ctx.tools.schemas()`, because a tool schema is not statically knowable (runtime-spread enums, concatenated descriptions, config-driven names, raw-JSON-Schema MCP tools). A completeness guard globs `packages/*/tool-*` and fails if any package is missing from the generator's boot manifest, so a new tool cannot be silently undocumented.
 
-Scope: shipped product tools under `packages/*/tool-*`, each booted with its DEFAULT config, except where a Config field is REQUIRED with no default — there the generator must choose, and the per-package note records which branch this page shows. The registered tool NAME can be a load-time config (e.g. `tool-subagent`'s `toolName`), so a deployment may expose a package under a different or additional name — a per-package note records those shipped aliases where they exist. The `examples/` demo tools (e.g. `echo`) are excluded, matching the cordis catalog's packages-only scope.
+Scope: shipped product tools under `packages/*/tool-*` and the explicitly listed W1 MCP catalog, each booted with its DEFAULT config, except where a Config field is REQUIRED with no default or a W1 policy is disabled by default — there the generator must choose, and the per-package note records which branch this page shows. The registered tool NAME can be a load-time config (e.g. `tool-subagent`'s `toolName`), so a deployment may expose a package under a different or additional name — a per-package note records those shipped aliases where they exist. The `examples/` demo tools (e.g. `echo`) are excluded, matching the cordis catalog's packages-only scope.
 
 ## Tool Package Map
 
@@ -33,6 +33,7 @@ This table connects model-visible tool names to the plugin package and service s
 | `@deepseek-ai/dsh-tool-fs-search` | `glob`, `grep` | `ctx.workingDirectory`, `ctx.tools`, `ctx.subprocess`, `ctx.systemPrompt` | `tool/call`, `tool/result` | - | glob and grep are unconditional discovery tools that spawn the packaged ripgrep binary (`@vscode/ripgrep`) through ctx.subprocess as ordinary foreground calls (never background jobs) — no host `rg` install and no shell layer. The catalog uses `sampleOverCapGlobResults: true`; deployments must choose that behavior explicitly. Capped results save the complete formatted list through the optional ctx.spillStore backend; returned locators are follow-up-readable/searchable when the backend exposes local paths in co-located deployments. |
 | `@deepseek-ai/dsh-tool-terminal` | `terminal_close`, `terminal_list`, `terminal_open`, `terminal_read`, `terminal_send`, `terminal_signal` | `ctx.workingDirectory`, `ctx.tools`, `ctx.terminals`, `ctx.systemPrompt`, `ctx.jobs at call time for run_in_background` | `tool/call`, `tool/result` | - | The six terminal tools are opt-in and complement one-shot shell/filesystem tools. `terminal_send(run_in_background: true)` registers with `ctx.jobs`; TUI, named key sequences, BEL, resize, auto-start, and cross-agent sharing are absent from the schema. |
 | `@deepseek-ai/dsh-tool-goal` | `create_goal`, `get_goal`, `update_goal` | `ctx.tools`, `ctx.agents`, `ctx.goals`, `ctx.systemPrompt`, `a calling Agent in an authorized open turn` | `tool/call`, `goal/change for mutations`, `tool/result` | - | create, edit, pause, and resume require direct-human root authority; complete and blocked also accept the exact current goal round. The default blocked lower bound is three admitted rounds. |
+| `@deepseek-ai/dsh-w1-mcp-tool-catalog` | `w1_tool_catalog` | `ctx.tools`, `ctx.agents`, `ctx.systemPrompt`, `ctx.sessionProjections` | `w1/mcp-disclosure`, `request/header through existing tool history` | - | W1 enables the catalog explicitly; the standalone enabled default is false. Native MCP declarations are disclosed on demand. PTC descriptions and execution permissions remain unchanged. |
 | `@deepseek-ai/dsh-tool-schedule` | `schedule_create`, `schedule_delete`, `schedule_list`, `schedule_update` | `ctx.tools`, `ctx.schedule` | `tool/call`, `Schedule storage domain create, update, or delete`, `tool/result` | - | A preset or Agent scope mounts this package; the preset decides which agents receive the four management tools. Each call acts on the calling Agent's Session. Accepts after_seconds, explicit absolute at, bounded fixed-rate every_seconds, daily and weekly local times in an explicit IANA zone, and cron as a five-field expression. Management uses the Host storage domain; due messages resume the original Session. |
 | `@deepseek-ai/dsh-tool-lsp` | `lsp` | `ctx.workingDirectory`, `ctx.tools`, `ctx.lsp`, `ctx.systemPrompt` | `tool/call`, `tool/result` | - | The lsp tool keeps provider selection and language-server subprocesses behind ctx.lsp, so its model-visible schema stays stable across providers. Requires a registered provider (e.g. `@deepseek-ai/dsh-lsp-stdio`) at runtime; without one, a query returns the structured `LSP_UNAVAILABLE` error rather than changing the schema. |
 | `@deepseek-ai/dsh-tool-ralph` | `ralph` | `ctx.tools`, `ctx.workflowEngine`, `ctx.subagents`, `ctx.systemPrompt`, `a calling Agent (exec.agent parents every fresh round)` | `tool/call`, `tool/result`, `workflow and child session events during execution` | - | A fixed foreground workflow starts one fresh structured child per round; the model selects only the immutable objective and an optional round cap. |
@@ -1429,6 +1430,51 @@ Update the current goal.
 Source: [`packages/goal/tool-goal/src/index.ts`](../packages/goal/tool-goal/src/index.ts)
 
 create, edit, pause, and resume require direct-human root authority; complete and blocked also accept the exact current goal round. The default blocked lower bound is three admitted rounds.
+
+<a id="deepseek-aidsh-w1-mcp-tool-catalog"></a>
+
+## `@deepseek-ai/dsh-w1-mcp-tool-catalog`
+
+### `w1_tool_catalog`
+
+Find available MCP operations by names or descriptions. Search returns names and summaries. Load selected names to make their full calling schemas available on your next step. Existing execution permissions still apply.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "action": {
+      "type": "string",
+      "enum": [
+        "search",
+        "load"
+      ]
+    },
+    "query": {
+      "type": "string",
+      "description": "Search words; empty lists available operations."
+    },
+    "offset": {
+      "type": "integer",
+      "description": "Non-negative search offset from the previous page."
+    },
+    "names": {
+      "type": "array",
+      "description": "Exact public operation names returned by search, for action load.",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "action"
+  ]
+}
+```
+
+Source: [`packages/w1/mcp-tool-catalog/src/index.ts`](../packages/w1/mcp-tool-catalog/src/index.ts)
+
+W1 enables the catalog explicitly; the standalone enabled default is false. Native MCP declarations are disclosed on demand. PTC descriptions and execution permissions remain unchanged.
 
 <a id="deepseek-aidsh-tool-schedule"></a>
 

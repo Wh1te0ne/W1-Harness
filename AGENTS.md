@@ -193,3 +193,5 @@ Docs accompany every code change: update affected README and JSDoc contracts tog
 ## Vendoring policy
 
 `vendor/` packages are pinned source copies (manifest with upstream SHAs in [vendor/README.md](vendor/README.md)). Update via the sync procedure there; re-apply or retire the logged local modifications; rerun `pnpm run test && pnpm run build`.
+
+- W1 完成前复核、MCP 声明目录和缓存诊断的配置、验证与回退见 `docs/Harness三阶段改造.md`；保持原版 DSH 独立。

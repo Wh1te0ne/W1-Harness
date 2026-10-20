@@ -8,7 +8,7 @@ kind: "package-reference"
 
 ## 概述
 
-基于 Agent-scoped Remote Event waterfall 的浏览器审批界面。插件通过 `ctx.uiSession` 发布每个待处理请求、接管 Conversation composer、按需渲染关联的 Tool 详情，并将用户决定返回给等待中的 Host 请求。当浏览器必须为等待中的 Host 操作收集批准时，请使用它。
+基于 Agent-scoped Remote Event waterfall 的浏览器审批界面。插件通过 `ctx.uiSession` 发布待处理请求，在关联工具操作旁显示审批，并在输入区保留等待条。等待条可定位操作或打开备用审批面板。没有调用标识的请求直接使用输入区面板。两处呈现都向等待中的 Host 请求返回同一个单次决定。
 
 ## 目录
 

@@ -159,6 +159,13 @@ export function createElectronBuilderConfig(
       { from: fileURLToPath(new URL('../../../assets/w1/exports/app-icon-1024.png', import.meta.url)), to: 'icon.png' },
       // Windows tray bitmaps; macOS keeps the Dock and ships no menu bar icon.
       ...(packagesWindows ? [{ from: fileURLToPath(new URL('../../../assets/w1/exports/app-icon.ico', import.meta.url)), to: 'tray.ico' }] : []),
+      ...(packagesWindows ? ['light', 'dark'].map(color => ({
+        from: fileURLToPath(new URL(`../../../assets/w1/exports/mark-${color}.ico`, import.meta.url)), to: `w1-mark-${color}.ico`,
+      })) : []),
+      ...(packagesWindows ? [
+        { from: fileURLToPath(new URL('../../../assets/w1/exports/app-icon-light.ico', import.meta.url)), to: 'w1-app-light.ico' },
+        { from: fileURLToPath(new URL('../../../assets/w1/exports/app-icon.ico', import.meta.url)), to: 'w1-app-dark.ico' },
+      ] : []),
     ],
     mac: {
       icon: fileURLToPath(new URL('../resources/icon-macos.png', import.meta.url)),

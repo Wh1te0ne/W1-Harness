@@ -1,5 +1,5 @@
 /**
- * ModelSelect: the composer's named model seat (`conversation.input.model`).
+ * ModelSelect: the shared `model.selector` Factory used by main and side composers.
  * Two-level selection per figma 496:26454's MenuDropdown: the root menu is
  * the Model / Effort row pair (label + current value + a right chevron),
  * each drilling into its own list — the provider-grouped model list over
@@ -16,7 +16,8 @@
  * within each provider group, ranked by
  * prefix, alignment score, then catalog order. Returning to the root pane
  * hands focus back to the cell that opened it. Data and submission ride the
- * same per-session ModelDirectory as the /model popup; exact-model reasoning
+ * caller-owned state and callbacks. The main composer shares its per-session
+ * ModelDirectory with the /model popup; exact-model reasoning
  * metadata and the selected effort come from the Host rather than a
  * client-owned vocabulary. A rejected selection announces through the shared
  * transient Toast anchored to the composer card; the in-menu strip with
@@ -27,7 +28,7 @@
  */
 import { MenuGroup, MenuSurface, observeStickyMenuGroups } from '@deepseek-ai/dsh-client-ui-primitives'
 import {
-  useEffect, useId, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore,
+  useEffect, useId, useLayoutEffect, useMemo, useRef, useState,
   type CSSProperties, type KeyboardEvent, type FocusEvent,
 } from 'react'
 import { createPortal } from 'react-dom'
@@ -37,8 +38,8 @@ import {
   IconCheckOutlineRegular, IconChevronDownOutlineRegular, IconChevronRightOutlineRegular, IconCloseFillRegular,
   IconDataOutlineRegular, IconWarningOutlineRegular, Input, rankByName, StateDot, Toast,
 } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { PropsLocale, PropsRenderSlots, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
-import type { ModelLabelOwner, ModelSelectInjected } from './slots.ts'
+import type { FactoryComponentPropsOf } from '@deepseek-ai/dsh-client-ui-slots'
+import type { ModelLabelOwner, ModelPickerOwner } from './slots.ts'
 import css from './ModelSelect.module.css'
 import { orderModelProviders } from './provider-order.ts'
 
@@ -56,20 +57,14 @@ interface EffortChoice {
 const MEASURE_STYLE: CSSProperties = { visibility: 'hidden', left: 0, top: 0 }
 
 /**
- * Render the composer model seat.
- * @param props - owner share (locked) + injected face (shared directory
- * store/verbs) + the standard locale seat.
+ * Render the shared model picker for a caller-owned selection.
+ * @param props - occurrence data and callbacks plus framework locale and label rendering.
  * @returns the trigger and, while open, the two-level menu.
  */
 export function ModelSelect(
-  { locked, available, directory, load, select, t, renderSlot }:
-  ModelSelectInjected & Pick<PropsRuntime<'conversation.input.model'>, 'locked'> & PropsLocale<'model'>
-    & Omit<PropsRenderSlots<'conversation.input.model.label'>, 'SessionProvider'>,
+  { locked, available, state, load, select, t, renderSlot }:
+  Pick<FactoryComponentPropsOf<'model.selector'>, 'locked' | 'available' | 'state' | 'load' | 'select' | 't' | 'renderSlot'>,
 ) {
-  const state = useSyncExternalStore(
-    fn => directory.subscribe(fn),
-    () => directory.getSnapshot(),
-  )
   const [open, setOpen] = useState(false)
   const [pane, setPane] = useState<Pane>('root')
   const [query, setQuery] = useState('')
@@ -373,7 +368,7 @@ export function ModelSelect(
     close()
   }
 
-  const settleSelection = (result: Awaited<ReturnType<ModelSelectInjected['select']>>): void => {
+  const settleSelection = (result: Awaited<ReturnType<ModelPickerOwner['select']>>): void => {
     if (result === undefined) return
     if (result.ok) {
       if (rootRef.current !== null) closeAfterSelection()

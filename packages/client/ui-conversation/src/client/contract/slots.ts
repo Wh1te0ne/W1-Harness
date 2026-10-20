@@ -192,6 +192,8 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
   }
 
   interface SlotMap {
+    /** Tool-owned extension position for a Session's correlated pending interaction. */
+    'tool.call.interaction': { kind: 'single'; scope: 'session'; owner: { readonly callId: string } }
     /** One business-owned inline renderer for a pure JSON text node. */
     'conversation.user.text.node': {
       kind: 'keyed'

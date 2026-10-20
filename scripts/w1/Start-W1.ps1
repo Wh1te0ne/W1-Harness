@@ -47,9 +47,10 @@ if (-not $PrepareOnly -and -not $RefreshProject -and $DebugPortBase -eq 0) {
     $env:DSH_DESKTOP_PRIMARY_RUNTIME_DIR = Join-Path $root 'apps/desktop/.desktop-build/targets/win-x64/runtime/primary-runtime'
     $env:ELECTRON_ENABLE_LOGGING = '1'
     "W1 existing instance: forwarding activation to PID $($owner.ProcessId)" | Set-Content -LiteralPath $launchLog
-    & $node (Join-Path $PSScriptRoot 'run-logged.mjs') $launchLog $env:W1_DESKTOP_EXECUTABLE "--user-data-dir=$w1Data" (Join-Path $root 'apps/desktop')
-    if ($LASTEXITCODE -ne 0) { throw "W1 activation failed. See $launchLog" }
-    return
+    & $node (Join-Path $PSScriptRoot 'run-logged.mjs') $launchLog $env:W1_DESKTOP_EXECUTABLE "--user-data-dir=$w1Data" (Join-Path $root 'apps/desktop') --w1-activate-only
+    if ($LASTEXITCODE -eq 0) { return }
+    if ($LASTEXITCODE -ne 75) { throw "W1 activation failed. See $launchLog" }
+    # The owner exited during activation. Continue through the publisher before taking over.
   }
 }
 New-Item -ItemType Directory -Path $w1Home -Force | Out-Null

@@ -1,0 +1,46 @@
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write packages/w1/mcp-tool-catalog/README.md
+/:
+  en: f28d9b4f703585a2
+  zh: f28d9b4f703585a2
+/deepseek-ai-dsh-w1-mcp-tool-catalog:
+  en: 37f58d4bc25ca957
+  zh: e7e91b147bb3d137
+/deepseek-ai-dsh-w1-mcp-tool-catalog/summary:
+  en: 0a391f2af226504d
+  zh: 9765e57d8b37958d
+/deepseek-ai-dsh-w1-mcp-tool-catalog/table-of-contents:
+  en: d152484eb41ac6b4
+  zh: 405b30feaf48c087
+/deepseek-ai-dsh-w1-mcp-tool-catalog/use-this-package:
+  en: aad2d6126b2ed565
+  zh: 123ebed10ad5e816
+/deepseek-ai-dsh-w1-mcp-tool-catalog/understand-the-implementation:
+  en: b7dbe50db86df979
+  zh: 00d20113fc530a98
+/deepseek-ai-dsh-w1-mcp-tool-catalog/further-exploration:
+  en: 06fe9a4eb0072720
+  zh: 79c5c2475fed4956
+/deepseek-ai-dsh-w1-mcp-tool-catalog/model-experience:
+  en: 215e7ba838619b7b
+  zh: a311da3843709f90
+/deepseek-ai-dsh-w1-mcp-tool-catalog/model-experience/catalog-tool-schema:
+  en: 0d5a1c44fc8dd74d
+  zh: 890846a4fee183f2
+/deepseek-ai-dsh-w1-mcp-tool-catalog/model-experience/catalog-tool-schema/what-the-model-sees:
+  en: 36bbb2f64bf89f23
+  zh: 2e11459e61a6887d
+/deepseek-ai-dsh-w1-mcp-tool-catalog/model-experience/catalog-tool-schema/token-effect:
+  en: adbd0bb489ba7ae2
+  zh: ad6cd89ade68abac
+/deepseek-ai-dsh-w1-mcp-tool-catalog/model-experience/catalog-tool-schema/kv-cache-effect:
+  en: 5e3cfe9215007992
+  zh: af6f917af992d71e
+/deepseek-ai-dsh-w1-mcp-tool-catalog/known-limitations-and-deferred-work:
+  en: b137f8e8cf5aeb8a
+  zh: 5ec563440eeec2c2
+/deepseek-ai-dsh-w1-mcp-tool-catalog/known-limitations-and-deferred-work/dev-note:
+  en: 0a1253c6f7b5e8b9
+  zh: 9f56528562c7c914

@@ -89,11 +89,11 @@ The page refresh shortcut calls the same reload operation as the toolbar. Its to
 <a id="model-experience"></a>
 ## Model Experience
 
-None, as Browser tabs are user-facing presentation state and register no tool, prompt section, or Session event.
+This tab package registers no model tool. In W1 Desktop, the [browser control provider](../../w1/browser-use/README.md) operates these same tabs, binds each guest to its conversation, and exposes a per-tab pause control. Web iframe tabs remain presentation-only.
 
 #### KV Cache effect
 
-None; browsing does not enter a model request.
+Manual browsing does not enter model requests. W1 browser tool calls append observations and attachment references through the normal tool pipeline.
 
 ## Known Limitations and Deferred Work
 

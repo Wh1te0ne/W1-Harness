@@ -1,0 +1,49 @@
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write packages/w1/goal-review/README.md
+/:
+  en: a37dc8141763c20e
+  zh: a37dc8141763c20e
+/deepseek-ai-dsh-w1-goal-review:
+  en: 5d314bf6501eefca
+  zh: 118cd933f891f1d7
+/deepseek-ai-dsh-w1-goal-review/summary:
+  en: 45aafc7e2ed60d3e
+  zh: 36f34ab7bf7d9f15
+/deepseek-ai-dsh-w1-goal-review/table-of-contents:
+  en: d152484eb41ac6b4
+  zh: 405b30feaf48c087
+/deepseek-ai-dsh-w1-goal-review/use-this-package:
+  en: c64160b6c4c8d517
+  zh: 036460164c9e8c89
+/deepseek-ai-dsh-w1-goal-review/understand-the-implementation:
+  en: 834fda3a3f0700a4
+  zh: fa1f96877da10f25
+/deepseek-ai-dsh-w1-goal-review/further-exploration:
+  en: 06fe9a4eb0072720
+  zh: 79c5c2475fed4956
+/deepseek-ai-dsh-w1-goal-review/model-experience:
+  en: 215e7ba838619b7b
+  zh: a311da3843709f90
+/deepseek-ai-dsh-w1-goal-review/model-experience/auxiliary-completion-review:
+  en: 37937f8eb8cd307b
+  zh: 20a5742f53f82337
+/deepseek-ai-dsh-w1-goal-review/model-experience/auxiliary-completion-review/what-the-model-sees:
+  en: 3be2e9761e2da23b
+  zh: de17ba584839ceab
+/deepseek-ai-dsh-w1-goal-review/model-experience/auxiliary-completion-review/what-the-model-sees/verbatim-auxiliary-instruction:
+  en: e81239be3dd62a75
+  zh: efe02ba32b7cf95d
+/deepseek-ai-dsh-w1-goal-review/model-experience/auxiliary-completion-review/token-effect:
+  en: 66f0a0b21124448e
+  zh: f1f25e76df9c869b
+/deepseek-ai-dsh-w1-goal-review/model-experience/auxiliary-completion-review/kv-cache-effect:
+  en: 6f1697e442e5bb43
+  zh: 3c995e0a9d45b569
+/deepseek-ai-dsh-w1-goal-review/known-limitations-and-deferred-work:
+  en: 8049dac79abf1d85
+  zh: 54399a17ae3cfc64
+/deepseek-ai-dsh-w1-goal-review/known-limitations-and-deferred-work/dev-note:
+  en: 0a1253c6f7b5e8b9
+  zh: 9f56528562c7c914

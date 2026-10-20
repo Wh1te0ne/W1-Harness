@@ -237,6 +237,13 @@
     "scripts/client-bundle-purity.spec.ts"
   ],
   "references": [
+    { "path": "./packages/w1/browser-use" },
+    { "path": "./packages/w1/tool-selection" },
+    { "path": "./packages/w1/chrome-use" },
+    { "path": "./packages/w1/cache-diagnostics" },
+    { "path": "./packages/w1/mcp-tool-catalog" },
+    { "path": "./packages/w1/goal-review" },
+    { "path": "./packages/w1/side-chat/tsconfig.host.json" },
     { "path": "./packages/w1/reply-suggestions" },
     { "path": "./packages/experimental/client-ui-cot-translation/tsconfig.host.json" },
     { "path": "./packages/experimental/cot-translation-bundle" },

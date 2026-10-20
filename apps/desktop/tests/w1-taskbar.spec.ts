@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { configureW1StartMenu, configureW1Taskbar, isW1Development } from '../src/w1-identity.ts'
+import { configureW1StartMenu, configureW1Taskbar, isW1Development, relaunchW1 } from '../src/w1-identity.ts'
 import type { W1Product } from '../src/w1-upstream.ts'
 
 const product: W1Product = { name: 'W1 Harness', appId: 'local.w1.harness', protocol: 'w1-harness',
@@ -11,6 +11,19 @@ const owned: string[] = []
 afterEach(() => { vi.unstubAllEnvs(); for (const dir of owned.splice(0)) rmSync(dir, { recursive: true, force: true }) })
 
 describe.skipIf(process.platform !== 'win32')('W1 Windows taskbar relaunch', () => {
+  it('restarts development through the publisher launcher without inherited application arguments', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'w1-relaunch-'))
+    owned.push(directory)
+    const launcher = join(directory, 'W1 Harness.exe')
+    writeFileSync(launcher, '')
+    vi.stubEnv('W1_DESKTOP_LAUNCHER', launcher)
+    const relaunch = vi.fn()
+    relaunchW1({ isPackaged: false, relaunch })
+    expect(relaunch).toHaveBeenCalledWith({ execPath: launcher, args: [] })
+    relaunch.mockClear()
+    relaunchW1({ isPackaged: true, relaunch })
+    expect(relaunch).toHaveBeenCalledWith()
+  })
   it('reopens the development launcher with spaces as one executable and shares the shortcut identity', () => {
     const directory = mkdtempSync(join(tmpdir(), 'w1-taskbar-'))
     owned.push(directory)

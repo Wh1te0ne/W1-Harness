@@ -15,6 +15,8 @@ export {
   DEFAULT_STREAM_IDLE_TIMEOUT_MS,
 } from './defaults.ts'
 export { DeepSeekAdapter } from './adapter.ts'
+export type { RequestStructure } from './request-structure.ts'
+export type { PreparedRequestObservation } from './types.ts'
 export type { DeepSeekRequestAuth, DeepSeekAdapterOptions, DeepSeekCatalogModel, DeepSeekConnectionOptions } from './types.ts'
 export {
   DEFAULT_LOW_DETAIL_IMAGE_PIXEL_BUDGET,

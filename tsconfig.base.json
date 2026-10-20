@@ -28,6 +28,19 @@
     // not declaration path aliases, keep each package/vendor source compiled
     // under its own tsconfig boundary.
     "paths": {
+      "@deepseek-ai/dsh-w1-browser-use": ["./packages/w1/browser-use/src/index.ts"],
+      "@deepseek-ai/dsh-w1-tool-selection": ["./packages/w1/tool-selection/src/index.ts"],
+      "@deepseek-ai/dsh-w1-browser-use/protocol": ["./packages/w1/browser-use/src/protocol.ts"],
+      "@deepseek-ai/dsh-w1-browser-use/page": ["./packages/w1/browser-use/src/page.ts"],
+      "@deepseek-ai/dsh-w1-chrome-use": ["./packages/w1/chrome-use/src/index.ts"],
+      "@deepseek-ai/dsh-w1-cache-diagnostics": ["./packages/w1/cache-diagnostics/src/index.ts"],
+      "@deepseek-ai/dsh-w1-cache-diagnostics/types": ["./packages/w1/cache-diagnostics/src/types.ts"],
+      "@deepseek-ai/dsh-w1-mcp-tool-catalog": ["./packages/w1/mcp-tool-catalog/src/index.ts"],
+      "@deepseek-ai/dsh-w1-goal-review": ["./packages/w1/goal-review/src/index.ts"],
+      "@deepseek-ai/dsh-w1-goal-review/types": ["./packages/w1/goal-review/src/types.ts"],
+      "@deepseek-ai/dsh-client-ui-side-chat/client": ["./packages/client/ui-side-chat/src/client/index.ts"],
+      "@deepseek-ai/dsh-w1-side-chat": ["./packages/w1/side-chat/src/index.ts"],
+      "@deepseek-ai/dsh-w1-side-chat/types": ["./packages/w1/side-chat/src/types.ts"],
       "@deepseek-ai/dsh-w1-reply-suggestions": ["./packages/w1/reply-suggestions/src/index.ts"],
       "@deepseek-ai/dsh-w1-reply-suggestions/types": ["./packages/w1/reply-suggestions/src/types.ts"],
       "@deepseek-ai/dsh-experimental-session-search": ["./packages/experimental/session-search/src/index.ts"],

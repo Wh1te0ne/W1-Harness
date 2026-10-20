@@ -5,6 +5,8 @@
   padding: 8px calc(var(--dsh-composer-side-clearance) + 16px) 12px;
 }
 
+.inline { padding: 8px 0; }
+
 .card {
   overflow: hidden;
   width: 100%;
@@ -65,3 +67,4 @@
   color: var(--dsw-alias-state-error-primary);
   border-color: transparent;
 }
+.waiting { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 12px; color: var(--dsw-alias-label-secondary); font-size: 12px; }

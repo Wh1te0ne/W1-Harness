@@ -89,11 +89,11 @@ Desktop 主进程批准 guest 租约，并执行挂载、导航和权限策略�
 <a id="model-experience"></a>
 ## 模型体验
 
-无。Browser tab 是用户侧呈现状态，不注册工具、prompt section 或 Session event。
+本标签页包不注册模型工具。W1 Desktop 的[浏览器操控提供方](../../w1/browser-use/README.zh.md)操作同一批标签页，将 guest 绑定到聊天，并提供逐页暂停入口。Web iframe 标签仍仅用于呈现。
 
 #### KV Cache 影响
 
-无；浏览内容不进入模型请求。
+手动浏览不进入模型请求。W1 浏览器工具调用通过正常工具流程追加观察结果与附件引用。
 
 ## 已知限制与延期工作
 

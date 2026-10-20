@@ -96,6 +96,8 @@ ctx.tools.register(defineTool({
 
 -----
 
+`ToolDefinition.origin` 可选地保留 MCP 服务与原始操作名，供目录检索使用。声明投影通过字段白名单排除此运行时元数据，它不授予执行权限。Native 声明过滤可以修改 `system-prompt/assemble` 的结果，而不改变按作用域校验的执行器视图。
+
 <a id="understand-the-implementation"></a>
 ## 理解实现
 

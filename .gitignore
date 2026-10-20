@@ -58,3 +58,21 @@ native/system/test/bin/
 # W1 built-in usage owns its Host JS and shipped browser modules.
 !packages/w1/usage/lib/
 !packages/w1/usage/lib/**
+
+# TypeScript emissions accidentally placed beside sources; keep the authored TS files.
+/packages/mcp/mcp-client/src/*.js
+/packages/mcp/mcp-client/src/*.js.map
+/packages/mcp/mcp-client/src/*.d.ts
+/packages/mcp/mcp-client/src/*.d.ts.map
+/packages/mcp/mcp-resources/src/*.js
+/packages/mcp/mcp-resources/src/*.js.map
+/packages/mcp/mcp-resources/src/*.d.ts
+/packages/mcp/mcp-resources/src/*.d.ts.map
+/packages/subprocess/subprocess/src/*.js
+/packages/subprocess/subprocess/src/*.js.map
+/packages/subprocess/subprocess/src/*.d.ts
+/packages/subprocess/subprocess/src/*.d.ts.map
+/packages/util/http-proxy/src/*.js
+/packages/util/http-proxy/src/*.js.map
+/packages/util/http-proxy/src/*.d.ts
+/packages/util/http-proxy/src/*.d.ts.map

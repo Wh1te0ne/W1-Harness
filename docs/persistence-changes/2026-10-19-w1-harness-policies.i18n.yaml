@@ -1,0 +1,28 @@
+# Bilingual-pair consistency record for 2026-10-19-w1-harness-policies.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write docs/persistence-changes/2026-10-19-w1-harness-policies.md
+/:
+  en: 3d5a424ae7d7e46b
+  zh: c22a8e4a62d8cc1a
+/2026-10-19-w1-harness-policies:
+  en: bfdfae67d89185ac
+  zh: 0fdeb98b2b966dd8
+/2026-10-19-w1-harness-policies/summary:
+  en: 2d23e5fc48419ae1
+  zh: e9dcc9611ffb0f74
+/2026-10-19-w1-harness-policies/table-of-contents:
+  en: 6cf314a069ceb451
+  zh: 9adff678e9ecab3b
+/2026-10-19-w1-harness-policies/declaration:
+  en: 6907136f28e48c90
+  zh: 02f8298485f3d8e7
+/2026-10-19-w1-harness-policies/compatibility:
+  en: 634efa20d5e0d35d
+  zh: f2b5c9035b9d45e9
+/2026-10-19-w1-harness-policies/verification:
+  en: a6b3a0981a02f564
+  zh: fcd2aba8ff1d9eac
+/2026-10-19-w1-harness-policies/dev-note:
+  en: b75c8458928b72b9
+  zh: 003ba4e17b4b5269

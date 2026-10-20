@@ -50,6 +50,7 @@
     "ws": "^8.21.3"
   },
   "devDependencies": {
+    "@deepseek-ai/dsh-w1-browser-use": "workspace:*",
     "@deepseek-ai/dsh-app-boot": "workspace:*",
     "@deepseek-ai/dsh-atomic-write": "workspace:*",
     "@deepseek-ai/dsh-client-product-analytics": "workspace:*",

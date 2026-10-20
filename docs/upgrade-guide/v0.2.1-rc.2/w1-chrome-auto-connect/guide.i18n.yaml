@@ -1,0 +1,16 @@
+# Bilingual-pair consistency record for guide.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write docs/upgrade-guide/v0.2.1-rc.2/w1-chrome-auto-connect/guide.md
+/:
+  en: 495156207fe684ee
+  zh: 845806974c0c1558
+/w1-chrome-automatic-connection:
+  en: 785e1a9262860300
+  zh: 4d97699d426e01f5
+/w1-chrome-automatic-connection/change:
+  en: b172ed76cb9e02bd
+  zh: f800a48c0662a4c3
+/w1-chrome-automatic-connection/migration:
+  en: 1cd50cc96d9d8182
+  zh: 8e7633afa62a227b

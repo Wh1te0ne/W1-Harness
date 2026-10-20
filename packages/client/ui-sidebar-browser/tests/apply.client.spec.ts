@@ -56,7 +56,7 @@ async function boot(platform: ShortcutPlatform = 'macos', runtime: 'desktop' | '
   const openTabs = createSnapshotStore<readonly { sessionId: string; tabId: TabId }[]>([])
   const target = { sessionId: 'session', paneId: 'pane' }
   const sidebar = { openTabs, commandTarget: vi.fn<() => typeof target | undefined>(() => target),
-    openTabFromTarget: vi.fn() }
+    openTabFromTarget: vi.fn(), openTabIn: vi.fn() }
   const registry = new ShortcutRegistry(runtime, platform)
   ctx.provide('sidebarRight', sidebar as never)
   ctx.provide('shortcuts', { register: (command: ShortcutCommand) => registry.register(command) } as never)
@@ -70,6 +70,22 @@ async function boot(platform: ShortcutPlatform = 'macos', runtime: 'desktop' | '
 }
 
 describe('ui-sidebar-browser apply', () => {
+  it('opens an Agent-requested page in its stated conversation and releases the listener', async () => {
+    let receive: ((request: { sessionId: string; requestId: string; url: string }) => void) | undefined
+    const unsubscribe = vi.fn()
+    const bridge: DesktopBrowserBridge = {
+      acquire: vi.fn(), release: vi.fn(), onOpenRequested: () => () => {},
+      onCreateRequested: (listener) => { receive = listener; return unsubscribe },
+    }
+    vi.stubGlobal('dshDesktop', { protocolVersion: 1, browser: bridge })
+    const h = await boot()
+    receive?.({ sessionId: 'owner', requestId: 'request', url: 'https://example.test/' })
+    expect(h.sidebar.openTabIn).toHaveBeenCalledWith('owner', 'browser', {
+      params: { url: 'https://example.test/', automationRequestId: 'request' }, revealIfOpened: false,
+    })
+    await h.fiber.dispose()
+    expect(unsubscribe).toHaveBeenCalledOnce()
+  })
   it.each([0, 1])('binds and rebinds session controllers under desktop protocol %s', async (protocolVersion) => {
     const acquire = vi.fn(async () => ({ lease: 'test-lease' as DesktopBrowserLeaseId, partition: 'test-partition' }))
     const bridge: DesktopBrowserBridge = {
@@ -96,7 +112,7 @@ describe('ui-sidebar-browser apply', () => {
         initial: undefined, initialUrl: 'https://example.test/', openTab: vi.fn() })
       expect(replacementStore.getSnapshot().byTab[tabId]).toBeDefined()
       expect(firstStore.getSnapshot().byTab[tabId]).toBeUndefined()
-      if (protocolVersion === 1) await vi.waitFor(() => { expect(acquire).toHaveBeenCalledWith('session:session') })
+      if (protocolVersion === 1) await vi.waitFor(() => { expect(acquire).toHaveBeenCalledWith('session:session', { sessionId: 'session' }) })
       else expect(host.querySelector('iframe')).not.toBeNull()
       h.openTabs.set([{ sessionId: 'other', tabId }, { sessionId: 'session', tabId: 'other-tab' as TabId }])
       signal.abort()

@@ -1,0 +1,37 @@
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write packages/w1/chrome-use/README.md
+/:
+  en: b522e9755da086fb
+  zh: c310501a29f27272
+/deepseek-ai-dsh-w1-chrome-use:
+  en: 57d639ed6ea31f81
+  zh: e667583edb764f42
+/deepseek-ai-dsh-w1-chrome-use/summary:
+  en: 00b3bb64c4d33c0f
+  zh: c82b89bef31308ca
+/deepseek-ai-dsh-w1-chrome-use/table-of-contents:
+  en: 854d17a18ef49c05
+  zh: f8d34632140ec9e9
+/deepseek-ai-dsh-w1-chrome-use/use-this-library:
+  en: d0fc82c1ff34b2e0
+  zh: a401bd69a7d74cb8
+/deepseek-ai-dsh-w1-chrome-use/use-this-library/install-or-update-awaiting-native-acceptance:
+  en: 9bc2c81a24af5390
+  zh: bf01b8a0584deba7
+/deepseek-ai-dsh-w1-chrome-use/use-this-library/build:
+  en: f85e775d25ea7e89
+  zh: 7eb9b63c83961039
+/deepseek-ai-dsh-w1-chrome-use/connection-and-control:
+  en: a85e865fc5f4619c
+  zh: 41beb36a0c93e0bf
+/deepseek-ai-dsh-w1-chrome-use/implementation:
+  en: 12b3343e27c12e1c
+  zh: 5807fe8fdf5875d3
+/deepseek-ai-dsh-w1-chrome-use/model-experience:
+  en: efdd629df4dabc57
+  zh: 4770262c499695fb
+/deepseek-ai-dsh-w1-chrome-use/known-limitations-and-deferred-work:
+  en: 633c0d2bae104c99
+  zh: 7d1f42c01b7606fa

@@ -18,6 +18,7 @@ declare module '@deepseek-ai/dsh-llm' {
 
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import type { GenericCallView } from '@deepseek-ai/dsh-tools'
+import type { Agent } from '@deepseek-ai/dsh-agent'
 import {
   completionAuthority,
   goalToolExecution,
@@ -27,6 +28,22 @@ import { renderWrapupContext } from './wrapup.ts'
 
 export const name = 'tool-goal'
 export const inject = ['agents', 'goals', 'tools', 'systemPrompt', 'sessionProjections']
+
+/** Completion policy runs after authority and CAS validation, before mutation. */
+export type ModelCompletionDecision = { readonly kind: 'allow' } | { readonly kind: 'deny'; readonly reason: string }
+
+declare module '@deepseek-ai/cordis' {
+  interface Events {
+    /**
+     * Review an authorized completion before its compare-and-set mutation.
+     * No listener preserves upstream completion. Rejections leave the goal incomplete.
+     * @param payload - exact live agent, validated goal revision and calling tool cancellation.
+     * @param next - downstream completion policies; defaults to allow.
+     * @mode waterfall
+     */
+    'goal/before-model-complete'(payload: { agent: Agent; goal: GoalView; signal: AbortSignal }, next: () => Promise<ModelCompletionDecision>): Promise<ModelCompletionDecision>
+  }
+}
 
 /** Model policy and hard lower bounds for goal-state updates. */
 export interface Config {
@@ -252,7 +269,7 @@ export function apply(ctx: Context, config: Config): void {
       },
     },
     output: GOAL_OUTPUT,
-    execute(args, exec) {
+    async execute(args, exec) {
       const execution = goalToolExecution(ctx, exec)
       const ref = goalRef(args.goal_id, args.revision)
       const replacements = {
@@ -309,6 +326,19 @@ export function apply(ctx: Context, config: Config): void {
           + `current round is ${authority.goal.roundsStarted}`,
           'GOAL_TOOL_BLOCK_THRESHOLD',
         )
+      }
+      if (args.action === 'complete') {
+        const current = ctx.goals.get(execution.agent)
+        if (current === undefined || current.id !== ref.id || current.revision !== ref.revision) {
+          throw new HarnessError('Goal changed; read get_goal before completing it.', 'GOAL_TOOL_STALE_REF')
+        }
+        const decision = await ctx.waterfall('goal/before-model-complete', {
+          agent: execution.agent, goal: current, signal: exec.signal,
+        }, () => Promise.resolve<ModelCompletionDecision>({ kind: 'allow' }))
+        exec.signal.throwIfAborted()
+        // A policy may await model evidence while a human changes the goal.
+        completionAuthority(ctx, goalToolExecution(ctx, exec))
+        if (decision.kind === 'deny') throw new HarnessError(decision.reason, 'GOAL_COMPLETION_REVIEW_REQUIRED')
       }
       const goal = args.action === 'complete'
         ? ctx.goals.complete(execution.agent, ref)

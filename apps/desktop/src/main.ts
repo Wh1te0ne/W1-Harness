@@ -1,6 +1,7 @@
 import { markW1Startup } from './w1-startup.ts'
 import type { ProductEventMap, ProductEvent } from '@deepseek-ai/dsh-client-product-analytics/types'
-import { configureW1Identity, configureW1Taskbar, configureW1StartMenu, isW1Development } from './w1-identity.ts'
+import { configureW1Identity, configureW1Taskbar, configureW1StartMenu, isW1Development, relaunchW1 } from './w1-identity.ts'
+import { watchW1SystemIcons } from './w1-system-icons.ts'
 import { W1UpstreamUpdates } from './w1-upstream.ts'
 import { W1Notifications } from './w1-notifications.ts'
 import { manageW1Remote } from './w1-remote-settings.ts'
@@ -59,6 +60,7 @@ import { readDesktopSettings } from './settings.ts'
 import { DesktopUpdateDialog, type UpdateDialogOptions } from './update-dialog.ts'
 import { readDesktopRuntime } from './runtime-tree.ts'
 import { DesktopBrowserGuests } from './browser-guests.ts'
+import { BrowserAutomation, BrowserControlError } from './browser-automation.ts'
 import { installDesktopShortcuts } from './keyboard.ts'
 import { DesktopUpdateOverlays } from './update-overlay.ts'
 import { DesktopQuitConfirmation } from './quit-confirmation.ts'
@@ -109,7 +111,7 @@ const recovery = new DesktopFatalRecovery({
     console.info('Desktop profile recovery completed:', { profilePatchBackup: backupPath ?? null, homePatch: 'unchanged' })
   },
   exit: () => { quitWithoutConfirmation() },
-  restart: () => { app.relaunch(); quitWithoutConfirmation() },
+  restart: () => { relaunchW1(app); quitWithoutConfirmation() },
   writeReport: (error, source) => persistCrashReport(error, source),
 })
 
@@ -232,6 +234,12 @@ function createWindow(preload: string, show = false, primary = false): BrowserWi
     },
   })
   configureW1Taskbar(app, window, w1Product)
+  if (process.platform === 'win32') {
+    const icon = join(isW1Development(app) ? join(app.getAppPath(), 'resources') : process.resourcesPath,
+      nativeTheme.shouldUseDarkColors ? 'w1-app-dark.ico' : 'w1-app-light.ico')
+    window.setIcon(icon)
+    window.setAppDetails({ appIconPath: icon, appIconIndex: 0 })
+  }
   window.webContents.setWindowOpenHandler(({ url }) => {
     if (['http:', 'https:'].includes(new URL(url).protocol)) void shell.openExternal(url)
     return { action: 'deny' }
@@ -402,7 +410,12 @@ async function main(): Promise<void> {
   const applicationUrl = `${SCHEME}://app/`
   let hostUrl: string | undefined
   let hostCookie: string | undefined
-  const browserGuests = new DesktopBrowserGuests(() => hostUrl)
+  const browserAutomation: BrowserAutomation = new BrowserAutomation(value => browserGuests.allowedNavigation(value),
+    (sessionId, requestId, url) => {
+      if (mainWindow === undefined || mainWindow.isDestroyed()) throw new BrowserControlError('window-unavailable', 'Open the W1 conversation before opening a browser tab.')
+      mainWindow.webContents.send(DESKTOP_IPC.browserCreateRequested, { sessionId, requestId, url })
+    })
+  const browserGuests = new DesktopBrowserGuests(() => hostUrl, browserAutomation)
   let injections: readonly unknown[] = []
   let welcomeBackend: DesktopWelcomeBackend | undefined
   let reportedLaunch = false
@@ -443,7 +456,8 @@ async function main(): Promise<void> {
     const host = new DesktopHostProcess(resources.node, resources.dsh, activeProject,
       hostInspectPort, { ...hostEnvironment, DSH_CLIENT_VERSION: desktopClientVersion() }, onFailure,
       primaryRuntime,
-      resources, (next) => { platformView.setSession(next) })
+      resources, (next) => { platformView.setSession(next) },
+      (sessionId, command, limits, signal) => browserAutomation.execute(sessionId, command, limits, signal))
     return {
       start: async () => {
         markW1Startup('host-start')
@@ -680,13 +694,17 @@ async function main(): Promise<void> {
     reportFatal(new Error(message), 'web-boot')
   })
 
-  ipcMain.handle(DESKTOP_IPC.browserAcquire, (event, workspace: unknown) => {
+  ipcMain.handle(DESKTOP_IPC.browserAcquire, (event, workspace: unknown, binding: unknown) => {
     assertProductSender(event)
-    return browserGuests.acquire(event.sender, workspace)
+    return browserGuests.acquire(event.sender, workspace, binding)
   })
   ipcMain.handle(DESKTOP_IPC.browserRelease, (event, lease: unknown) => {
     assertProductSender(event)
     return browserGuests.release(event.sender, lease)
+  })
+  ipcMain.handle(DESKTOP_IPC.browserAutomation, (event, lease: unknown, enabled: unknown) => {
+    assertProductSender(event)
+    browserGuests.setAutomation(event.sender, lease, enabled)
   })
 
   session.defaultSession.webRequest.onBeforeSendHeaders({ urls: ['ws://127.0.0.1/*', 'wss://127.0.0.1/*'] }, (details, callback) => {
@@ -900,7 +918,7 @@ async function main(): Promise<void> {
       { label: currentDesktopLocale().messages.reloadPageMenu, role: 'reload' as const },
       { label: currentDesktopLocale().messages.restartAppHostMenu, click: () => {
         if (quitting) return
-        app.relaunch()
+        relaunchW1(app)
         quitWithoutConfirmation()
       } },
     ] : [],
@@ -928,6 +946,15 @@ async function main(): Promise<void> {
       tray = new DesktopTray({ iconPath: trayIconPath, locale: currentDesktopLocale,
         open: () => { focusPrimaryWindow() }, quit: () => { app.quit() } })
     } catch (error) { console.warn('desktop tray: unavailable', error) }
+  }
+  if (process.platform === 'win32') {
+    const disposeSystemIcons = watchW1SystemIcons({ app, theme: nativeTheme, shell,
+      readDark: () => nativeTheme.shouldUseDarkColors,
+      resources: development ? join(app.getAppPath(), 'resources') : process.resourcesPath,
+      appId: development ? `${w1Product.appId}.dev` : w1Product.appId,
+      windows: () => BrowserWindow.getAllWindows(), tray,
+      report: (error) => { console.warn('W1 system icons:', error) } })
+    app.on('will-quit', disposeSystemIcons)
   }
   const backgroundNotice = process.platform === 'win32'
     ? new DesktopBackgroundNotice({ markerPath: join(app.getPath('userData'), 'background-close-confirmed'),
@@ -1211,8 +1238,10 @@ async function main(): Promise<void> {
 }
 
 const ownsDesktopInstance = claimDesktopSingleInstance(app, () => { focusPrimaryWindow() })
+const activationOnly = isW1Development(app) && process.argv.includes('--w1-activate-only')
+if (ownsDesktopInstance && activationOnly) app.exit(75)
 
-if (ownsDesktopInstance) void app.whenReady().then(main).catch(async (error: unknown) => {
+if (ownsDesktopInstance && !activationOnly) void app.whenReady().then(main).catch(async (error: unknown) => {
   const message = error instanceof Error ? error.message : String(error)
   console.error(error)
   const diagnosticFile = process.env.DSH_DESKTOP_DIAGNOSTIC_FILE

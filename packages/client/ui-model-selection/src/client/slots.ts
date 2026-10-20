@@ -18,6 +18,17 @@ export interface ModelLabelOwner {
 }
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
+  interface SlotFactoryMap {
+    /** Shared picker; callers own selection state and submission semantics. */
+    'model.selector': {
+      scope: 'session'
+      props: ModelPickerOwner
+      locale: 'model'
+      children: {
+        'conversation.input.model.label': { kind: 'single'; scope: 'session'; inline: true }
+      }
+    }
+  }
   interface SlotMap {
     /**
      * Non-interactive inline model label; selection controls remain owner-managed.
@@ -42,12 +53,21 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
   }
 }
 
+/** Plain selection data and callbacks supplied by each picker occurrence. */
+export interface ModelPickerOwner {
+  locked: boolean
+  available: boolean
+  state: ModelDirectoryState
+  load: () => void
+  select: (selection: ModelSelection) => Promise<RemoteResult<void> | undefined>
+}
+
 /** Injected business face of the composer model seat. */
 export interface ModelSelectInjected {
   /** Whether this session supports Agent-bound model inspection and selection. */
   available: boolean
   /** The session's shared directory store (same instance the /model popup reads). */
-  directory: SnapshotStore<ModelDirectoryState>
+  hooks: { modelDirectory: SnapshotStore<ModelDirectoryState> }
   /** Ensure the shared advisory catalog is loaded (errors land on the store). */
   load: () => void
   /**

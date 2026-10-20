@@ -210,7 +210,7 @@ describe('approval Remote Event consumer', () => {
       .resolves.toBe('unavailable')
     expect(next).toHaveBeenCalledOnce()
     expect(bench.pending.getSnapshot()).toEqual([])
-    expect(bench.register).toHaveBeenCalledOnce()
+    expect(bench.register).toHaveBeenCalledTimes(2)
   })
 
   it('publishes one scoped takeover, returns the answer, and keeps stable registrations', async () => {
@@ -247,7 +247,7 @@ describe('approval Remote Event consumer', () => {
     await expect(result).resolves.toBe('allowed-once')
     expect(next).not.toHaveBeenCalled()
     expect(bench.pending.getSnapshot()).toEqual([])
-    expect(bench.register).toHaveBeenCalledOnce()
+    expect(bench.register).toHaveBeenCalledTimes(2)
     expect(bench.disposeSlot).not.toHaveBeenCalled()
     await scope.fiber.dispose()
   })
@@ -307,7 +307,7 @@ describe('approval Remote Event consumer', () => {
   it('removes stable registrations with the plugin lifetime', async () => {
     const bench = await setupPlugin()
     await bench.ctx.fiber.dispose()
-    expect(bench.disposeSlot).toHaveBeenCalledOnce()
+    expect(bench.disposeSlot).toHaveBeenCalledTimes(2)
     expect(bench.disposeLocale).toHaveBeenCalledOnce()
   })
 })
@@ -357,6 +357,8 @@ describe('ApprovalPanel', () => {
     })
     const renderSlot = vi.fn(() => <code>pnpm test</code>)
     render(<ApprovalPanel {...panelProps(pending, renderSlot)} />)
+    expect(screen.queryByRole('button', { name: 'Allow once' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'reviewHere' }))
 
     expect(screen.getByText('Run this exact command')).toBeTruthy()
     expect(screen.getByText('pnpm test')).toBeTruthy()
@@ -418,6 +420,8 @@ describe('ApprovalPanel', () => {
     const pending = new PendingApproval(id('s1'), { toolName: 'bash', callId: 'call-1' as ToolCallId })
     const renderSlot = () => <input aria-label="Approval input" />
     render(<ApprovalPanel {...panelProps(pending, renderSlot)} />)
+    expect(screen.queryByRole('button', { name: 'Allow once' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'reviewHere' }))
     const group = screen.getByRole('group', { name: 'Approval details' })
     fireEvent.keyDown(group, { key: 'Enter', code: 'Enter' })
     expect(pending.answerable).toBe(true)

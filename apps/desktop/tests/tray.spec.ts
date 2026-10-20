@@ -8,6 +8,7 @@ const native = await vi.hoisted(async () => {
   const trays: FakeTray[] = []
   class FakeTray extends EventEmitter {
     readonly setToolTip = vi.fn()
+    readonly setImage = vi.fn()
     readonly setContextMenu = vi.fn()
     readonly destroy = vi.fn()
     constructor(readonly image: unknown) { super(); trays.push(this) }
@@ -43,9 +44,11 @@ it('shows the application icon with its name as the tooltip and an Open / Quit m
   const f = setup()
   expect(native.createFromPath).toHaveBeenCalledWith('C:/app/resources/tray.ico')
   expect(f.native.image).toEqual({ path: 'C:/app/resources/tray.ico' })
-  expect(f.native.setToolTip).toHaveBeenCalledWith('DeepSeek Harness')
-  expect(labels(native.menus[0]!)).toEqual(['Open DeepSeek Harness', 'separator', 'Quit DeepSeek Harness'])
+  expect(f.native.setToolTip).toHaveBeenCalledWith('W1 Harness')
+  expect(labels(native.menus[0]!)).toEqual(['Open W1 Harness', 'separator', 'Quit W1 Harness'])
   expect(f.native.setContextMenu).toHaveBeenCalledWith({ template: native.menus[0] })
+  f.tray.setIcon('white.ico')
+  expect(f.native.setImage).toHaveBeenCalledWith({ path: 'white.ico' })
 })
 
 it('opens the window on a single click and routes menu entries to the open and quit actions', () => {
@@ -63,7 +66,7 @@ it('relabels the menu in the current locale and ignores relabel after disposal',
   const f = setup()
   f.setLocale('zh')
   f.tray.relabel()
-  expect(labels(native.menus[1]!)).toEqual(['打开 DeepSeek Harness', 'separator', '退出 DeepSeek Harness'])
+  expect(labels(native.menus[1]!)).toEqual(['打开 W1 Harness', 'separator', '退出 W1 Harness'])
   f.tray.dispose()
   f.tray.dispose()
   expect(f.native.destroy).toHaveBeenCalledOnce()

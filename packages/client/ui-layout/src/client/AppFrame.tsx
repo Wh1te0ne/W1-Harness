@@ -55,7 +55,7 @@ function RightbarColumn(props: { children?: ReactNode }) {
  * One drag handle: pointer capture, rAF-throttled dx reports against the drag-start origin.
  * `side` keys the hover-reveal CSS to the owning column.
  */
-function DragHandle(props: { side: 'sidebar' | 'rightbar'; left: number; onStart: () => void; onDrag: (dx: number) => void; onEnd: () => void }) {
+function DragHandle(props: { side: 'sidebar' | 'rightbar'; left: number; onStart: () => void; onDrag: (dx: number) => void; onEnd: () => void; onCancel: () => void; onReset: () => void }) {
   const [dragging, setDragging] = useState(false)
   const origin = useRef(0)
   const latest = useRef(0)
@@ -74,6 +74,19 @@ function DragHandle(props: { side: 'sidebar' | 'rightbar'; left: number; onStart
     callbacks.current.onEnd()
   }, [])
   useEffect(() => endDrag, [endDrag])
+  const cancelRef = useRef(props.onCancel)
+  cancelRef.current = props.onCancel
+  useEffect(() => {
+    const cancel = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || capture.current === null) return
+      event.preventDefault()
+      event.stopPropagation()
+      endDrag()
+      cancelRef.current()
+    }
+    window.addEventListener('keydown', cancel, true)
+    return () => { window.removeEventListener('keydown', cancel, true) }
+  }, [endDrag])
 
   const onPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     if (e.button !== 0 || capture.current !== null) return
@@ -108,6 +121,7 @@ function DragHandle(props: { side: 'sidebar' | 'rightbar'; left: number; onStart
       style={{ left: props.left }}
       data-side={props.side}
       data-dragging={dragging || undefined}
+      onDoubleClick={props.onReset}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
@@ -298,9 +312,12 @@ export function AppFrame({
         </div>
       )}
       {/* The collapsed rail is fixed-width: no resize handle while closed. */}
-      {!sidebarCollapsed && <DragHandle side="sidebar" left={cols.sidebar} onStart={onSidebarStart} onDrag={onSidebarDrag} onEnd={onDragEnd} />}
+      {!sidebarCollapsed && <DragHandle side="sidebar" left={cols.sidebar} onStart={onSidebarStart} onDrag={onSidebarDrag} onEnd={onDragEnd}
+        onCancel={() => { actions.setSidebar(sidebarBase.current) }} onReset={() => { actions.setSidebar(SIDEBAR_DEFAULT) }} />}
       {layoutInfo.rightbarShown && !layoutInfo.rightbarFullscreen && normal.rightbar > 0 && (
-        <DragHandle side="rightbar" left={viewport - normal.rightbar} onStart={onRightbarStart} onDrag={onRightbarDrag} onEnd={onDragEnd} />
+        <DragHandle side="rightbar" left={viewport - normal.rightbar} onStart={onRightbarStart} onDrag={onRightbarDrag} onEnd={onDragEnd}
+          onCancel={() => { actions.setRightbar(rightbarBase.current) }}
+          onReset={() => { actions.setRightbar(viewport * RIGHTBAR_DEFAULT_RATIO) }} />
       )}
     </div>
   )

@@ -37,6 +37,8 @@ A rejected mutation surfaces the Remote error inline on the strip; loading, abse
 
 -----
 
+When the W1 completion-review projection is present, the dock shows reviewing, remaining-work, insufficient-evidence or unavailable states for the exact current goal revision. A stale review cannot relabel a changed goal.
+
 <a id="understand-the-implementation"></a>
 ## Understand the implementation
 

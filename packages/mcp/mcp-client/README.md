@@ -102,6 +102,8 @@ When a server connection drops — for example a local server process crashes �
 
 This section explains the design decisions behind the bridge and points at the code that realizes them; the observable behavior is fully covered in [Use this package](#use-this-package).
 
+Tool definitions retain the original `serverName` and `rawName` as runtime-only origin metadata. Public-name normalization is never reversed to recover the upstream identity; model wire schemas exclude this metadata. W1 can use it for declaration discovery without changing MCP startup or dispatch.
+
 ### Design philosophy
 
 - **Server-qualified identity.** Every MCP tool has the stable identity `(serverName, rawName)`. The namespace is local configuration, never the remote `serverInfo.name` — the remote name is untrusted, not unique across deployments, and can change on upgrade, none of which may silently rename model-facing tools.

@@ -39,15 +39,25 @@ export class ElectronWebViewImpl implements BrowserFrame {
    */
   constructor(private readonly options: BrowserPageOptions, private readonly bridge: DesktopBrowserBridge,
     private readonly workspace: (signal: AbortSignal) => Promise<string>,
-    private readonly presentation: ElectronWebviewPresentation) {
+    private readonly presentation: ElectronWebviewPresentation, private readonly sessionId?: string) {
     this.checkpoint = currentBrowserTarget(options.initial)
-    this.store = createSnapshotStore(emptyBrowserFrame())
+    this.store = createSnapshotStore({ ...emptyBrowserFrame(),
+      automationEnabled: sessionId !== undefined && bridge.setAutomation !== undefined ? true : undefined })
   }
 
   /** @returns immutable carrier-neutral navigation state. */
   getSnapshot = (): BrowserFrameState => this.store.getSnapshot()
   /** @param listener - state invalidation. @returns unsubscribe callback. */
   subscribe = (listener: () => void): (() => void) => this.store.subscribe(listener)
+
+  /** Per-tab user control; errors remain visible in the existing failure presentation. */
+  readonly automation = { setEnabled: (enabled: boolean): void => {
+    if (this.lease === undefined || this.bridge.setAutomation === undefined) return
+    const lease = this.lease
+    void this.bridge.setAutomation(lease, enabled).then(() => {
+      if (this.lease === lease) this.store.set({ ...this.store.getSnapshot(), automationEnabled: enabled })
+    }).catch((error: unknown) => { this.commandFailed(error) })
+  } }
 
   /** A physical mount may recreate a lost guest; ordinary Sidebar hiding never calls this. */
   attach(): void {
@@ -144,7 +154,11 @@ export class ElectronWebViewImpl implements BrowserFrame {
   private async createGuest(attachmentSignal: AbortSignal): Promise<void> {
     this.workspaceKey ??= await this.workspace(attachmentSignal)
     if (attachmentSignal.aborted) return
-    const reservation = await this.bridge.acquire(this.workspaceKey)
+    const automationEnabled = this.store.getSnapshot().automationEnabled
+    const reservation = await this.bridge.acquire(this.workspaceKey, this.sessionId === undefined ? undefined : {
+      sessionId: this.sessionId, ...this.options.automationRequestId === undefined ? {} : { requestId: this.options.automationRequestId },
+      ...automationEnabled === undefined ? {} : { automationEnabled },
+    })
     // oxlint-disable-next-line typescript/no-unnecessary-condition -- The signal can abort while acquire is pending.
     if (attachmentSignal.aborted) { await this.release(reservation.lease); return }
     this.lease = reservation.lease

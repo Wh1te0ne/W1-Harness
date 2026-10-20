@@ -1,0 +1,10 @@
+version: 1
+scenario: w1-chrome-use
+profile: headless
+composition: w1-chrome-use
+recording: authored
+header:
+  class: w1-chrome-use
+  pin: true
+replay:
+  override: true

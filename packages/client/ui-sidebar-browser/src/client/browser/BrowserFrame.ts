@@ -10,6 +10,7 @@ export interface BrowserLoadError {
 
 /** State consumed by common browser chrome, without DOM or carrier identifiers. */
 export interface BrowserFrameState {
+  readonly automationEnabled?: boolean | undefined
   readonly target: BrowserTarget | undefined
   readonly address: 'empty' | 'requested' | 'observed' | 'unknown'
   readonly loading: boolean
@@ -28,6 +29,7 @@ export interface BrowserSandboxControl {
 
 /** Navigation owns page lifetime; mounting and hiding belong to BrowserPresentation. */
 export interface BrowserFrame extends HostObservable<BrowserFrameState> {
+  readonly automation?: BrowserSandboxControl
   readonly sandbox?: BrowserSandboxControl
   /** @param target - validated HTTP(S) address; loading failures are published in state. */
   loadUrl(target: BrowserTarget): void

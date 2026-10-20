@@ -13,7 +13,7 @@ import { Context } from '@deepseek-ai/cordis'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { LayoutState, PaneId, TabId } from '@deepseek-ai/dsh-client-ui-dockkit'
 import { dockPaneIds, findTabPane, getPane } from '@deepseek-ai/dsh-client-ui-dockkit'
-import { createSidebarRightController } from '../src/client/service.ts'
+import { createSidebarRightController, type SidebarRightCloseHandler } from '../src/client/service.ts'
 import { SidebarRightTabRegistry } from '../src/client/tab-registry.ts'
 import { createSidebarRightStore } from '../src/client/stores.ts'
 import { guideDefinition } from '../src/client/tabs/guide/definition.ts'
@@ -679,6 +679,37 @@ describe('SidebarRightController — the on-screen Session', () => {
 })
 
 describe('explicit tab resource cleanup', () => {
+  it.each(['close', 'replace'] as const)('retains a tab until its %s handler retries after confirmation', (operation) => {
+    const h = harness()
+    h.publish()
+    h.controller.openResource('dsh-resource://file/session/s-test/temporary')
+    const tabId = h.tabOf('temporary')
+    let retry: (() => void) | undefined
+    let confirmed = false
+    h.controller.registerCloseHandler('text', (_session, _tab, again) => { retry = again; return confirmed })
+    if (operation === 'close') h.controller.closeIn(SESSION, tabId)
+    else h.controller.openTab('guide', { replaceTab: tabId, revealIfOpened: false })
+    expect(h.layout().tabs[tabId]).toBeDefined()
+    confirmed = true
+    const confirm = retry!
+    confirm(); confirm()
+    expect(h.layout().tabs[tabId]).toBeUndefined()
+    expect(h.titles()).toEqual(operation === 'replace' ? ['tab.guide.title'] : [])
+  })
+  it('does not retry a captured removal after its store adoption changes', () => {
+    const h = harness()
+    h.publish()
+    h.controller.openResource('dsh-resource://file/session/s-test/temporary')
+    const tabId = h.tabOf('temporary')
+    let retry: (() => void) | undefined
+    const handler = vi.fn<SidebarRightCloseHandler>((_session, _tab, again) => { retry = again; return false })
+    h.controller.registerCloseHandler('text', handler)
+    h.controller.closeIn(SESSION, tabId)
+    h.unadopt()
+    retry!()
+    expect(h.layout().tabs[tabId]).toBeDefined()
+    expect(handler).toHaveBeenCalledOnce()
+  })
   it.each(['close', 'replace'] as const)('immediately removes the tab after a synchronous cleanup handler during %s', (operation) => {
     const h = harness()
     const release = h.adopt(SESSION, h.instance)
@@ -692,7 +723,7 @@ describe('explicit tab resource cleanup', () => {
       const before = h.entries()
       if (operation === 'close') h.controller.close(tabId)
       else h.controller.openTab('guide', { replaceTab: tabId, revealIfOpened: false })
-      expect(handler).toHaveBeenCalledExactlyOnceWith(SESSION, original)
+      expect(handler).toHaveBeenCalledExactlyOnceWith(SESSION, original, expect.any(Function))
       expect(h.layout().tabs[tabId]).toBeUndefined()
       expect(h.entries()).toBe(before + 1)
       h.controller.closeIn(SESSION, tabId)

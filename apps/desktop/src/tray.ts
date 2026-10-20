@@ -39,6 +39,11 @@ export class DesktopTray {
     ]))
   }
 
+  /** Update the tray bitmap after the Windows system color scheme changes. @param path - Multi-size icon file. */
+  setIcon(path: string): void {
+    this.tray?.setImage(nativeImage.createFromPath(path))
+  }
+
   /** Remove the icon; called once the quit is confirmed so no dead icon outlives the process. */
   dispose(): void {
     const tray = this.tray

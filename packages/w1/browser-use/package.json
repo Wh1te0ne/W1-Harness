@@ -1,0 +1,38 @@
+{
+  "name": "@deepseek-ai/dsh-w1-browser-use",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Conversation-scoped control of W1 built-in browser tabs",
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./protocol": { "types": "./lib/types/protocol.d.ts", "default": "./lib/protocol.js" },
+    "./page": { "types": "./lib/types/page.d.ts", "default": "./lib/page.js" },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": ["lib"],
+  "license": "MIT",
+  "peerDependencies": {
+    "@deepseek-ai/dsh-system-prompt": "workspace:*",
+    "@deepseek-ai/cordis": "workspace:~",
+    "@deepseek-ai/dsh-browser-use": "workspace:*",
+    "@deepseek-ai/dsh-tools": "workspace:*"
+  },
+  "dependencies": { "@deepseek-ai/dsh-mcp-client": "workspace:*", "zod": "4.4.3" },
+  "devDependencies": {
+    "@deepseek-ai/dsh-scope": "workspace:*",
+    "@deepseek-ai/dsh-w1-tool-selection": "workspace:*",
+    "@deepseek-ai/dsh-agent-loop": "workspace:*",
+    "@deepseek-ai/dsh-session": "workspace:*",
+    "@deepseek-ai/dsh-session-projection": "workspace:*",
+    "@deepseek-ai/dsh-system-prompt": "workspace:*",
+    "@deepseek-ai/dsh-llm": "workspace:*",
+    "@deepseek-ai/cordis": "workspace:~",
+    "@deepseek-ai/dsh-browser-use": "workspace:*",
+    "@deepseek-ai/dsh-tools": "workspace:*",
+    "@deepseek-ai/dsh-agent": "workspace:*"
+  }
+}

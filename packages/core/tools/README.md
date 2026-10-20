@@ -96,6 +96,8 @@ A tool can retain pure `presentCall()` and `presentResult()` methods for Host-lo
 
 -----
 
+`ToolDefinition.origin` optionally retains an MCP server and its original operation name for discovery. This runtime metadata is excluded by the allowlisted schema projection and grants no execution permission. Native declaration filters can change `system-prompt/assemble` without changing the scoped executor view.
+
 <a id="understand-the-implementation"></a>
 ## Understand the implementation
 

@@ -1,0 +1,28 @@
+# Bilingual-pair consistency record for 2026-10-19-w1-side-chat.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write docs/persistence-changes/2026-10-19-w1-side-chat.md
+/:
+  en: 3d5a424ae7d7e46b
+  zh: c22a8e4a62d8cc1a
+/2026-10-19-w1-side-chat:
+  en: 0dea2542b6b2958b
+  zh: 7ef9116ae4a68af1
+/2026-10-19-w1-side-chat/summary:
+  en: e03c04b85f8fb64c
+  zh: 8f1d52c5b8531e25
+/2026-10-19-w1-side-chat/table-of-contents:
+  en: 6cf314a069ceb451
+  zh: 9adff678e9ecab3b
+/2026-10-19-w1-side-chat/declaration:
+  en: 6907136f28e48c90
+  zh: 02f8298485f3d8e7
+/2026-10-19-w1-side-chat/compatibility:
+  en: 6cae1559a1423fc8
+  zh: dba9fe1736d56f48
+/2026-10-19-w1-side-chat/verification:
+  en: cb0d8e5ae391c414
+  zh: b9b25ef07552497c
+/2026-10-19-w1-side-chat/dev-note:
+  en: b75c8458928b72b9
+  zh: 003ba4e17b4b5269

@@ -9,7 +9,7 @@
 
 英文源文件由系统**生成**，并通过 `pnpm run verify-tool-catalog`（`doc-sync`（文档同步门禁）的一部分）验证新鲜度；本中文文件作为经评审对侧通过双语配对维护。与 Cordis 目录（纯源码 AST 处理）不同，英文生成器会在真实上下文中**启动**每个工具插件并读取 `ctx.tools.schemas()`，因为工具 schema 无法通过静态分析完全确定，例如运行时展开的枚举、拼接的描述、由配置决定的名称以及使用原始 JSON Schema 的 MCP 工具。完整性守卫会 glob 匹配 `packages/*/tool-*`；如果生成器的启动 manifest（元数据清单）遗漏任何包，检查就会失败，因此新工具不会在无人察觉的情况下缺少文档。
 
-范围：`packages/*/tool-*` 下已发布的产品工具，每个工具均使用其**默认**配置启动；但如果某个 Config 字段是**必填项**且没有默认值，生成器就必须作出选择，对应包的说明会记录本页展示的是哪个分支。注册的工具**名称**可以是加载时配置，例如 `tool-subagent` 的 `toolName`，因此部署可能以不同名称或额外名称提供某个包；如果存在随产品发布的别名，对应包的说明会予以记录。`examples/` 中的演示工具（例如 `echo`）不在范围内，这与 Cordis 目录仅涵盖包的范围一致。
+范围：`packages/*/tool-*` 下已发布的产品工具以及明确列出的 W1 MCP 目录，每个工具均使用其**默认**配置启动；但如果某个 Config 字段是**必填项**且没有默认值，或某项 W1 策略默认关闭，生成器就必须作出选择，对应包的说明会记录本页展示的是哪个分支。注册的工具**名称**可以是加载时配置，例如 `tool-subagent` 的 `toolName`，因此部署可能以不同名称或额外名称提供某个包；如果存在随产品发布的别名，对应包的说明会予以记录。`examples/` 中的演示工具（例如 `echo`）不在范围内，这与 Cordis 目录仅涵盖包的范围一致。
 
 <a id="tool-package-map"></a>
 
@@ -37,6 +37,7 @@
 | `@deepseek-ai/dsh-tool-fs-search` | `glob`、`grep` | `ctx.workingDirectory`、`ctx.tools`、`ctx.subprocess`、`ctx.systemPrompt` | `tool/call`、`tool/result` | - | glob 和 grep 是无条件可用的发现工具，通过 ctx.subprocess spawn 随包提供的 ripgrep 二进制文件（`@vscode/ripgrep`），并作为普通前台调用运行，绝不作为后台任务；无需在宿主机安装 `rg`，也不经过 shell 层。本目录使用 `sampleOverCapGlobResults: true`；部署必须显式选择该行为。结果超过上限时，会通过可选的 ctx.spillStore 后端保存完整的格式化列表；在共置部署中，如果后端公开本地路径，返回的定位信息可供后续读取／搜索。 |
 | `@deepseek-ai/dsh-tool-terminal` | `terminal_close`、`terminal_list`、`terminal_open`、`terminal_read`、`terminal_send`、`terminal_signal` | `ctx.workingDirectory`、`ctx.tools`、`ctx.terminals`、`ctx.systemPrompt`、`ctx.jobs at call time for run_in_background` | `tool/call`、`tool/result` | - | 这 6 个终端工具需要选择启用，用于补充一次性 bash／文件系统工具。`terminal_send(run_in_background: true)` 会注册到 `ctx.jobs`；schema 不包含 TUI、具名按键序列、BEL、调整尺寸、自动启动和跨 agent 共享。 |
 | `@deepseek-ai/dsh-tool-goal` | `create_goal`、`get_goal`、`update_goal` | `ctx.tools`、`ctx.agents`、`ctx.goals`、`ctx.systemPrompt`、`a calling Agent in an authorized open turn` | `tool/call`、`goal/change for mutations`、`tool/result` | - | create、edit、pause 和 resume 要求直接来自人类的根权限；complete 和 blocked 也接受确切的当前 Goal Round。blocked 的默认下限是 3 个获准的 Round。 |
+| `@deepseek-ai/dsh-w1-mcp-tool-catalog` | `w1_tool_catalog` | `ctx.tools`, `ctx.agents`, `ctx.systemPrompt`, `ctx.sessionProjections` | `w1/mcp-disclosure`, `request/header through existing tool history` | - | W1 明确启用目录；独立配置的 enabled 默认值为 false。Native MCP 声明按需披露，PTC 描述和执行权限保持既有语义。 |
 | `@deepseek-ai/dsh-tool-schedule` | `schedule_create`、`schedule_delete`、`schedule_list`、`schedule_update` | `ctx.tools`、`ctx.schedule` | `tool/call`、Schedule storage domain 创建、更新或删除、`tool/result` | - | preset 或 Agent scope 挂载本包；由 preset 决定哪些 agent 获得这四个管理工具。每次调用都作用于调用方 Agent 的 Session。接受 after_seconds、显式绝对 at、有界固定速率 every_seconds、带显式 IANA 时区的每日与每周本地时间，以及作为五字段表达式的 cron。管理使用宿主 storage domain；到期消息会恢复原 Session。 |
 | `@deepseek-ai/dsh-tool-lsp` | `lsp` | `ctx.workingDirectory`、`ctx.tools`、`ctx.lsp`、`ctx.systemPrompt` | `tool/call`、`tool/result` | - | lsp 工具将提供方选择和语言服务器子进程置于 ctx.lsp 之后，因此其模型可见 schema 在更换提供方时保持稳定。运行时要求已注册提供方，例如 `@deepseek-ai/dsh-lsp-stdio`；如果没有提供方，查询会返回结构化 `LSP_UNAVAILABLE` 错误，而不会改变 schema。 |
 | `@deepseek-ai/dsh-tool-ralph` | `ralph` | `ctx.tools`、`ctx.workflowEngine`、`ctx.subagents`、`ctx.systemPrompt`、`a calling Agent (exec.agent parents every fresh round)` | `tool/call`、`tool/result`、`workflow and child session events during execution` | - | 固定的前台工作流会在每个 Round 启动一个全新的结构化子级；模型只能选择不可变目标和可选的 Round 上限。 |
@@ -1435,6 +1436,52 @@ glob 和 grep 是无条件可用的发现工具，通过 ctx.subprocess spawn �
 来源：[`packages/goal/tool-goal/src/index.ts`](../packages/goal/tool-goal/src/index.ts)
 
 create、edit、pause 和 resume 要求直接来自人类的根权限；complete 和 blocked 也接受确切的当前 Goal Round。blocked 的默认下限是 3 个获准的 Round。
+
+<a id="deepseek-aidsh-w1-mcp-tool-catalog"></a>
+
+## `@deepseek-ai/dsh-w1-mcp-tool-catalog`
+
+### `w1_tool_catalog`
+
+Find available MCP operations by names or descriptions. Search returns names and summaries. Load selected names to make their full calling schemas available on your next step. Existing execution permissions still apply.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "action": {
+      "type": "string",
+      "enum": [
+        "search",
+        "load"
+      ]
+    },
+    "query": {
+      "type": "string",
+      "description": "Search words; empty lists available operations."
+    },
+    "offset": {
+      "type": "integer",
+      "description": "Non-negative search offset from the previous page."
+    },
+    "names": {
+      "type": "array",
+      "description": "Exact public operation names returned by search, for action load.",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "action"
+  ]
+}
+```
+
+来源： [`packages/w1/mcp-tool-catalog/src/index.ts`](../packages/w1/mcp-tool-catalog/src/index.ts)
+
+W1 明确启用目录；独立配置的 enabled 默认值为 false。Native MCP 声明按需披露，PTC 描述和执行权限保持既有语义。
+
 
 <a id="deepseek-aidsh-tool-schedule"></a>
 

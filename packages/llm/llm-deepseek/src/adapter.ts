@@ -12,6 +12,7 @@ import { FileResolutionFailure, RequestFiles } from './request-files.ts'
 import { prepareRequestExtensions } from './request-extensions.ts'
 import { imagePricing, inlineImages, prepareFileIds, prepareImages } from './images.ts'
 import { serialize } from './serialize.ts'
+import { requestStructure } from './request-structure.ts'
 import { parseSse } from './sse.ts'
 import { translate } from './translate.ts'
 import { providerError, providerErrorDetail } from './transport.ts'
@@ -135,6 +136,9 @@ export class DeepSeekAdapter<C extends Connection = Connection> extends LlmAdapt
             ? [MESSAGES_TOOL_CHANGES_BETA]
             : [],
         ]
+        try {
+          this.dependencies.onRequestPrepared?.({ options, summarize: maxMessages => requestStructure(extensions.payload, maxMessages) })
+        } catch { /* Diagnostics must not affect transport or request bytes. */ }
         const response = await fetch(`${messagesApiRoot(connection.baseURL)}/messages`, {
           method: 'POST', signal, body: extensions.payload, redirect: 'error',
           headers: {

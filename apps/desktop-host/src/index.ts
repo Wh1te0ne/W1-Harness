@@ -10,6 +10,11 @@ import type {} from '@deepseek-ai/dsh-deepseek-account'
 import { resolveDshHome } from '@deepseek-ai/dsh-home-paths'
 import * as desktopOffice from './office.ts'
 import { installW1Remote } from './w1-remote.ts'
+import BrowserUseRegistry from '@deepseek-ai/dsh-browser-use'
+import * as w1BrowserUse from '@deepseek-ai/dsh-w1-browser-use'
+import * as w1ToolSelection from '@deepseek-ai/dsh-w1-tool-selection'
+import { ChromeBridge, BRIDGE_PORTS } from '@deepseek-ai/dsh-w1-chrome-use'
+import { BrowserIpc } from './browser-ipc.ts'
 
 import { installDesktopUpdateTaskControl } from './update-tasks.ts'
 import { installDesktopQuitInspection } from './quit-inspection.ts'
@@ -103,6 +108,15 @@ async function main(): Promise<void> {
   })
   process.once('disconnect', () => { void stop() })
   const { ctx } = await application
+  await ctx.plugin(w1ToolSelection)
+  await ctx.plugin(BrowserUseRegistry)
+  const browser = new BrowserIpc()
+  ctx.effect(() => () => { browser.dispose() }, 'desktop browser transport')
+  const chrome = new ChromeBridge({ port: BRIDGE_PORTS[0], connectWaitMs: 5000, timeoutMs: 30000 })
+  ctx.effect(() => () => chrome.dispose(), 'desktop Chrome bridge')
+  void chrome.start().catch(() => { console.warn('W1 Chrome bridge unavailable; the local discovery ports are occupied.') })
+  await ctx.plugin(w1BrowserUse, { request: browser.request, chromeRequest: chrome.request,
+    timeoutMs: 30000, maxTextChars: 12000, maxElements: 100 })
   control.updateTasks = installDesktopUpdateTaskControl(ctx)
   control.quitInspection = installDesktopQuitInspection(ctx)
   try { control.remote = await installW1Remote(ctx) }

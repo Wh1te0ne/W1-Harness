@@ -8,7 +8,7 @@ import type { PendingInteractionPublisher } from '@deepseek-ai/dsh-client-ui-ses
 import type { TypertClientEventListener } from '@deepseek-ai/dsh-typert-protocol'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type { ShortcutCommandId } from '@deepseek-ai/dsh-client-shortcuts/client'
-import { ApprovalPanel } from './ApprovalPanel.tsx'
+import { ApprovalPanel, InlineApproval, type InlineApprovalInjected } from './ApprovalPanel.tsx'
 import { PendingApproval } from './contract/slots.ts'
 import { en, zh } from './locales.ts'
 
@@ -88,6 +88,12 @@ export function apply(ctx: ClientContext): void {
   const registerPendingInteraction = ctx.uiSession.registerPendingInteraction<PendingApproval>(
     () => 0,
   )
+  ctx.effect(() => ctx.slots.inject('tool.call.interaction', () => ctx.slots.register({
+    name: 'tool.call.interaction', locale: NS,
+    inject: (sessionId): InlineApprovalInjected => ({ sessionId,
+      resolveReason: reason => ctx.locale.resolveText(reason), hooks: { approvalStatus: ctx.uiSession.sessionStatus },
+    }),
+  }, InlineApproval)))
   ctx.slots.inject('conversation.composer', () => ctx.slots.register({
     name: 'conversation.composer',
     priority: 1,

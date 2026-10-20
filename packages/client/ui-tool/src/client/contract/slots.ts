@@ -152,6 +152,6 @@ export type ToolHostInfoInjected = {
 
 /** Full props of the Tool call-tree renderer registered as a tool-call Chat Node. */
 export type ToolTreeProps = PropsRuntime<'conversation.chat.node', 'tool-call'>
-  & PropsRenderSlots<'tool.call.toolview'>
+  & PropsRenderSlots<'tool.call.toolview' | 'tool.call.interaction'>
   & PropsLocale<'conversation'>
   & InjectFace<ToolHostInfoInjected>

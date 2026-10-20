@@ -30,6 +30,15 @@ test('build completion leaves active files alone and promotion waits until W1 is
   assert.equal(readFileSync(join(dirname(f.active), 'client.chunk.js'), 'utf8'), 'new chunk')
   assert.equal(publishPendingBuilds(f.root, () => { throw Error('should not probe') }), 0)
 })
+
+test('desktop and Host bundles use the same stopped-only publication', t => {
+  const f = fixture(t)
+  for (const target of ['apps/desktop', 'apps/desktop-host']) queuePackageBuild(f.root, target, f.stage)
+  assert.throws(() => publishPendingBuilds(f.root, () => true), /Exit W1/)
+  assert.equal(publishPendingBuilds(f.root, () => false), 2)
+  assert.equal(readFileSync(join(f.root, 'apps/desktop/lib/client.js'), 'utf8'), 'new')
+  assert.throws(() => queuePackageBuild(f.root, 'apps/other', f.stage), /Expected/)
+})
 test('partial builds are ignored and only the latest completed build is queued', t => {
   const f = fixture(t)
   assert.equal(publishPendingBuilds(f.root, () => false), 0)
@@ -50,7 +59,7 @@ test('changed queued bytes stop startup before any active file is modified', t =
 })
 test('rejects destinations outside package build output', t => {
   const f = fixture(t)
-  assert.throws(() => queuePackageBuild(f.root, '../other', f.stage), /package target/)
+  assert.throws(() => queuePackageBuild(f.root, '../other', f.stage), /package or desktop/)
   queuePackageBuild(f.root, f.target, f.stage)
   const manifest = join(f.root, '.work/local-dev/pending-builds/packages-client-example.json')
   const item = JSON.parse(readFileSync(manifest, 'utf8'))

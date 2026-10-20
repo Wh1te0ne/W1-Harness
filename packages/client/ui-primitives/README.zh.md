@@ -60,7 +60,7 @@ kind: "package-library"
 | `RiskConfirmation` | 以显式复选框把关的敏感操作确认。 |
 | `Tooltip` | 锚定在克隆子元素上的悬停与键盘聚焦提示；可选的 `delayMs` 控制悬停延迟，`focusDelayMs` 控制键盘聚焦延迟，均默认为 0 毫秒。可通过 `portal` 渲染到外层，避免被容器裁剪，或受祖先层叠上下文限制其 z-index。 |
 | `HoverCard`、`HoverCardGroup` | 可阅读、可选带复制按钮的悬停预览；物理列表可选择让卡片共享首次显示等待，并互斥显示。 |
-| `ImageLightbox` | 共享图片浮层，支持焦点恢复与 Esc 关闭。 |
+| `ImageLightbox` | 原图浮层，支持指针中心缩放、拖动平移、适应窗口复位、焦点恢复与 Esc 关闭。 |
 | `Toast` | 顶部居中的瞬时横幅，保持时长由所有者的 `holdMs` 决定。 |
 | `SettingsForm`、`SettingsValueField`、`SettingsSecretField` | 插件设置页的框架与控件：框架以 `labels` 接收文案，只在按钮点击时保存，卸载即丢弃；值字段显示暂存文本以及已覆盖标签和重置；密文字段每次为空，请求浏览器不要自动填入已保存的密码，只报告是否已配置。 |
 | `SettingsFormModel`、`settingsNumberField`、`settingsTextField` | 这类页面背后基于设置 scope 的暂存编辑模型：草稿先暂存、保存时写入，字段是否被覆盖看用户层是否含有它，未落地的保存保留草稿。 |

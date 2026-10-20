@@ -1,0 +1,80 @@
+{
+  "extensionName": {
+    "message": "W1 Chrome"
+  },
+  "extensionDescription": {
+    "message": "自动连接 Chrome 与 W1。助手自行寻找目标网页，你可以随时暂停。"
+  },
+  "waiting": {
+    "message": "自动连接已开启"
+  },
+  "waitingTitle": {
+    "message": "等待 W1 就绪"
+  },
+  "waitingDescription": {
+    "message": "打开 W1 后会自动连接。\n无需连接码，也不用手动选择标签页。"
+  },
+  "connected": {
+    "message": "已连接到 W1"
+  },
+  "connectedTitle": {
+    "message": "浏览器，已就位"
+  },
+  "connectedDescription": {
+    "message": "直接告诉 W1 你要做什么。\n它会自行寻找目标标签，或打开新网页。"
+  },
+  "paused": {
+    "message": "连接已暂停"
+  },
+  "pausedTitle": {
+    "message": "由你掌控节奏"
+  },
+  "pausedDescription": {
+    "message": "W1 暂时无法访问浏览器。\n准备好后，随时重新开启连接。"
+  },
+  "pages": {
+    "message": "可访问的网页"
+  },
+  "controlled": {
+    "message": "W1 正在使用"
+  },
+  "pauseConnection": {
+    "message": "暂停连接"
+  },
+  "enableConnection": {
+    "message": "开启连接"
+  },
+  "reconnect": {
+    "message": "重新连接"
+  },
+  "tabSettings": {
+    "message": "网页访问范围"
+  },
+  "scope": {
+    "message": "普通网页自动可用，不包含无痕和浏览器内部页面。你也可以单独暂停某个网页。"
+  },
+  "pauseTab": {
+    "message": "暂停"
+  },
+  "resumeTab": {
+    "message": "恢复"
+  },
+  "footer": {
+    "message": "网页操作仅由你的 W1 任务发起"
+  },
+  "unavailable": {
+    "message": "扩展不可用"
+  },
+  "failed": {
+    "message": "操作未完成"
+  },
+  "update": {
+    "message": "需要更新 W1 连接服务"
+  },
+  "updateTitle": {
+    "message": "请完全退出并重开 W1"
+  },
+  "updateDescription": {
+    "message": "检测到本机服务，但它尚未支持当前连接协议。\n从 W1 菜单退出，再用正常快捷方式打开；无需设置端口。"
+  }
+}

@@ -27,13 +27,14 @@ import type { ModelDirectoryState } from './directory.ts'
 import { ModelDirectoryResolver } from './service.ts'
 import type { ModelSelectInjected } from './slots.ts'
 import { ModelSelect } from './ModelSelect.tsx'
+import { ComposerModelSelect } from './ComposerModelSelect.tsx'
 import { en, zh, type ModelKey } from './locales.ts'
 import { orderModelProviders } from './provider-order.ts'
 
 export { ModelDirectory } from './directory.ts'
 export type { ModelDirectoryState } from './directory.ts'
 export { ModelDirectoryResolver } from './service.ts'
-export type { ModelLabelOwner, ModelSelectInjected } from './slots.ts'
+export type { ModelLabelOwner, ModelSelectInjected, ModelPickerOwner } from './slots.ts'
 export type { ModelKey } from './locales.ts'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
@@ -114,6 +115,12 @@ export const inject = ['commandUi', 'locale', 'sessions', 'slots', 'remote', 're
  */
 export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'ui-model-selection: dictionaries')
+  ctx.effect(() => ctx.slots.registerFactory({
+    name: 'model.selector', scope: 'session', locale: NS,
+    children: {
+      'conversation.input.model.label': { kind: 'single', scope: 'session', inline: true },
+    },
+  }, ModelSelect), 'ui-model-selection: shared picker')
 
   // Non-slot faces (the command description, the popup option builder) read
   // through the bound translate; the seat component reads the standard seat.
@@ -172,15 +179,12 @@ export function apply(ctx: ClientContext): void {
     scope.slots.inject('conversation.input.model', () => scope.slots.register({
       name: 'conversation.input.model',
       locale: NS,
-      children: {
-        'conversation.input.model.label': { kind: 'single', scope: 'session', inline: true },
-      },
       inject: (sessionId): ModelSelectInjected => {
         const directory = models.directoryFor(sessionId)
         const available = sessions.subagentAddress(sessionId) === undefined
         return {
           available,
-          directory: directory.store,
+          hooks: { modelDirectory: directory.store },
           load: () => {
             if (available) directory.load().catch(() => { /* surfaced on the store */ })
           },
@@ -189,6 +193,6 @@ export function apply(ctx: ClientContext): void {
             : Promise.resolve(undefined),
         }
       },
-    }, ModelSelect))
+    }, ComposerModelSelect))
   })
 }

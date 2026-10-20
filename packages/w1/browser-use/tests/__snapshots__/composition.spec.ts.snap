@@ -1,0 +1,36 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`logs browser observations before the next request and binds calls to the executing conversation 1`] = `
+[
+  [
+    {
+      "text": "[]",
+      "type": "text",
+    },
+  ],
+  [
+    {
+      "text": "{"tab":"owned-tab","url":"https://fixture.test/"}",
+      "type": "text",
+    },
+  ],
+  [
+    {
+      "text": "{"elements":[{"ref":"snapshot:1","label":"Name","value":""}]}",
+      "type": "text",
+    },
+  ],
+  [
+    {
+      "text": "{"delivered":true,"message":"Read the page to verify the result."}",
+      "type": "text",
+    },
+  ],
+  [
+    {
+      "text": "{"elements":[{"ref":"snapshot:2","label":"Name","value":"W1"}]}",
+      "type": "text",
+    },
+  ],
+]
+`;

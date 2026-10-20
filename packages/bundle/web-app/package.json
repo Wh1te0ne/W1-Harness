@@ -191,8 +191,13 @@
     "@deepseek-ai/dsh-harness-dev-context": "workspace:*",
     "dsh-usage-manager": "workspace:*",
     "@deepseek-ai/dsh-w1-reply-suggestions": "workspace:*",
+    "@deepseek-ai/dsh-w1-goal-review": "workspace:*",
+    "@deepseek-ai/dsh-w1-cache-diagnostics": "workspace:*",
+    "@deepseek-ai/dsh-w1-mcp-tool-catalog": "workspace:*",
     "@w1h/remote": "workspace:*",
-    "@w1h/notifications": "workspace:*"
+    "@w1h/notifications": "workspace:*",
+    "@deepseek-ai/dsh-w1-side-chat": "workspace:*",
+    "@deepseek-ai/dsh-client-ui-side-chat": "workspace:*"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "workspace:~",

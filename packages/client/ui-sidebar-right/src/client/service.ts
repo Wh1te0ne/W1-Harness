@@ -179,8 +179,8 @@ export interface SidebarRightOpenTabOptions<K extends string = string> extends S
 /** The scheme every resource address carries; anything else is not a resource this face opens. */
 const RESOURCE_SCHEME = 'dsh-resource://'
 
-/** Synchronous close/replacement hook; resource owners retain any background cleanup. */
-export type SidebarRightCloseHandler = (sessionId: SessionId, tab: TabRecord) => void
+/** Return false to retain a tab; retry repeats the original close/replacement while its occurrence remains current. */
+export type SidebarRightCloseHandler = (sessionId: SessionId, tab: TabRecord, retry: () => void) => boolean | void
 
 /** The outward right-Sidebar face (`ctx.sidebarRight`). */
 export interface ISidebarRight {
@@ -271,7 +271,7 @@ export class SidebarRightController implements ISidebarRight {
   /**
    * Register resource cleanup before explicit removal. Failure preserves the tab.
    * @param kind - tab kind owned by the registering plugin.
-   * @param handler - saves any background cleanup before returning and allowing removal.
+   * @param handler - retains cleanup before removal, or returns false and later retries after confirmation.
    * @returns an effect-scoped unregister callback.
    */
   registerCloseHandler(kind: string, handler: SidebarRightCloseHandler): () => void {
@@ -377,8 +377,22 @@ export class SidebarRightController implements ISidebarRight {
   }
 
   private removeAfterCleanup(sessionId: SessionId, tab: TabRecord, commit: () => void): void {
-    this.closeHandlers.get(tab.kind)?.(sessionId, tab)
-    commit()
+    const handler = this.closeHandlers.get(tab.kind)
+    if (handler === undefined) { commit(); return }
+    const adoption = this.adopted.get(sessionId)
+    const occurrence = this.tabDomain.occurrence(sessionId, tab)
+    const revision = occurrence.navigation.getSnapshot().revision
+    let retried = false
+    const retry = (): void => {
+      if (retried) return
+      retried = true
+      const current = this.adopted.get(sessionId)
+      if (current !== adoption || occurrence.signal.aborted
+        || current?.store.getSnapshot().bySession[sessionId]?.layout.tabs[tab.id] === undefined
+        || occurrence.navigation.getSnapshot().revision !== revision) return
+      this.removeAfterCleanup(sessionId, tab, commit)
+    }
+    if (handler(sessionId, tab, retry) !== false) commit()
   }
 
   /** Claim a resource and place it in one session; an address outside the scheme or one no type claims throws. */

@@ -9,6 +9,20 @@ afterEach(cleanup)
 const labels = { dialog: '原图预览', close: '关闭原图预览' }
 
 describe('ImageLightbox', () => {
+  it('zooms around the pointer, fits again, and keeps keyboard focus within all controls', () => {
+    const view = render(<ImageLightbox src="blob:test" alt="Zoom test" labels={labels} onClose={vi.fn()} />)
+    const image = view.getByRole('img')
+    fireEvent.wheel(image, { deltaY: -100, clientX: 100, clientY: 80 })
+    expect(image.style.transform).toContain('scale(1.221')
+    expect(image.style.transform).toContain('translate(-22.')
+    const close = view.getByRole('button', { name: labels.close })
+    fireEvent.keyDown(close, { key: 'Tab' })
+    expect(document.activeElement).toBe(view.getByRole('button', { name: '−' }))
+    fireEvent.keyDown(document.activeElement!, { key: 'Tab', shiftKey: true })
+    expect(document.activeElement).toBe(close)
+    fireEvent.doubleClick(image)
+    expect(image.style.transform).toBe('translate(0px, 0px) scale(1)')
+  })
   it('focuses its close control, closes by button and Escape, and restores focus', () => {
     const opener = document.createElement('button')
     document.body.appendChild(opener)

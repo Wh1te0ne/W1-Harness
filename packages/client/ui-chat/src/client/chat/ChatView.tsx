@@ -88,6 +88,7 @@ export function ChatView({
     labels: {
       open: t('image.open'), loading: t('image.loading'), failed: t('image.failed'),
       dialog: t('image.dialog'), close: t('image.close'),
+      zoomIn: t('image.zoomIn'), zoomOut: t('image.zoomOut'), reset: t('image.reset'),
     },
   }), [cwd, t])
   const running = useSession(s => s.running)
@@ -229,9 +230,7 @@ export function ChatView({
                 cwd, openFile: requestOpenFile, inspectCall, forkAt, loadImage, fileMentions,
               }, { hookContext: flowContext })}
             </MarkdownDelegateProvider>
-            {/* No pending placeholders: questions (ui-user-questions) and approvals
-                (ApprovalPanel) both take over the composer, so a flow card would
-                double-render the same wait. */}
+            {/* Tool-owned interactions are rendered beside their correlated operation. */}
           </div>
           {/* Fold room is reclaimed by viewport scroll, content-growth, and display-mode policies. */}
           <div className={css.turnSpacer} data-chat-turn-spacer aria-hidden="true" />

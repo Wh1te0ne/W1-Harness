@@ -10,6 +10,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { GoalActivation, GoalSnapshot } from '@deepseek-ai/dsh-goal/client'
+import type { GoalReviewView } from '@deepseek-ai/dsh-w1-goal-review/types'
 import {
   IconCheckOutlineRegular, IconCloseOutlineRegular, IconEditOutlineRegular, IconGoalOutlineRegular,
   IconPauseOutlineRegular, IconPlayOutlineRegular, IconTrashOutlineRegular, InlineEditor, Tooltip,
@@ -24,6 +25,8 @@ export interface GoalBarProps extends GoalBarActions {
   goal: GoalSnapshot | null | undefined
   /** Process-local continuation activation; absent while the live read is pending. */
   activation?: GoalActivation
+  /** Exact-revision completion review, absent before a proposal. */
+  review?: GoalReviewView | null
 }
 
 /** Strip label keys per visible phase; complete goals render nothing. */
@@ -39,7 +42,7 @@ function activeLabel(activation: GoalActivation | undefined, t: TranslateNS<'goa
   return t(PHASE_LABELS.active)
 }
 
-export function GoalBar({ goal, activation, onEdit, onPause, onResume, onClear, t }: GoalBarProps & PropsLocale<'goal'>) {
+export function GoalBar({ goal, activation, review, onEdit, onPause, onResume, onClear, t }: GoalBarProps & PropsLocale<'goal'>) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
   const [pending, setPending] = useState(false)
@@ -126,8 +129,11 @@ export function GoalBar({ goal, activation, onEdit, onPause, onResume, onClear, 
     )
   }
 
-  const title = goal.phase === 'blocked' ? goal.blockedReason?.message : undefined
-  const label = goal.phase === 'active' ? activeLabel(activation, t) : t(PHASE_LABELS[goal.phase])
+  const currentReview = review?.goalId === goal.id && review.revision === goal.revision ? review : null
+  const title = currentReview?.reason || (goal.phase === 'blocked' ? goal.blockedReason?.message : undefined)
+  const label = currentReview !== null && currentReview.status !== 'satisfied'
+    ? t(`review.${currentReview.status}`)
+    : goal.phase === 'active' ? activeLabel(activation, t) : t(PHASE_LABELS[goal.phase])
   const showResume = goal.phase === 'paused'
     || (goal.phase === 'active' && activation === 'disarmed')
   return (
@@ -185,6 +191,7 @@ export function GoalDock({
   useProjection, useGoalActivation, onEdit, onPause, onResume, onClear, t,
 }: GoalDockProps) {
   const projection = useProjection('goal')
+  const review = useProjection('w1GoalReview')
   const goal = projection === undefined || projection === null ? projection : projection.goal
   const goalId = goal?.id
   const revision = goal?.revision
@@ -195,6 +202,7 @@ export function GoalDock({
   return (
     <GoalBar
       goal={goal}
+      {...review === undefined ? {} : { review }}
       {...activation === undefined ? {} : { activation }}
       onEdit={onEdit}
       onPause={onPause}

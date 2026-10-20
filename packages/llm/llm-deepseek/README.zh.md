@@ -102,6 +102,8 @@ Files 模式通过 `maxRequestFilesBytes` 与 `maxImagesPerRequest` 限制保留
 
 `reasoningEffort` 选择公布的默认值。当部署策略允许 thinking 时，确切模型元数据会按强度递增顺序公开 `off`、`low`、`high` 与 `max` 及选择指引。`low`、`high` 与 `max` 启用 thinking，并以 `output_config.effort` 序列化，适配器自有的 `off` 则发送 `thinking.type: disabled`。不支持的取值会在网络 I/O 前以 `UNSUPPORTED_REASONING_EFFORT` 失败；`thinking: disabled` 会在插件加载时拒绝任何非 `off` 强度。适配器转发显式 `temperature`；DeepSeek 在启用 thinking 时接受该参数，但忽略其值。
 
+可选的同步 `llm-deepseek/request-prepared` 诊断在 Files/inline 转换及请求扩展序列化后提供惰性的无正文结构摘要。回调获得有数量上限的摘要函数，不获得 wire 正文；哈希不包含传输凭据、端点 URL 和请求元数据。观察器失败不会改变发出的请求。[W1 诊断插件](../../w1/cache-diagnostics/README.zh.md)消费这项观测。
+
 ### 动态配置
 
 连接选项在每次操作开始时从 volatile Config 引用捕获。Config 验证在表单持久化前拒绝无效候选值。凭据使用与端点、图像及 Files 策略、空闲预算相同的快照解析。附件服务在请求时解析。

@@ -130,6 +130,7 @@ export async function syncTools(
     }
     definitions.set(publicName, createMcpToolDefinition(ctx, {
       name: publicName,
+      serverName: opts.serverName,
       rawName: tool.name,
       description: tool.description ?? '',
       inputSchema: tool.inputSchema,
@@ -194,6 +195,8 @@ function supportedOutputSchema(candidate: unknown): JsonSchemaNode | undefined {
 
 /** One upstream MCP tool and the callback that obtains its raw protocol result. */
 export interface McpToolDefinitionOptions {
+  /** Original server identity, retained without parsing the normalized public name. */
+  serverName?: string
   /** ToolRuntime name presented to the model. */
   name: string
   /** Upstream name used in result diagnostics. */
@@ -230,6 +233,7 @@ export function createMcpToolDefinition(
   const projections = new WeakMap<ToolExecution, PreparedProjection>()
   return {
     name,
+    ...options.serverName === undefined ? {} : { origin: { kind: 'mcp' as const, serverName: options.serverName, rawName } },
     description,
     parameters: inputSchema,
     output: createOutput(rawName, supportedOutputSchema(options.outputSchema)),

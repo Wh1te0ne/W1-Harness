@@ -2,6 +2,10 @@
 
 /** Simplified Chinese dictionary (the key-set source of truth). */
 export const zh = {
+  'review.reviewing': '正在复核完成情况',
+  'review.needs-work': '复核发现尚有未完成项',
+  'review.insufficient-evidence': '待补充验收证据',
+  'review.runtime-error': '完成复核未通过执行',
   'phase.active': '进行中的目标',
   'phase.active.disarmed': '已暂停的目标',
   'phase.paused': '已暂停的目标',
@@ -21,6 +25,10 @@ export type GoalKey = keyof typeof zh
 
 /** English dictionary, checked complete against the zh key set. */
 export const en = {
+  'review.reviewing': 'Reviewing completion',
+  'review.needs-work': 'Review found remaining work',
+  'review.insufficient-evidence': 'Verification evidence needed',
+  'review.runtime-error': 'Completion review unavailable',
   'phase.active': 'Ongoing Goal',
   'phase.active.disarmed': 'Inactive Goal',
   'phase.paused': 'Paused Goal',

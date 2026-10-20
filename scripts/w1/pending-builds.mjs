@@ -5,6 +5,8 @@ import { dirname, join, relative, resolve, sep } from 'node:path'
 
 const queueDirectory = root => join(root, '.work/local-dev/pending-builds')
 const hash = file => createHash('sha256').update(readFileSync(file)).digest('hex')
+const validTarget = target => /^packages[/][a-z0-9-]+[/][a-z0-9-]+$/u.test(target)
+  || target === 'apps/desktop' || target === 'apps/desktop-host'
 function inside(base, path) {
   const resolved = resolve(base, path)
   if (!resolved.startsWith(resolve(base) + sep)) throw new Error('Pending build path escapes its directory')
@@ -19,7 +21,7 @@ function files(directory) {
 }
 /** Publish a queue record only after a successful build; incomplete outputs remain unreachable. */
 export function queuePackageBuild(root, target, output) {
-  if (!/^packages[/][a-z0-9-]+[/][a-z0-9-]+$/u.test(target)) throw new Error('Expected one package target')
+  if (!validTarget(target)) throw new Error('Expected a package or desktop application target')
   const stage = inside(join(root, '.work/local-dev/pending-artifacts'), relative(join(root, '.work/local-dev/pending-artifacts'), output))
   const entries = files(stage).map(file => ({ file: relative(stage, file), sha256: hash(file) }))
   if (!entries.length) throw new Error('Pending build is empty')
@@ -39,7 +41,7 @@ export function publishPendingBuilds(root, isRunning) {
     const manifest = join(queueDirectory(root), name)
     const raw = readFileSync(manifest, 'utf8')
     const item = JSON.parse(raw)
-    if (!/^packages[/][a-z0-9-]+[/][a-z0-9-]+$/u.test(item.target)) throw new Error('Invalid pending build target')
+    if (!validTarget(item.target)) throw new Error('Invalid pending build target')
     const stage = inside(join(root, '.work/local-dev/pending-artifacts'), relative(join(root, '.work/local-dev/pending-artifacts'), resolve(root, item.stage)))
     const destination = join(root, item.target, 'lib')
     const entries = item.entries.map(entry => {

@@ -62,6 +62,8 @@ Generic command rows retain the ordinary command glyph in every lifecycle state;
 -----
 
 <a id="turn-token-usage"></a>
+With the optional W1 cache-diagnostic projection, detailed turn usage also shows the last retained main-loop step: C1 normalized structure or C2 actual DeepSeek serialized structure, observed changes and unknown server-cache facts. Auxiliary calls do not enter these comparisons.
+
 ## Turn token usage
 
 A completed Turn shows an expandable usage row only when the loaded window includes `turn/start` and every started model attempt reports safe, exact usage. The row omits unavailable optional buckets. Incomplete or contradictory accounting hides the complete disclosure instead of presenting a partial total.

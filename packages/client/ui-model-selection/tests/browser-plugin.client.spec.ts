@@ -20,6 +20,7 @@ import type { CommandContribution, PopupSelectSpec, SelectOption } from '@deepse
 import type { ModelSelectInjected } from '../src/client/slots.ts'
 import { apply, inject } from '../src/client/index.ts'
 import { zh } from '../src/client/locales.ts'
+import { ModelSelect } from '../src/client/ModelSelect.tsx'
 
 const sid = (k: string): SessionId => k as SessionId
 
@@ -123,7 +124,12 @@ async function bench(locale: 'zh' | 'en' = 'zh') {
     inject: ((sessionId: SessionId) => ModelSelectInjected) | undefined
     locale: string | undefined
   }>()
+  const factories = new Map<string, { options: object; component: unknown }>()
   ctx.provide('slots', {
+    registerFactory(options: { name: string }, component: unknown) {
+      factories.set(options.name, { options, component })
+      return () => { factories.delete(options.name) }
+    },
     inject(_name: string, callback: () => () => void) { return callback() },
     register(options: { name: string; locale?: string; inject?: (sessionId: SessionId) => ModelSelectInjected }) {
       seats.set(options.name, { inject: options.inject, locale: options.locale })
@@ -179,7 +185,7 @@ async function bench(locale: 'zh' | 'en' = 'zh') {
     return { ...handle, projection }
   }
   return {
-    ctx, fiber, mint, calls, remote, track,
+    ctx, fiber, mint, calls, remote, track, factories,
     contribution: () => contribution!,
     popup: (): PopupSelectSpec => {
       const ui = contribution!.ui
@@ -223,6 +229,12 @@ describe('ui-model-selection dual entry', () => {
     expect(b.seat().inject).toBeTypeOf('function')
     // Copy rides the standard locale seat.
     expect(b.seat().locale).toBe('model')
+    expect(b.factories.get('model.selector')).toEqual({
+      component: ModelSelect,
+      options: { name: 'model.selector', scope: 'session', locale: 'model', children: {
+        'conversation.input.model.label': { kind: 'single', scope: 'session', inline: true },
+      } },
+    })
   })
 
   it.each(['zh', 'en'] as const)('shows names and providers without catalog descriptions (%s)', async (locale) => {
@@ -266,15 +278,15 @@ describe('ui-model-selection dual entry', () => {
     // Switch through the SEAT entry; the directory holds the submission until it settles.
     const selection = { provider: 'deepseek-official', model: 'deepseek-v4-pro', reasoningEffort: 'max' }
     const settled = seatFace.select(selection)
-    expect(seatFace.directory.getSnapshot()).toMatchObject({ status: 'selecting', pending: selection })
+    expect(seatFace.hooks.modelDirectory.getSnapshot()).toMatchObject({ status: 'selecting', pending: selection })
     expect(await settled).toEqual({ ok: true, value: undefined })
-    expect(seatFace.directory.getSnapshot()).toMatchObject({ status: 'ready', pending: null })
+    expect(seatFace.hooks.modelDirectory.getSnapshot()).toMatchObject({ status: 'ready', pending: null })
     expect(b.hostCurrent()).toEqual({
       provider: 'deepseek-official',
       model: 'deepseek-v4-pro',
       reasoningEffort: 'max',
     })
-    expect(seatFace.directory.getSnapshot().current).toEqual({
+    expect(seatFace.hooks.modelDirectory.getSnapshot().current).toEqual({
       provider: 'deepseek-official',
       model: 'deepseek-v4-pro',
       reasoningEffort: 'max',
@@ -291,7 +303,7 @@ describe('ui-model-selection dual entry', () => {
     const options = await b.popup().options(projection('s1'), new AbortController().signal)
     const pro = options.find((o: SelectOption) => o.label === 'DeepSeek-V4-Pro')!
     await b.popup().onSelect(pro, projection('s1'))
-    expect(seatFace.directory.getSnapshot().current).toEqual({
+    expect(seatFace.hooks.modelDirectory.getSnapshot().current).toEqual({
       provider: 'deepseek-official',
       model: 'deepseek-v4-pro',
       reasoningEffort: 'high',
@@ -339,10 +351,10 @@ describe('ui-model-selection dual entry', () => {
     const faceA = b.seat().inject!(sid('a'))
     const faceA2 = b.seat().inject!(sid('a'))
     const faceB = b.seat().inject!(sid('b'))
-    expect(faceA.directory).toBe(faceA2.directory)
-    expect(faceA.directory).not.toBe(faceB.directory)
+    expect(faceA.hooks.modelDirectory).toBe(faceA2.hooks.modelDirectory)
+    expect(faceA.hooks.modelDirectory).not.toBe(faceB.hooks.modelDirectory)
     // The service face resolves the same instance the seat inject handed out.
-    expect(b.ctx.modelDirectories.directoryFor(sid('a')).store).toBe(faceA.directory)
+    expect(b.ctx.modelDirectories.directoryFor(sid('a')).store).toBe(faceA.hooks.modelDirectory)
     await Promise.all([
       b.popup().options(projection('a'), new AbortController().signal),
       b.popup().options(projection('b'), new AbortController().signal),
@@ -356,11 +368,11 @@ describe('ui-model-selection dual entry', () => {
     const face = b.seat().inject!(sid('s1'))
     await b.ctx.modelDirectories.directoryFor(sid('s1')).load()
     const late = face.select({ provider: 'deepseek-official', model: 'deepseek-v4-pro' })
-    expect(face.directory.getSnapshot().pending).toEqual({ provider: 'deepseek-official', model: 'deepseek-v4-pro' })
+    expect(face.hooks.modelDirectory.getSnapshot().pending).toEqual({ provider: 'deepseek-official', model: 'deepseek-v4-pro' })
     b.ctx.emit('connection/reset')
-    expect(face.directory.getSnapshot()).toMatchObject({ status: 'loading', pending: null })
+    expect(face.hooks.modelDirectory.getSnapshot()).toMatchObject({ status: 'loading', pending: null })
     await late
-    expect(face.directory.getSnapshot().pending).toBeNull()
+    expect(face.hooks.modelDirectory.getSnapshot().pending).toBeNull()
   })
 
   it('hides the effective selection until the reconnected catalog validates it', async () => {
@@ -371,12 +383,12 @@ describe('ui-model-selection dual entry', () => {
     b.setHostCurrent({ provider: 'deepseek-official', model: 'deepseek-v4-flash' })
 
     b.ctx.emit('connection/reset')
-    expect(face.directory.getSnapshot()).toMatchObject({
+    expect(face.hooks.modelDirectory.getSnapshot()).toMatchObject({
       current: null,
       status: 'loading',
     })
     face.load()
-    expect(face.directory.getSnapshot()).toMatchObject({
+    expect(face.hooks.modelDirectory.getSnapshot()).toMatchObject({
       current: null,
       status: 'loading',
     })
@@ -387,14 +399,14 @@ describe('ui-model-selection dual entry', () => {
     b.mint('s1')
     const face = b.seat().inject!(sid('s1'))
     face.load()
-    expect(face.directory.getSnapshot().current?.model).toBe('deepseek-v4-flash')
+    expect(face.hooks.modelDirectory.getSnapshot().current?.model).toBe('deepseek-v4-flash')
 
     b.remote.emit('settings/document-updated', ['llm-deepseek', 1])
     b.setProjected(sid('s1'), {
       lastUsed: { provider: 'deepseek-official', model: 'deepseek-v4-flash' },
       next: { provider: 'deepseek-official', model: 'deepseek-v4-pro' },
     })
-    expect(face.directory.getSnapshot()).toMatchObject({
+    expect(face.hooks.modelDirectory.getSnapshot()).toMatchObject({
       current: { provider: 'deepseek-official', model: 'deepseek-v4-flash' },
       groups: GROUPS,
       routable: null,
@@ -402,7 +414,7 @@ describe('ui-model-selection dual entry', () => {
     })
 
     await vi.waitFor(() => {
-      expect(face.directory.getSnapshot()).toMatchObject({
+      expect(face.hooks.modelDirectory.getSnapshot()).toMatchObject({
         current: { provider: 'deepseek-official', model: 'deepseek-v4-pro' },
         status: 'ready',
       })
@@ -418,7 +430,7 @@ describe('ui-model-selection dual entry', () => {
       b.setCatalogFailure(true)
       b.remote.emit('credentials/record-updated', ['DEEPSEEK_API_KEY'])
       await vi.waitFor(() => {
-        expect(face.directory.getSnapshot()).toMatchObject({
+        expect(face.hooks.modelDirectory.getSnapshot()).toMatchObject({
           current: { provider: 'deepseek-official', model: 'deepseek-v4-flash' },
           groups: GROUPS, routable: null, status: 'error', error: 'catalog offline',
         })
@@ -426,7 +438,7 @@ describe('ui-model-selection dual entry', () => {
       expect(b.blockOf('s1')).toBeUndefined()
       b.setCatalogFailure(false)
       await b.ctx.modelDirectories.directoryFor(sid('s1')).load()
-      expect(face.directory.getSnapshot().routable).toBe(true)
+      expect(face.hooks.modelDirectory.getSnapshot().routable).toBe(true)
       expect(b.blockOf('s1')).toBeUndefined()
     } finally {
       await b.ctx.fiber.dispose()
@@ -440,7 +452,7 @@ describe('ui-model-selection dual entry', () => {
     await first.fiber.dispose()
     b.mint('s1')
     const face2 = b.seat().inject!(sid('s1'))
-    expect(face2.directory).not.toBe(face1.directory)
+    expect(face2.hooks.modelDirectory).not.toBe(face1.hooks.modelDirectory)
   })
 
   it('retains saved effort for existing and new sessions after credentials disappear', async () => {
@@ -500,8 +512,8 @@ describe('ui-model-selection dual entry', () => {
     const face = b.seat().inject!(sid('s1'))
     const intended = { provider: 'deepseek-official', model: 'unlisted' }
     b.setProjected(sid('s1'), { lastUsed: intended, next: intended })
-    await vi.waitFor(() => { expect(face.directory.getSnapshot().status).toBe('ready') })
-    expect(face.directory.getSnapshot().current).toEqual(intended)
+    await vi.waitFor(() => { expect(face.hooks.modelDirectory.getSnapshot().status).toBe('ready') })
+    expect(face.hooks.modelDirectory.getSnapshot().current).toEqual(intended)
     expect(b.blockOf('s1')).toBeUndefined()
     expect(b.calls.select).toBe(0)
   })

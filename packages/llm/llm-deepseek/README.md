@@ -102,6 +102,8 @@ Files mode bounds retained request versions by `maxRequestFilesBytes` and `maxIm
 
 `reasoningEffort` selects the advertised default. Exact-model metadata lists `off`, `low`, `high`, and `max` in increasing effort order with selection guidance when deployment policy permits thinking. `low`, `high`, and `max` enable thinking and serialize as `output_config.effort`, while adapter-owned `off` sends `thinking.type: disabled` instead. An unsupported value fails with `UNSUPPORTED_REASONING_EFFORT` before network I/O, and `thinking: disabled` rejects any non-`off` effort at plugin load. The adapter forwards an explicit `temperature`; DeepSeek accepts it with thinking enabled but ignores its value in that mode.
 
+The optional synchronous `llm-deepseek/request-prepared` diagnostic offers a lazy, content-free structural summary after Files/inline conversion and request-extension serialization. The callback receives a bounded summarizer rather than the wire body; hashes exclude transport credentials, endpoint URLs and request metadata. Observer failure cannot change the outgoing payload. The [W1 diagnostics plugin](../../w1/cache-diagnostics/README.md) consumes this observation.
+
 ### Dynamic configuration
 
 Connection options are captured from volatile Config references once per operation. Config validation rejects invalid candidates before form persistence. Credentials resolve from the same snapshot as the endpoint, image and Files policies, and idle budget. Attachment services resolve at request time.

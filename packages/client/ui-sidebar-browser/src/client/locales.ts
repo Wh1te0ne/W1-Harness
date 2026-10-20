@@ -1,5 +1,9 @@
 /** Locale-owned Browser tab copy. */
 export const zh = {
+  'automation.enabled': '本聊天可操控此页面',
+  'automation.paused': '模型操控已暂停',
+  'automation.pause': '暂停操控',
+  'automation.resume': '允许操控',
   'type.label': '浏览器',
   'guide.title': '浏览器',
   'guide.description': '浏览网页',
@@ -33,6 +37,10 @@ export type SidebarBrowserKey = keyof typeof zh
 
 /** English dictionary with the same keys. */
 export const en = {
+  'automation.enabled': 'This conversation can control this page',
+  'automation.paused': 'Agent control paused',
+  'automation.pause': 'Pause control',
+  'automation.resume': 'Allow control',
   'type.label': 'Browser',
   'guide.title': 'Browser',
   'guide.description': 'Browse web pages',

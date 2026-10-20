@@ -1,0 +1,46 @@
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write packages/w1/side-chat/README.md
+/:
+  en: 3f73e93fcaabb32b
+  zh: f5743fdf28a85681
+/w1-side-chat:
+  en: ebabc3080a76b7a0
+  zh: 2bed3cb17dc7a8ec
+/w1-side-chat/summary:
+  en: 79a411d737257c13
+  zh: a54bad35bc4a6134
+/w1-side-chat/use-this-package:
+  en: 077af5fd44976c3d
+  zh: 71adbec959c398cc
+/w1-side-chat/implementation:
+  en: a3e8971e9726f993
+  zh: 2326ce0b6992489b
+/w1-side-chat/verification:
+  en: 72bc34a778b66cc1
+  zh: 1ebf3bfeb54a4df7
+/w1-side-chat/model-experience:
+  en: 215e7ba838619b7b
+  zh: a311da3843709f90
+/w1-side-chat/model-experience/independent-side-request:
+  en: 6199cc25761bad06
+  zh: 080811123d5a87b3
+/w1-side-chat/model-experience/independent-side-request/what-the-model-sees:
+  en: bdd5bd2d81568958
+  zh: aeee2f9d758245f1
+/w1-side-chat/model-experience/independent-side-request/what-the-model-sees/verbatim-side-chat-instruction:
+  en: 97e45ec5d4e16bcd
+  zh: e0f97d89b538194c
+/w1-side-chat/model-experience/independent-side-request/token-effect:
+  en: 2bb15b757d2c50b8
+  zh: 06676d98023c7271
+/w1-side-chat/model-experience/independent-side-request/kv-cache-effect:
+  en: 0b9b7874c719c298
+  zh: aee2b68a512b7e64
+/w1-side-chat/known-limitations-and-deferred-work:
+  en: 0772acec4688161d
+  zh: 5a9b21ea74e02775
+/w1-side-chat/known-limitations-and-deferred-work/dev-note:
+  en: 782bcd2c0492fe88
+  zh: e17a35faa6ec6544

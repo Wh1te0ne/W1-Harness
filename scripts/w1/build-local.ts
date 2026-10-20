@@ -19,13 +19,15 @@ if (target === 'shell') run([pnpm, '--filter', '@deepseek-ai/dsh-web-frontend', 
 else {
   const directory = resolve(root, target === 'desktop' ? 'apps/desktop' : target)
   if (directory !== resolve(root, 'apps/desktop') && !directory.startsWith(resolve(root, 'packages') + sep)) throw new Error('Select desktop, shell, or one packages/ directory.')
-  if (!existsSync(resolve(directory, 'tsconfig.json')) || !existsSync(resolve(directory, 'tsdown.config.ts'))) throw new Error('Selected package has no compiler or bundle config.')
+  if (!existsSync(resolve(directory, 'tsconfig.json'))) throw new Error('Selected package has no compiler config.')
   run([resolve(root, 'node_modules/typescript/bin/tsc'), '-b', directory])
   if (target === 'desktop') {
     run([resolve(root, 'node_modules/tsdown/dist/run.mjs'), '--config-loader', 'native'], directory)
   } else {
     const output = resolve(root, '.work/local-dev/pending-artifacts', randomUUID())
-    run([resolve(root, 'node_modules/tsdown/dist/run.mjs'), '--config-loader', 'native', '--out-dir', output], directory)
+    const bundleConfig = existsSync(resolve(directory, 'tsdown.config.ts'))
+      ? resolve(directory, 'tsdown.config.ts') : resolve(root, 'scripts/w1/tsdown-host.config.ts')
+    run([resolve(root, 'node_modules/tsdown/dist/run.mjs'), '--config', bundleConfig, '--config-loader', 'native', '--out-dir', output], directory)
     queuePackageBuild(root, relative(root, directory).split(sep).join('/'), output)
   }
 }

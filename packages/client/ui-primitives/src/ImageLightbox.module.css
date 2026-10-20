@@ -7,6 +7,7 @@
 
 /* Painted area below the Windows caption; like Modal, the caption stays unpainted. */
 .stage {
+  overflow: hidden;
   position: absolute;
   inset: var(--dsh-frame-chrome-top, 0px) 0 0;
   display: flex;
@@ -24,6 +25,8 @@
 }
 
 .image {
+  touch-action: none;
+  user-select: none;
   position: relative;
   max-width: min(100%, 1600px);
   max-height: 100%;
@@ -33,6 +36,29 @@
   border: 0;
   box-shadow: var(--dsw-elevation-prominent);
 }
+
+.image[data-zoomed] { cursor: grab; }
+.image[data-zoomed]:active { cursor: grabbing; }
+.toolbar {
+  position: absolute;
+  bottom: 12px;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: var(--dsw-radius-lg);
+  background: var(--dsw-specific-input-major);
+  box-shadow: var(--dsw-elevation-prominent);
+}
+.toolbar button {
+  min-width: 40px;
+  height: 32px;
+  border: 0;
+  border-radius: var(--dsw-radius-sm);
+  background: transparent;
+  color: var(--dsw-alias-label-primary);
+  cursor: pointer;
+}
+.toolbar button:hover { background: var(--dsw-alias-interactive-bg-hover); }
 
 .close {
   position: absolute;

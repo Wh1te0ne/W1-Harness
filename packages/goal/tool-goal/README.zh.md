@@ -50,9 +50,11 @@ kind: "package-reference"
 
 该值必须是正的安全整数。它既提供模型自行报告阻塞的硬下限，也决定模型指引中指明的数值。生成的[配置目录](../../../docs/config-catalog.zh.md#deepseek-aidsh-tool-goal)是每个受支持字段的穷尽式真源。
 
+模型完成目标还会在权限、参数和当前版本校验后等待可选的 `goal/before-model-complete` 瀑布。没有策略监听器时，保留既有状态转换。拒绝或执行失败不会完成目标；等待结束后重新校验取消与权限，目标服务再次比较版本。[W1 复核插件](../../w1/goal-review/README.zh.md)是该接口的一个使用方。
+
 ### 权限规则
 
-工具只为活跃驱动器内、处于开放轮次中的精确活跃调用 agent 执行。`create`、`edit`、`pause` 和 `resume` 还要求运行时根 agent 的当前轮次中存在人类直接消息——subagent 或非人类生产方不能创建或编辑 goal。`resume` 会在 goal 服务执行前拒绝持久的 paused goal；该状态只属于面向用户的恢复路径。`complete` 和 `blocked` 还接受完全一致的当前 Goal Round：来源为 goal 的 Round 可以立即完成 goal，但 `blocked` 调用在达到配置的连续 Round 数量之前会被机械拒绝——模型判断同一条件是否确实持续，并必须在 `blocked_reason` 中说明。人类直接请求可以立即停止 goal。
+工具只为活跃驱动器内、处于开放轮次中的精确活跃调用 agent 执行。`create`、`edit`、`pause` 和 `resume` 还要求运行时根 agent 的当前轮次中存在人类直接消息——subagent 或非人类生产方不能创建或编辑 goal。`resume` 会在 goal 服务执行前拒绝持久的 paused goal；该状态只属于面向用户的恢复路径。`complete` 和 `blocked` 还接受完全一致的当前 Goal Round：来源为 goal 的 Round 可以提议完成 goal，但 `blocked` 调用在达到配置的连续 Round 数量之前会被机械拒绝——模型判断同一条件是否确实持续，并必须在 `blocked_reason` 中说明。人类直接请求可以立即停止 goal。
 
 成功报告 `complete` 或 `blocked` 的自主 Round 还会在该步骤后结束物理轮次，模型会收到一条结束指令，要求向用户写出最终消息。人类直接变更绝不会触发这种停止：assistant 可以确认变更，循环仍可接收并发的人类 steering（中途引导）。
 

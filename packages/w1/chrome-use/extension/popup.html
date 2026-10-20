@@ -1,0 +1,19 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>W1 Chrome</title><link rel="stylesheet" href="popup.css"></head>
+<body>
+  <header><div class="brand"><img src="mark.svg" alt="" width="30" height="30"><span>HARNESS</span></div><span class="product">Chrome</span></header>
+  <main>
+    <section class="connection-card" aria-labelledby="title">
+      <div class="eyebrow"><span id="dot" class="dot"></span><span id="label" data-i18n="waiting"></span></div>
+      <h1 id="title" data-i18n="waitingTitle"></h1>
+      <p id="description" class="description" data-i18n="waitingDescription"></p>
+      <div class="stats"><div><strong id="total">—</strong><span data-i18n="pages"></span></div><div><strong id="controlled">—</strong><span data-i18n="controlled"></span></div></div>
+      <button id="toggle" class="primary" data-i18n="pauseConnection"></button>
+      <button id="reconnect" class="text-button" data-i18n="reconnect"></button>
+    </section>
+    <details class="section"><summary><span data-i18n="tabSettings"></span><span class="chevron">⌄</span></summary><p class="hint" data-i18n="scope"></p><ul id="tabs"></ul></details>
+    <p id="status" class="error" role="status" aria-live="polite" hidden></p>
+  </main>
+  <footer><span class="footer-mark">◈</span><span data-i18n="footer"></span><span class="version">0.2</span></footer>
+  <script type="module" src="popup.js"></script>
+</body></html>

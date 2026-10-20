@@ -1,0 +1,13 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": { "rootDir": "src", "outDir": "lib/types" },
+  "include": ["src"],
+  "references": [
+    { "path": "../../core/system-prompt" },
+    { "path": "../../../vendor/cordis" },
+    { "path": "../../browser-use/browser-use" },
+    { "path": "../../core/tools" },
+    { "path": "../../core/agent" },
+    { "path": "../../mcp/mcp-client" }
+  ]
+}

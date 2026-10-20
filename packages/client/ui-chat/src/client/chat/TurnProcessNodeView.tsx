@@ -15,7 +15,8 @@ export const TurnProcessNodeView = memo(function TurnProcessNodeView({
   const turn = node.location.kind === 'turn' || node.location.kind === 'step'
     ? node.location.turn
     : undefined
-  if (turn?.status !== 'closed') return null
+  if (turn === undefined) return null
+  const running = turn.status !== 'closed'
   const canCollapse = turnProcess.foldable && turnProcess.hasContent && !turnProcessAlwaysOpen(node)
   const reason = turn.end?.data.reason.kind
   const stopped = reason === 'aborted' || reason === 'interrupted'
@@ -24,11 +25,11 @@ export const TurnProcessNodeView = memo(function TurnProcessNodeView({
   const duration = elapsedMs === undefined || stopped || reason === 'error' ? undefined
     : formatRunDuration(elapsedMs, t)
   // Other end reasons retain elapsed time; only stops and failure replace it.
-  const label = stopped ? t('message.stopped')
+  const label = running ? t('message.turnProcess.running') : stopped ? t('message.stopped')
     : reason === 'error' ? t('message.turnProcess.failed')
       : duration === undefined ? t('message.turnProcess.worked')
         : t('message.turnProcess.took')
-  const announcement = stopped ? t('message.stopped')
+  const announcement = running ? t('message.turnProcess.running') : stopped ? t('message.stopped')
     : reason === 'error' ? t('message.turnProcess.failed')
       : t('message.turnProcess.worked')
   return (
@@ -54,6 +55,9 @@ export const TurnProcessNodeView = memo(function TurnProcessNodeView({
           {duration?.map((part, index) => (
             <span key={index} className={part.numeric ? css.durationNumber : undefined}>{part.text}</span>
           ))}
+          <span className={css.summary}>{t('message.turnProcess.summary', {
+            tools: node.data.toolCallCount, agents: node.data.subagentCount, messages: node.data.messageCount,
+          })}</span>
         </span>
         {canCollapse && <IconChevronDownOutlineRegular className={css.chevron} />}
       </button>

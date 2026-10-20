@@ -1,0 +1,32 @@
+{
+  "name": "@deepseek-ai/dsh-w1-chrome-use",
+  "version": "0.2.4",
+  "private": true,
+  "description": "W1 Chrome extension and conversation-bound loopback bridge",
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "extension"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@deepseek-ai/dsh-w1-browser-use": "workspace:*",
+    "@deepseek-ai/dsh-util-crypto": "workspace:*",
+    "ws": "^8.21.3",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.18.1",
+    "@types/jsdom": "^28.0.3",
+    "jsdom": "29.1.1"
+  }
+}

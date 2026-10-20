@@ -8,6 +8,7 @@
     "src"
   ],
   "references": [
+    { "path": "../../packages/w1/browser-use" },
     {
       "path": "../../packages/boot/app-boot"
     },

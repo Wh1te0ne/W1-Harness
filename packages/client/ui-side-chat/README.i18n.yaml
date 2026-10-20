@@ -1,0 +1,40 @@
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write packages/client/ui-side-chat/README.md
+/:
+  en: 18c29f7f00364264
+  zh: 6a2ff027a387a60f
+/w1-side-chat-interface:
+  en: eda17bc9bfa8cd81
+  zh: 9536c3f08d3b0138
+/w1-side-chat-interface/summary:
+  en: bb140b660ed271c3
+  zh: cfba0b912cadb49f
+/w1-side-chat-interface/behavior:
+  en: a62203a1d11bc499
+  zh: 688e8696a7bcbe14
+/w1-side-chat-interface/verification:
+  en: 33072c5d822630a0
+  zh: 5c8668784c6ab321
+/w1-side-chat-interface/model-experience:
+  en: 215e7ba838619b7b
+  zh: a311da3843709f90
+/w1-side-chat-interface/model-experience/side-chat-submissions:
+  en: 7a9475961d05ce71
+  zh: 9e3d6d30494de004
+/w1-side-chat-interface/model-experience/side-chat-submissions/what-the-model-sees:
+  en: d2d52bbb1f466f74
+  zh: 8df993a9c77203e8
+/w1-side-chat-interface/model-experience/side-chat-submissions/token-effect:
+  en: 838ae3583a3d9c3a
+  zh: 0e2c34710c9edadf
+/w1-side-chat-interface/model-experience/side-chat-submissions/kv-cache-effect:
+  en: b553b4f44ddbfd6f
+  zh: bfe3969e837d7096
+/w1-side-chat-interface/known-limitations-and-deferred-work:
+  en: 68674f0d974ef0ed
+  zh: 8b183a3d842100a2
+/w1-side-chat-interface/known-limitations-and-deferred-work/dev-note:
+  en: a97ae5daba7cec0d
+  zh: ed8469c36f8467e9

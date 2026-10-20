@@ -45,7 +45,7 @@ function useBrowserDraft(url: string | undefined, revision: number): readonly [s
 
 /** Render provider-neutral navigation state and optional controls. */
 export function BrowserBody(props: BrowserBodyProps): ReactNode {
-  const { mount, loadUrl, restore, goBack, goForward, reload, setSandbox, useBrowserState, useStore, useTabInfo, t } = props
+  const { mount, loadUrl, restore, goBack, goForward, reload, setSandbox, setAutomation, useBrowserState, useStore, useTabInfo, t } = props
   const { tab } = useTabInfo()
   useEffect(() => tab.actions.bindCommands({ refresh: () => { reload(tab.id) } }), [tab.actions, tab.id, reload])
   const saved = useStore(state => state.byTab[tab.id])
@@ -63,6 +63,7 @@ export function BrowserBody(props: BrowserBodyProps): ReactNode {
     const hide = mount({
       tabId: tab.id, signal: tab.signal, viewportId, applicationOrigin: window.location.origin,
       initial: initial.current, initialUrl: initialUrl.current,
+      automationRequestId: tab.navigation.params?.automationRequestId,
       openTab: (url) => { tab.actions.openTab('browser', { params: { url }, revealIfOpened: false }) },
     })
     setMountEpoch(value => value + 1)
@@ -108,6 +109,12 @@ export function BrowserBody(props: BrowserBodyProps): ReactNode {
           onClick={() => { setSandbox(tab.id, !sandboxed) }}
         ><SandboxPolicyIcon sandboxed={sandboxed} /></button>}
       </form>
+      {frame.automationEnabled !== undefined && <div className={css.controlStatus} role="status">
+        <span>{t(frame.automationEnabled ? 'automation.enabled' : 'automation.paused')}</span>
+        <button type="button" onClick={() => { setAutomation(tab.id, !frame.automationEnabled) }}>
+          {t(frame.automationEnabled ? 'automation.pause' : 'automation.resume')}
+        </button>
+      </div>}
       {sandboxed === false && <div className={css.sandboxWarning} role="status">{t('sandbox.warning')}</div>}
       {error !== undefined && <div className={css.failure} role="status">{error.code !== undefined && error.description !== undefined
         ? t('load.failed.detail', { code: String(error.code), description: error.description })

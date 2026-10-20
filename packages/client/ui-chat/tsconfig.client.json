@@ -9,6 +9,7 @@
     "src"
   ],
   "references": [
+    { "path": "../../w1/cache-diagnostics" },
     {
       "path": "../../util/brand"
     },

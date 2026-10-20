@@ -1,0 +1,80 @@
+{
+  "extensionName": {
+    "message": "W1 Chrome"
+  },
+  "extensionDescription": {
+    "message": "Connect Chrome to W1 automatically. Let your assistant find the right page, with pause controls always available."
+  },
+  "waiting": {
+    "message": "AUTOMATIC CONNECTION"
+  },
+  "waitingTitle": {
+    "message": "Ready when you are"
+  },
+  "waitingDescription": {
+    "message": "Open W1 to connect automatically. Your assistant will find and use the right page."
+  },
+  "connected": {
+    "message": "CONNECTED TO W1"
+  },
+  "connectedTitle": {
+    "message": "Your browser, connected"
+  },
+  "connectedDescription": {
+    "message": "Ask W1 to work in Chrome. It will choose the right tab or open a new page."
+  },
+  "paused": {
+    "message": "CONNECTION PAUSED"
+  },
+  "pausedTitle": {
+    "message": "You’re in control"
+  },
+  "pausedDescription": {
+    "message": "Browser access is paused. Enable the connection whenever you want to continue."
+  },
+  "pages": {
+    "message": "Web pages available"
+  },
+  "controlled": {
+    "message": "In use by W1"
+  },
+  "pauseConnection": {
+    "message": "Pause connection"
+  },
+  "enableConnection": {
+    "message": "Enable connection"
+  },
+  "reconnect": {
+    "message": "Reconnect"
+  },
+  "tabSettings": {
+    "message": "Page access"
+  },
+  "scope": {
+    "message": "Ordinary web pages are available automatically. Incognito and browser-internal pages are excluded. Pause any page below."
+  },
+  "pauseTab": {
+    "message": "Pause"
+  },
+  "resumeTab": {
+    "message": "Resume"
+  },
+  "footer": {
+    "message": "Page actions are initiated by your W1 tasks"
+  },
+  "unavailable": {
+    "message": "Extension unavailable"
+  },
+  "failed": {
+    "message": "Could not complete the action"
+  },
+  "update": {
+    "message": "W1 connection service needs an update"
+  },
+  "updateTitle": {
+    "message": "Quit and reopen W1"
+  },
+  "updateDescription": {
+    "message": "A local service responded but is not ready for this connection protocol.\nQuit W1 from its menu and reopen the normal shortcut. No port setup is needed."
+  }
+}

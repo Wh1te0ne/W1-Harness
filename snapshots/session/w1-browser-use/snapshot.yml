@@ -1,0 +1,10 @@
+version: 1
+scenario: w1-browser-use
+profile: headless
+composition: w1-browser-use
+recording: authored
+header:
+  class: w1-browser-use
+  pin: true
+replay:
+  override: true

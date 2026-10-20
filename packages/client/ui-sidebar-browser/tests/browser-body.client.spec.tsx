@@ -2,7 +2,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react'
 import { useSyncExternalStore } from 'react'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { PaneId, TabId } from '@deepseek-ai/dsh-client-ui-dockkit'
 import { createBrowserControllers, type BrowserControllerState, type BrowserInjected } from '../src/client/browser/BrowserController.ts'
 import { createBrowserStore } from '../src/client/browser/store.ts'
@@ -16,7 +15,6 @@ import type { BrowserPageFactory, BrowserPageOptions } from '../src/client/brows
 import { createSnapshotStore } from '@deepseek-ai/dsh-client-store'
 import { emptyBrowserFrame, type BrowserFrameState } from '../src/client/browser/BrowserFrame.ts'
 
-const SESSION = 'session' as SessionId
 const TAB = 'tab' as TabId
 const messages: Readonly<Record<string, string>> = zh
 const lifetimes = new Set<AbortController>()
@@ -47,9 +45,9 @@ function mountBrowser(navigation?: { readonly url?: string },
   controllers.push(injected)
   const { keyedHooks, ...commands } = injected
   const tabActions = { bindCommands: vi.fn<ReturnType<BrowserBodyProps['useTabInfo']>['tab']['actions']['bindCommands']>(() => vi.fn()), openResource: vi.fn(), openTab: vi.fn(), close: vi.fn() }
-  const props: Pick<BrowserBodyProps, 'sessionId' | 'useTabInfo' | 'useStore' | 'actions' | 't' | 'useBrowserState'>
+  const props: Pick<BrowserBodyProps, 'usePanelInfo' | 'useTabInfo' | 'useStore' | 'actions' | 't' | 'useBrowserState'>
     & Omit<BrowserInjected, 'keyedHooks'> = {
-      sessionId: SESSION,
+      usePanelInfo: () => { throw new Error('Browser body does not request panel data') },
       useTabInfo: () => ({
         sidebar: { expanded: true, fullscreen: false }, panel: { id: 'pane' as PaneId },
         tab: {
@@ -87,6 +85,20 @@ afterEach(async () => {
 })
 
 describe('BrowserBody', () => {
+  it('shows per-tab control status and sends pause/resume to that frame', () => {
+    const state = createSnapshotStore<BrowserFrameState>({ ...emptyBrowserFrame(), automationEnabled: true })
+    const setEnabled = vi.fn((enabled: boolean) => { state.set({ ...state.getSnapshot(), automationEnabled: enabled }) })
+    const mounted = mountBrowser(undefined, { createPage: () => ({
+      presentation: { mount: () => () => {} },
+      frame: { getSnapshot: () => state.getSnapshot(), subscribe: listener => state.subscribe(listener),
+        automation: { setEnabled }, loadUrl: vi.fn(), goBack: vi.fn(), goForward: vi.fn(), reload: vi.fn(), dispose: async () => {} },
+    }) })
+    fireEvent.click(mounted.view.getByRole('button', { name: zh['automation.pause'] }))
+    expect(setEnabled).toHaveBeenCalledWith(false)
+    expect(mounted.view.getByRole('status').textContent).toContain(zh['automation.paused'])
+    fireEvent.click(mounted.view.getByRole('button', { name: zh['automation.resume'] }))
+    expect(setEnabled).toHaveBeenLastCalledWith(true)
+  })
   it('displays the effective browser refresh accelerator', () => {
     const mounted = mountBrowser(undefined, { refreshShortcut: { id: 'page.refresh' as never,
       label: 'Refresh', aliases: [], binding: null, keys: ['Ctrl', 'R'], aria: 'Control+R',

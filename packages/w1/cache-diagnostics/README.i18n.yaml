@@ -1,0 +1,46 @@
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write packages/w1/cache-diagnostics/README.md
+/:
+  en: 0dc1da5d3782eea9
+  zh: 0dc1da5d3782eea9
+/deepseek-ai-dsh-w1-cache-diagnostics:
+  en: 3c51b7c31c15214b
+  zh: 60829d22e5018fbf
+/deepseek-ai-dsh-w1-cache-diagnostics/summary:
+  en: e44a09044e4d3bfa
+  zh: 60b22dd05703c758
+/deepseek-ai-dsh-w1-cache-diagnostics/table-of-contents:
+  en: d152484eb41ac6b4
+  zh: 405b30feaf48c087
+/deepseek-ai-dsh-w1-cache-diagnostics/use-this-package:
+  en: 7cdd1dc5d81b6d9b
+  zh: ad61ce195911fd81
+/deepseek-ai-dsh-w1-cache-diagnostics/understand-the-implementation:
+  en: 0b160db3210717a9
+  zh: 4e1225b447171319
+/deepseek-ai-dsh-w1-cache-diagnostics/further-exploration:
+  en: 06fe9a4eb0072720
+  zh: 79c5c2475fed4956
+/deepseek-ai-dsh-w1-cache-diagnostics/model-experience:
+  en: 215e7ba838619b7b
+  zh: a311da3843709f90
+/deepseek-ai-dsh-w1-cache-diagnostics/model-experience/passive-request-observations:
+  en: 29a6a7ce8dbaf15b
+  zh: d6b363c551535329
+/deepseek-ai-dsh-w1-cache-diagnostics/model-experience/passive-request-observations/what-the-model-sees:
+  en: a1a2161aa9f734e9
+  zh: 7be94b7fd84c7c74
+/deepseek-ai-dsh-w1-cache-diagnostics/model-experience/passive-request-observations/token-effect:
+  en: e6e6affe257c4ed7
+  zh: db527efe96b90708
+/deepseek-ai-dsh-w1-cache-diagnostics/model-experience/passive-request-observations/kv-cache-effect:
+  en: f6400bdf2cb8cb5f
+  zh: ae624351f88e07fa
+/deepseek-ai-dsh-w1-cache-diagnostics/known-limitations-and-deferred-work:
+  en: 53830f01fec647ef
+  zh: 5638385ec4baf591
+/deepseek-ai-dsh-w1-cache-diagnostics/known-limitations-and-deferred-work/dev-note:
+  en: 0a1253c6f7b5e8b9
+  zh: 9f56528562c7c914

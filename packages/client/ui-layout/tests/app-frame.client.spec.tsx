@@ -3,7 +3,7 @@
 import type { GlobalStandardProps, RenderOpts } from '@deepseek-ai/dsh-client-ui-slots'
 import { allowAllAccess, bindSnapshotSelector } from '@deepseek-ai/dsh-client-test-runtime'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { act, cleanup, render } from '@testing-library/react'
+import { act, cleanup, fireEvent, render } from '@testing-library/react'
 import { AppFrame } from '../src/client/AppFrame.tsx'
 import type { AppFrameProps } from '../src/client/AppFrame.tsx'
 import type { MainPanelId, RightbarOwnerProps, SidebarOwnerProps } from '../src/client/index.ts'
@@ -291,6 +291,21 @@ describe('AppFrame', () => {
 })
 
 describe('AppFrame normal width concessions', () => {
+  it('rolls a resize back with Escape and restores defaults on double-click', () => {
+    const { frame, instance } = mountFrame()
+    const handle = handleFor(frame, 'sidebar')
+    pointer(handle, 'pointerdown', 280)
+    pointer(handle, 'pointermove', 340)
+    act(flushFrames)
+    expect(instance.getSnapshot().layoutInfo.sidebar).toBe(340)
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(instance.getSnapshot().layoutInfo.sidebar).toBe(280)
+    pointer(handle, 'pointerup', 340)
+    expect(instance.getSnapshot().layoutInfo.sidebar).toBe(280)
+    act(() => { instance.actions.setSidebar(340) })
+    fireEvent.doubleClick(handle)
+    expect(instance.getSnapshot().layoutInfo.sidebar).toBe(280)
+  })
   it('measures the frame, not the window, before choosing the first-open preference', () => {
     frameWidth = 1000
     const { instance, rightOwner } = mountFrame(1920)

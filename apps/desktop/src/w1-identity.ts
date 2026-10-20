@@ -5,6 +5,17 @@ import type { App, BrowserWindow, Shell } from 'electron'
 import type { W1Product } from './w1-upstream.ts'
 
 /**
+ * Relaunch through the development publisher so queued updates are applied after exit.
+ * @param application - Current Electron application; packaged builds use their ordinary restart.
+ */
+export function relaunchW1(application: Pick<App, 'isPackaged' | 'relaunch'>): void {
+  const launcher = process.env.W1_DESKTOP_LAUNCHER
+  if (process.platform === 'win32' && isW1Development(application) && launcher && isAbsolute(launcher) && existsSync(launcher)) {
+    application.relaunch({ execPath: launcher, args: [] })
+  } else application.relaunch()
+}
+
+/**
  * Keep the explicitly selected W1 executable on source development paths even when Electron classifies its renamed binary as packaged.
  * @param application - Electron's default packaging classification.
  * @returns whether the current executable is a development launch.

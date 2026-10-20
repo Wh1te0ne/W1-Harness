@@ -13,6 +13,15 @@ const t = makeTranslate(en, commonEn)
 afterEach(cleanup)
 
 describe('TurnUsagePanel', () => {
+  it('shows the observation level and retains unknown server cache facts', () => {
+    const view = render(<TurnUsagePanel usage={{ uncachedInputTokens: 10, outputTokens: 3, totalTokens: 13 }} cacheDiagnostic={{
+      turn: 1, step: 2, provider: 'mock', model: 'main', channel: 'normalized', status: 'suspected-miss', causes: [], messageCount: 3, requestBytes: 100,
+    }} t={t} />)
+    fireEvent.click(view.getByRole('button'))
+    expect(view.getByRole('dialog').textContent).toContain('C1: model request structure')
+    expect(view.getByRole('dialog').textContent).toContain('Server cache key and TTL unknown')
+    expect(view.getByRole('dialog').textContent).toContain('Stable structure without observed cache reads')
+  })
   it('shows an icon-and-total pill and opens the usage dialog on click', () => {
     const usage: TurnTokenUsage = {
       uncachedInputTokens: 5_060,

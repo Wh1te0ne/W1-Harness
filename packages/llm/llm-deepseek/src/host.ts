@@ -26,6 +26,7 @@ export function registerDeepSeekProvider<C extends DeepSeekConnectionOptions>(
   const unacceptedRoutes = new Set<string>()
   const adapter = new DeepSeekAdapter({
     ...dependencies,
+    onRequestPrepared: (detail) => { ctx.emit('llm-deepseek/request-prepared', detail) },
     resolveUserId: () => userId ??= getOrCreateAnonymousUserId(),
     onReplayDegrade: ({ provider, model, reason }) => {
       const key = `${provider}/${model}\u0000${reason}`

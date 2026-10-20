@@ -20,6 +20,8 @@ export const DESKTOP_IPC = {
   browserAcquire: 'dsh-desktop:browser-acquire',
   browserRelease: 'dsh-desktop:browser-release',
   browserOpenRequested: 'dsh-desktop:browser-open-requested',
+  browserCreateRequested: 'w1-desktop:browser-create-requested',
+  browserAutomation: 'w1-desktop:browser-automation',
   directoryPick: 'dsh-desktop:directory-pick',
   deviceInfo: 'dsh-desktop:device-info',
   remoteManage: 'w1-desktop:remote-manage',

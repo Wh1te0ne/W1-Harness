@@ -5,6 +5,7 @@ import type { BrowserTabState } from './BrowserPersistence.ts'
 
 /** Provider construction inputs; persistence does not enter the live navigation interface. */
 export interface BrowserPageOptions {
+  readonly automationRequestId?: string | undefined
   readonly initial: BrowserTabState | undefined
   readonly persist: (state: BrowserTabState) => void
   readonly openRequested: (url: string) => void

@@ -1,5 +1,20 @@
 /** Model catalog and request-local dependencies for DeepSeek Messages. */
-import type { LlmModelInfo, ModelModality, SystemPromptUpdate, ToolUpdate, ResolvedRetryPolicy, ImageAttachmentAccess } from '@deepseek-ai/dsh-llm'
+import type { GenerateOptions, LlmModelInfo, ModelModality, SystemPromptUpdate, ToolUpdate, ResolvedRetryPolicy, ImageAttachmentAccess } from '@deepseek-ai/dsh-llm'
+import type { RequestStructure } from './request-structure.ts'
+
+/** Lazy, content-free observation after Files/inline projection and extension serialization. */
+export interface PreparedRequestObservation {
+  readonly options: GenerateOptions
+  /** Computes digests without exposing request text, credentials, headers or endpoint URLs. */
+  readonly summarize: (maxMessages: number) => RequestStructure
+}
+
+declare module '@deepseek-ai/cordis' {
+  interface Events {
+    /** A synchronous diagnostic observer; failures never change the outgoing request. @mode emit */
+    'llm-deepseek/request-prepared'(detail: PreparedRequestObservation): void
+  }
+}
 import type { AttachmentStore, ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
 import type { AnonymousUserId } from '@deepseek-ai/dsh-anonymous-user-id'
 import type { DeepSeekLlmApiExtensionRequest, PreparedDeepSeekLlmApiExtensions } from '@deepseek-ai/dsh-deepseek-llm-api-extensions'
@@ -91,6 +106,8 @@ export interface DeepSeekRequestAuth {
 
 /** Constructor options for {@link DeepSeekAdapter}: the operation-local resolution hooks the plugin owns. */
 export interface DeepSeekAdapterOptions<Connection extends DeepSeekConnectionOptions = DeepSeekConnectionOptions> {
+  /** Observe serialized request fingerprints. The adapter contains observer failures. */
+  onRequestPrepared?: (detail: PreparedRequestObservation) => void
   /** Report unusable native Messages replay metadata without exposing content or signatures. */
   onReplayDegrade?: (detail: { provider: string; model: string; reason: string }) => void
   /** Report extension fields omitted from one request because the merged request failed to serialize. */

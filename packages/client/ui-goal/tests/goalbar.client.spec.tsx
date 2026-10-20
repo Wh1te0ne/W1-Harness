@@ -34,6 +34,14 @@ function makeActions() {
 }
 
 describe('GoalBar', () => {
+  it('shows the current review and ignores a verdict for an older goal revision', () => {
+    const actions = makeActions()
+    const review = { goalId: 'g1', revision: 1, key: 'evidence', status: 'reviewing' as const, reason: '' }
+    const view = render(<GoalBar goal={makeGoal()} review={review} {...actions} t={t} />)
+    expect(screen.getByText('正在复核完成情况')).toBeTruthy()
+    view.rerender(<GoalBar goal={makeGoal({ revision: 2 })} review={review} {...actions} t={t} />)
+    expect(screen.getByText('进行中的目标')).toBeTruthy()
+  })
   it('renders nothing while loading, absent, or when the goal is complete', () => {
     const actions = makeActions()
     const loading = render(<GoalBar goal={undefined} {...actions} t={t} />)

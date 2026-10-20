@@ -4,12 +4,18 @@ import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 
 import { RemoteError, SlotTestRuntime } from '@deepseek-ai/dsh-client-test-runtime'
 import { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { ModelSelection } from '@deepseek-ai/dsh-api-remotes/client'
-import { createSnapshotStore } from '@deepseek-ai/dsh-client-store'
-import type { ComponentProps } from 'react'
+import { createSnapshotStore, type SnapshotStore } from '@deepseek-ai/dsh-client-store'
+import { useSyncExternalStore, type ComponentProps } from 'react'
 import type { ModelDirectoryState } from '../src/client/directory.ts'
-import { ModelSelect } from '../src/client/ModelSelect.tsx'
+import { ModelSelect as SharedModelSelect } from '../src/client/ModelSelect.tsx'
 import { en, zh } from '../src/client/locales.ts'
 import { zh as commonZh } from '@deepseek-ai/dsh-client-locale/src/locales/zh.ts'
+
+/** Preserve reactive fixture inputs while the production factory receives plain snapshots. */
+function ModelSelect({ directory, ...props }: Omit<ComponentProps<typeof SharedModelSelect>, 'state'> & { directory: SnapshotStore<ModelDirectoryState> }) {
+  const snapshot = useSyncExternalStore(listener => directory.subscribe(listener), () => directory.getSnapshot())
+  return <SharedModelSelect {...props} state={snapshot} />
+}
 
 // The seat's key domain is model ∪ common; the stub mirrors the real lookup
 // chain: package dictionary, then common vocabulary, then the key.

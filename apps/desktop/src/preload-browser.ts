@@ -1,6 +1,6 @@
 /** Lease-scoped browser operations and one main-process event subscription per window. */
 import { ipcRenderer } from 'electron'
-import type { DesktopBrowserBridge, DesktopBrowserLeaseId } from '@deepseek-ai/dsh-client-ui-sidebar-browser/types'
+import type { DesktopBrowserBridge, DesktopBrowserLeaseId, DesktopBrowserCreateRequest } from '@deepseek-ai/dsh-client-ui-sidebar-browser/types'
 import { DESKTOP_IPC } from './ipc.ts'
 
 /** @returns browser operations that expose neither IPC nor Electron objects. */
@@ -17,7 +17,13 @@ export function createDesktopBrowserBridge(): DesktopBrowserBridge {
     }
   })
   return {
-    acquire: workspace => ipcRenderer.invoke(DESKTOP_IPC.browserAcquire, workspace) as ReturnType<DesktopBrowserBridge['acquire']>,
+    acquire: (workspace, binding) => ipcRenderer.invoke(DESKTOP_IPC.browserAcquire, workspace, binding) as ReturnType<DesktopBrowserBridge['acquire']>,
+    setAutomation: (lease, enabled) => ipcRenderer.invoke(DESKTOP_IPC.browserAutomation, lease, enabled) as Promise<void>,
+    onCreateRequested(listener) {
+      const receive = (_event: Electron.IpcRendererEvent, request: DesktopBrowserCreateRequest): void => { listener(request) }
+      ipcRenderer.on(DESKTOP_IPC.browserCreateRequested, receive)
+      return () => { ipcRenderer.removeListener(DESKTOP_IPC.browserCreateRequested, receive) }
+    },
     release: lease => ipcRenderer.invoke(DESKTOP_IPC.browserRelease, lease) as Promise<void>,
     onOpenRequested(lease, listener) {
       let callbacks = listeners.get(lease)

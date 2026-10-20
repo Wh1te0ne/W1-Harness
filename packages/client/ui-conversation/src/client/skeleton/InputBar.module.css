@@ -1,5 +1,6 @@
 
 .root {
+  container-type: inline-size;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -445,3 +446,10 @@
 .activity { display: flex; align-items: center; flex: none; }
 .activity:empty { display: none; }
 .activityExpanded { flex: 1; min-width: 0; }
+
+@container (max-width: 420px) {
+  .row { gap: 6px; }
+  .tools, .modes, .trailing, .standardControls { gap: 4px; }
+  .replySuggestionHint { display: none; }
+  .standardControls { max-width: 100%; }
+}

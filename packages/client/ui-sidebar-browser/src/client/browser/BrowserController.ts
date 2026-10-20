@@ -19,6 +19,7 @@ export interface BrowserControllerState {
 
 /** Construction inputs for one tab occurrence. */
 export interface BrowserControllerOptions {
+  readonly automationRequestId?: string | undefined
   readonly tabId: TabId
   readonly signal: AbortSignal
   readonly applicationOrigin: string
@@ -45,6 +46,7 @@ export class BrowserController implements HostObservable<BrowserControllerState>
     this.actions = options.actions
     this.checkpoint = options.initial
     this.page = options.createPage({
+      automationRequestId: options.automationRequestId,
       initial: options.initial,
       persist: (state) => {
         if (this.disposed) return
@@ -133,6 +135,9 @@ export class BrowserController implements HostObservable<BrowserControllerState>
     if (sandbox !== undefined) this.command(() => { sandbox.setEnabled(enabled) })
   }
 
+  /** @param enabled - user's per-tab control choice. */
+  setAutomation(enabled: boolean): void { this.page.frame.automation?.setEnabled(enabled) }
+
   /**
    * Redirect future checkpoint writes to a replacement Session binding.
    * @param actions - replacement persistence writer.
@@ -170,6 +175,7 @@ export class BrowserController implements HostObservable<BrowserControllerState>
 
 /** Values available once a Sidebar body has committed its content container. */
 export interface BrowserMountRequest {
+  readonly automationRequestId?: string | undefined
   readonly tabId: TabId
   readonly signal: AbortSignal
   readonly viewportId: string
@@ -202,6 +208,8 @@ export interface BrowserInjected {
   reload(tabId: TabId): void
   /** @param tabId - owning tab. @param enabled - provider's optional sandbox control. */
   setSandbox(tabId: TabId, enabled: boolean): void
+  /** @param tabId - owning tab. @param enabled - user's control choice. */
+  setAutomation(tabId: TabId, enabled: boolean): void
 }
 
 /**
@@ -263,5 +271,6 @@ export function createBrowserControllers(actions: BoundActions<BrowserStore>, cr
     goForward: (id) => { controller(id)?.goForward() },
     reload: (id) => { controller(id)?.reload() },
     setSandbox: (id, enabled) => { controller(id)?.setSandbox(enabled) },
+    setAutomation: (id, enabled) => { controller(id)?.setAutomation(enabled) },
   }
 }

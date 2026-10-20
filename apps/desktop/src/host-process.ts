@@ -4,6 +4,8 @@ import { spawn, type ChildProcess } from 'node:child_process'
 import { join } from 'node:path'
 import type { PlatformSession } from '@deepseek-ai/dsh-deepseek-account'
 import { desktopNodeEnvironment } from './node-environment.ts'
+import { browserHostRequests, type BrowserExecutor } from './browser-host-requests.ts'
+import { HOST_MODULE_RETRY_IMPORT } from './host-module-retry.ts'
 
 interface ReadyEvent {
   readonly type: 'ready'
@@ -179,6 +181,7 @@ export class DesktopHostProcess {
     private readonly packageManager?: { readonly pnpm: string; readonly nodeBin: string },
 
     private readonly onPlatformSession?: (session: PlatformSession | null) => void,
+    private readonly browserExecutor?: BrowserExecutor,
   ) {}
 
   /**
@@ -190,6 +193,7 @@ export class DesktopHostProcess {
     const entry = join(this.runtimeDir, 'node_modules', '@deepseek-ai', 'dsh-desktop-host', 'lib', 'index.js')
     const child = spawn(this.node, [
       '--expose-internals',
+      '--import', HOST_MODULE_RETRY_IMPORT,
       ...(this.inspectPort === undefined ? [] : [`--inspect=127.0.0.1:${String(this.inspectPort)}`]),
       entry,
       this.runtimeDir,
@@ -202,10 +206,16 @@ export class DesktopHostProcess {
       stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
     })
     this.child = child
+    const browser = browserHostRequests((value) => {
+      if (child.connected) child.send(value, (error) => { if (error !== null) browser.dispose() })
+    }, this.browserExecutor)
+    child.once('exit', () => { browser.dispose() })
+    child.once('disconnect', () => { browser.dispose() })
     child.stderr?.setEncoding('utf8')
     child.stderr?.on('data', (chunk: string) => { this.stderr = (this.stderr + chunk).slice(-MAX_HOST_DIAGNOSTIC_CHARS) })
     child.stdout?.pipe(process.stdout)
     child.on('message', (message: unknown) => {
+      if (browser.receive(message)) return
       if (!isDesktopHostEvent(message)) {
         this.fail(new Error('dsh desktop host sent an invalid IPC event'))
         child.kill('SIGTERM')

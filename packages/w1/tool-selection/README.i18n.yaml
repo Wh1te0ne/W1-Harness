@@ -1,0 +1,40 @@
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write packages/w1/tool-selection/README.md
+/:
+  en: 1cbd456a28713623
+  zh: 9cd1d149bc22625a
+/deepseek-ai-dsh-w1-tool-selection:
+  en: 41fac64e71dcde5e
+  zh: c9e0fe816af2fd70
+/deepseek-ai-dsh-w1-tool-selection/summary:
+  en: a7549ac3812b5948
+  zh: 11e1b412b2dc22a9
+/deepseek-ai-dsh-w1-tool-selection/table-of-contents:
+  en: 2fee9973f19f9401
+  zh: 0a74df79b130c21a
+/deepseek-ai-dsh-w1-tool-selection/use-this-package:
+  en: 137e4a9e880252ec
+  zh: 9dbec44cfca18767
+/deepseek-ai-dsh-w1-tool-selection/understand-the-implementation:
+  en: d0bdacf6a4cbeebd
+  zh: d5674ce9f61a50af
+/deepseek-ai-dsh-w1-tool-selection/model-experience:
+  en: 215e7ba838619b7b
+  zh: a311da3843709f90
+/deepseek-ai-dsh-w1-tool-selection/model-experience/selection-guidance:
+  en: 1fc9290ba24f2166
+  zh: 0e96ff2bbe9a99ac
+/deepseek-ai-dsh-w1-tool-selection/model-experience/selection-guidance/what-the-model-sees:
+  en: 6fdb5376db5a87cf
+  zh: daedf9768592f85b
+/deepseek-ai-dsh-w1-tool-selection/model-experience/selection-guidance/token-effect:
+  en: fd7116c40b13876e
+  zh: acfe1b1ae875287d
+/deepseek-ai-dsh-w1-tool-selection/model-experience/selection-guidance/kv-cache-effect:
+  en: 4a963e5f569b462c
+  zh: ba334b87ec3e3e42
+/deepseek-ai-dsh-w1-tool-selection/known-limitations-and-deferred-work:
+  en: 1533023e9734b105
+  zh: 73f1293e6c88a3dc

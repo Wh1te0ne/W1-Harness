@@ -1,9 +1,10 @@
 /** Main-process ownership and fixed isolation policy for Sidebar webview guests. */
 import { randomUUID } from 'node:crypto'
 import { app, session, type BrowserWindow, type Session, type WebContents } from 'electron'
-import type { DesktopBrowserLeaseId, DesktopBrowserOpenRequest, DesktopBrowserReservation } from '@deepseek-ai/dsh-client-ui-sidebar-browser/types'
+import type { DesktopBrowserLeaseId, DesktopBrowserOpenRequest, DesktopBrowserReservation, DesktopBrowserBinding } from '@deepseek-ai/dsh-client-ui-sidebar-browser/types'
 import { isW1Development } from './w1-identity.ts'
 import { DESKTOP_IPC } from './ipc.ts'
+import type { BrowserAutomation } from './browser-automation.ts'
 
 interface GuestLease {
   readonly owner: WebContents
@@ -11,6 +12,8 @@ interface GuestLease {
   attached: boolean
   guest?: WebContents
   releaseInput?: () => void
+  binding?: DesktopBrowserBinding | undefined
+  releaseAutomation?: (() => void) | undefined
 }
 
 /** Owns workspace storage partitions independently from individual tab guests. */
@@ -19,7 +22,7 @@ export class DesktopBrowserGuests {
   private readonly leases = new Map<DesktopBrowserLeaseId, GuestLease>()
 
   /** @param hostUrl - current authenticated DSH Host, which guests cannot request. */
-  constructor(private readonly hostUrl: () => string | undefined) {}
+  constructor(private readonly hostUrl: () => string | undefined, private readonly automation?: BrowserAutomation) {}
 
   /**
    * Reserve one guest in a workspace's process-lifetime partition.
@@ -27,7 +30,7 @@ export class DesktopBrowserGuests {
    * @param workspace - workspace identity received over IPC.
    * @returns opaque lease and the partition approved for it.
    */
-  acquire(owner: WebContents, workspace: unknown): DesktopBrowserReservation {
+  acquire(owner: WebContents, workspace: unknown, binding?: unknown): DesktopBrowserReservation {
     if (typeof workspace !== 'string' || workspace.length === 0 || workspace.length > 4096) {
       throw new Error('desktop browser: a workspace storage identity is required')
     }
@@ -38,7 +41,16 @@ export class DesktopBrowserGuests {
       this.partitions.set(workspace, partition)
     }
     const lease = randomUUID() as DesktopBrowserLeaseId
-    this.leases.set(lease, { owner, partition, attached: false })
+    let scope: DesktopBrowserBinding | undefined
+    if (binding !== undefined) {
+      if (typeof binding !== 'object' || binding === null || !('sessionId' in binding)
+        || typeof binding.sessionId !== 'string' || binding.sessionId.length === 0 || binding.sessionId.length > 256
+        || 'requestId' in binding && (typeof binding.requestId !== 'string' || binding.requestId.length > 128)
+        || 'automationEnabled' in binding && typeof binding.automationEnabled !== 'boolean') throw new Error('desktop browser: invalid conversation binding')
+      scope = { sessionId: binding.sessionId, ...'requestId' in binding ? { requestId: binding.requestId as string } : {},
+        ...'automationEnabled' in binding ? { automationEnabled: binding.automationEnabled as boolean } : {} }
+    }
+    this.leases.set(lease, { owner, partition, attached: false, binding: scope })
     return { lease, partition }
   }
 
@@ -54,6 +66,7 @@ export class DesktopBrowserGuests {
     if (lease === undefined) return
     if (lease.owner !== owner) throw new Error('desktop browser: guest belongs to another window')
     lease.releaseInput?.()
+    lease.releaseAutomation?.()
     this.leases.delete(key)
     const guest = lease.guest
     if (guest !== undefined && !guest.isDestroyed()) {
@@ -107,7 +120,8 @@ export class DesktopBrowserGuests {
         lease.guest = guest
         attachedLease = id
         lease.releaseInput = attachInput(guest, id)
-        guest.once('destroyed', () => { lease.releaseInput?.(); this.leases.delete(id) })
+        if (lease.binding !== undefined) lease.releaseAutomation = this.automation?.attach(id, lease.binding, guest, owner)
+        guest.once('destroyed', () => { lease.releaseInput?.(); lease.releaseAutomation?.(); this.leases.delete(id) })
       })
       guest.setWindowOpenHandler(({ url, postBody }) => {
         const lease = attachedLease === undefined ? undefined : this.leases.get(attachedLease)
@@ -154,11 +168,25 @@ export class DesktopBrowserGuests {
     })
   }
 
-  private allowedNavigation(value: string): boolean {
+  /** @param value - proposed target. @returns whether this guest may navigate or be controlled there. */
+  allowedNavigation(value: string): boolean {
     if (!URL.canParse(value)) return false
     const url = new URL(value)
     return ['http:', 'https:'].includes(url.protocol) && url.username === '' && url.password === ''
       && !this.isApplicationHost(url)
+  }
+
+  /**
+   * Change only a tab owned by the IPC caller.
+   * @param owner - trusted product document.
+   * @param id - tab lease.
+   * @param enabled - user's choice.
+   */
+  setAutomation(owner: WebContents, id: unknown, enabled: unknown): void {
+    if (typeof id !== 'string' || typeof enabled !== 'boolean') throw new Error('desktop browser: invalid control request')
+    const lease = this.leases.get(id as DesktopBrowserLeaseId)
+    if (lease === undefined || lease.owner !== owner || this.automation === undefined) throw new Error('desktop browser: tab unavailable')
+    this.automation.setEnabled(id as DesktopBrowserLeaseId, enabled)
   }
 
   private isApplicationHost(url: URL): boolean {

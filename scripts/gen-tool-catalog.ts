@@ -56,6 +56,7 @@ import * as ToolStrReplaceEditor from '@deepseek-ai/dsh-tool-str-replace-editor'
 import TerminalSessionService from '@deepseek-ai/dsh-terminal'
 import * as ToolPty from '@deepseek-ai/dsh-tool-terminal'
 import * as ToolGoal from '@deepseek-ai/dsh-tool-goal'
+import * as W1McpCatalog from '@deepseek-ai/dsh-w1-mcp-tool-catalog'
 import * as ToolSchedule from '@deepseek-ai/dsh-tool-schedule'
 import type ScheduleService from '@deepseek-ai/dsh-schedule'
 import Lsp from '@deepseek-ai/dsh-lsp'
@@ -439,6 +440,21 @@ const TOOL_PACKAGES: ToolPackage[] = [
     },
     note:
       'create, edit, pause, and resume require direct-human root authority; complete and blocked also accept the exact current goal round. The default blocked lower bound is three admitted rounds.',
+  },
+  {
+    pkg: '@deepseek-ai/dsh-w1-mcp-tool-catalog',
+    dir: 'mcp-tool-catalog',
+    source: 'packages/w1/mcp-tool-catalog/src/index.ts',
+    requires: ['ctx.tools', 'ctx.agents', 'ctx.systemPrompt', 'ctx.sessionProjections'],
+    writes: ['w1/mcp-disclosure', 'request/header through existing tool history'],
+    async mount(ctx) {
+      await ctx.plugin(SessionStore)
+      await ctx.plugin(AgentRegistry)
+      await ctx.plugin(W1McpCatalog, {
+        enabled: true, maxResults: 12, maxResponseBytes: 16384, maxLoadedTools: 128, maxLoadedBytes: 262144,
+      })
+    },
+    note: 'W1 enables the catalog explicitly; the standalone enabled default is false. Native MCP declarations are disclosed on demand. PTC descriptions and execution permissions remain unchanged.',
   },
   {
     pkg: '@deepseek-ai/dsh-tool-schedule',
@@ -833,7 +849,7 @@ export function render(catalog: ToolCatalog): string {
     '',
     'This file is GENERATED and verified fresh by `pnpm run verify-tool-catalog` (part of `doc-sync`) — do not edit it by hand. Unlike the cordis catalog (a pure source-AST pass), this generator BOOTS each tool plugin on a real context and reads `ctx.tools.schemas()`, because a tool schema is not statically knowable (runtime-spread enums, concatenated descriptions, config-driven names, raw-JSON-Schema MCP tools). A completeness guard globs `packages/*/tool-*` and fails if any package is missing from the generator\'s boot manifest, so a new tool cannot be silently undocumented.',
     '',
-    'Scope: shipped product tools under `packages/*/tool-*`, each booted with its DEFAULT config, except where a Config field is REQUIRED with no default — there the generator must choose, and the per-package note records which branch this page shows. The registered tool NAME can be a load-time config (e.g. `tool-subagent`\'s `toolName`), so a deployment may expose a package under a different or additional name — a per-package note records those shipped aliases where they exist. The `examples/` demo tools (e.g. `echo`) are excluded, matching the cordis catalog\'s packages-only scope.',
+    'Scope: shipped product tools under `packages/*/tool-*` and the explicitly listed W1 MCP catalog, each booted with its DEFAULT config, except where a Config field is REQUIRED with no default or a W1 policy is disabled by default — there the generator must choose, and the per-package note records which branch this page shows. The registered tool NAME can be a load-time config (e.g. `tool-subagent`\'s `toolName`), so a deployment may expose a package under a different or additional name — a per-package note records those shipped aliases where they exist. The `examples/` demo tools (e.g. `echo`) are excluded, matching the cordis catalog\'s packages-only scope.',
     '',
     '## Tool Package Map',
     '',

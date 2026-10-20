@@ -30,7 +30,8 @@ function props(
 ): ToolTreeProps {
   const snapshot = {} as SessionSnapshot
   const useSession = ((selector: (value: SessionSnapshot) => unknown) => selector(snapshot)) as ToolTreeProps['useSession']
-  const renderSlot = ((_key: string, owner: ToolCallOwnerProps, options?: { fallback?: React.ReactNode }) => {
+  const renderSlot = ((key: string, owner: ToolCallOwnerProps, options?: { fallback?: React.ReactNode }) => {
+    if (key !== 'tool.call.toolview') return null
     owners?.push(owner)
     return options?.fallback ?? null
   }) as unknown as ToolTreeProps['renderSlot']
@@ -61,6 +62,16 @@ function props(
 }
 
 describe('ToolCallTree', () => {
+  it('places a pending interaction beside its live call and removes that seat after settlement', () => {
+    const live = { phase: 'preparing' as const, args: PartialArguments.EMPTY, callId: 'waiting', name: 'write', turn: 1, step: 1, time: 1, subCalls: [] }
+    const renderSlot: ToolTreeProps['renderSlot'] = (key, _owner, options) => key === 'tool.call.interaction'
+      ? <span data-testid="approval-seat">Approve</span> : options?.fallback ?? null
+    const p = props(live)
+    const view = render(<ToolCallTree {...p} renderSlot={renderSlot} />)
+    expect(view.getByTestId('approval-seat').closest('[data-chat-call-id]')?.getAttribute('data-chat-call-id')).toBe('waiting')
+    view.rerender(<ToolCallTree {...props(root('waiting', { name: 'write', argsRaw: '{}' }))} renderSlot={renderSlot} />)
+    expect(view.queryByTestId('approval-seat')).toBeNull()
+  })
   it('dispatches only the parent and changed child among 100 sibling calls', () => {
     const children = Array.from({ length: 100 }, (_, index) => root(`child-${index}`, { name: 'custom_child', argsRaw: '{}' }))
     const block = { ...root('parent', { name: 'custom_parent', argsRaw: '{}' }), subCalls: children }
