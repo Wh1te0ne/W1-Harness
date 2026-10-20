@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto'
 import {
   constants,
   copyFileSync,
+  existsSync,
   globSync,
   mkdirSync,
   readFileSync,
@@ -88,7 +89,16 @@ export function selectDesktopPackageClosure(
 }
 
 function packedManifest(tarball: string): Record<string, unknown> {
-  const value: unknown = JSON.parse(capture('tar', ['-xOzf', tarball, 'package/package.json']))
+  let value: unknown
+  for (let attempt = 0; ; attempt++) {
+    try { value = JSON.parse(capture('tar', ['-xOzf', tarball, 'package/package.json'])); break }
+    catch (error) {
+      if (process.platform !== 'win32' || attempt >= 4 || !(error instanceof Error) || !existsSync(tarball)
+        || !error.message.includes('tar: Error opening archive: Failed to open')) throw error
+      // A just-written tarball can remain briefly locked by Windows readers.
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 250 * (attempt + 1))
+    }
+  }
   if (value === null || typeof value !== 'object' || Array.isArray(value)) {
     throw new Error(`desktop package set: ${tarball} has no package manifest`)
   }
