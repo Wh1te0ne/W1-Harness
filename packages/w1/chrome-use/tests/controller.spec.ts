@@ -155,6 +155,65 @@ it('uses an explicit rendered viewport for background screenshots without activa
   expect(api.tabs.update).not.toHaveBeenCalled()
 })
 
+it('accepts browser numeric timer handles and releases both screenshot deadlines', async () => {
+  const { controller, signal } = await fixture()
+  const schedule = globalThis.setTimeout, cancel = globalThis.clearTimeout
+  const timers = new Map<number, ReturnType<typeof setTimeout>>()
+  let next = 0
+  const restore = () => {
+    vi.unstubAllGlobals()
+    for (const timer of timers.values()) cancel(timer)
+    timers.clear()
+  }
+  onTestFinished(restore)
+  vi.stubGlobal('setTimeout', (callback: () => void, delay?: number) => {
+    const id = ++next
+    timers.set(id, schedule(() => { timers.delete(id); callback() }, delay))
+    return id
+  })
+  vi.stubGlobal('clearTimeout', (id: number) => {
+    const timer = timers.get(id)
+    if (timer !== undefined) cancel(timer)
+    timers.delete(id)
+  })
+  try {
+    await expect(controller.execute({ action: 'screenshot', tab: '1' }, signal, 'chat-a')).resolves.toHaveProperty('screenshot')
+    expect(timers.size).toBe(0)
+  } finally { restore() }
+  expect(globalThis.setTimeout).toBe(schedule)
+  expect(globalThis.clearTimeout).toBe(cancel)
+})
+
+it('uses the off-screen capture after a stalled surface without keeping a deadline alive', async () => {
+  const { controller, api, signal, sendCommand } = await fixture()
+  vi.useFakeTimers()
+  onTestFinished(() => { vi.useRealTimers() })
+  const original = sendCommand.getMockImplementation()
+  sendCommand.mockImplementation(async (target, method, params) => method === 'Page.captureScreenshot' && params?.fromSurface === true
+    ? new Promise(() => {}) : original?.(target, method, params))
+  try {
+    const result = controller.execute({ action: 'screenshot', tab: '1' }, signal, 'chat-a')
+    await vi.advanceTimersByTimeAsync(3000)
+    await expect(result).resolves.toHaveProperty('screenshot')
+    expect(api.debugger.sendCommand).toHaveBeenCalledWith({ tabId: 1 }, 'Page.captureScreenshot', expect.objectContaining({
+      fromSurface: false, captureBeyondViewport: false,
+    }))
+    expect(vi.getTimerCount()).toBe(0)
+  } finally { vi.useRealTimers() }
+})
+
+it('does not reinterpret a provider error named stall as its own deadline', async () => {
+  const { controller, signal, sendCommand } = await fixture()
+  const original = sendCommand.getMockImplementation()
+  const failure = new Error('stall')
+  sendCommand.mockImplementation(async (target, method, params) => {
+    if (method === 'Page.captureScreenshot') throw failure
+    return original?.(target, method, params)
+  })
+  await expect(controller.execute({ action: 'screenshot', tab: '1' }, signal, 'chat-a')).rejects.toBe(failure)
+  expect(sendCommand.mock.calls.filter(([, method]) => method === 'Page.captureScreenshot')).toHaveLength(1)
+})
+
 it('detaches a hanging capture on timeout and allows a fresh read immediately', async () => {
   const { controller, api, signal, sendCommand } = await fixture()
   const original = sendCommand.getMockImplementation()

@@ -225,6 +225,7 @@ export class ChromeController {
           await send('Page.navigateToHistoryEntry', { entryId: previous.id }); break
         }
         case 'screenshot': {
+          let surfaceTimer: ReturnType<typeof setTimeout> | undefined
           const capture = async (): Promise<BrowserResult> => {
             const layout = await send('Page.getLayoutMetrics') as {
               cssLayoutViewport?: { pageX: number; pageY: number; clientWidth: number; clientHeight: number }
@@ -239,14 +240,20 @@ export class ChromeController {
             // fromSurface:true requires active GPU compositing; a minimized window pauses the compositor
             // and may hang indefinitely. Race it against 3 s and fall back to the off-screen buffer.
             const surfaceShot = send('Page.captureScreenshot', { ...base, fromSurface: true, captureBeyondViewport: true })
-            const surfaceStall = new Promise<never>((_, reject) => { setTimeout(() => { reject(new Error('stall')) }, 3000).unref() })
+            const stalled = new Error('Chrome surface capture stalled')
+            const surfaceStall = new Promise<never>((_, reject) => {
+              surfaceTimer = setTimeout(() => { reject(stalled) }, 3000)
+            })
             let image: { data?: string }
             try {
               image = await Promise.race([surfaceShot, surfaceStall]) as { data?: string }
             } catch (err) {
-              if ((err as Error).message !== 'stall') throw err
+              if (err !== stalled) throw err
               // Surface capture stalled; the off-screen buffer does not require an active compositor.
               image = await send('Page.captureScreenshot', { ...base, fromSurface: false, captureBeyondViewport: false }) as { data?: string }
+            } finally {
+              if (surfaceTimer !== undefined) clearTimeout(surfaceTimer)
+              surfaceTimer = undefined
             }
             await current()
             if (!image.data || image.data.length > 8000000) throw new Error('Screenshot unavailable or exceeds the output limit')
@@ -276,7 +283,12 @@ export class ChromeController {
               finally { if (cleanup) clearTimeout(cleanup) }
             }
             throw error
-          } finally { if (timer) clearTimeout(timer); combined.removeEventListener('abort', cancel) }
+          } finally {
+            if (timer !== undefined) clearTimeout(timer)
+            if (surfaceTimer !== undefined) clearTimeout(surfaceTimer)
+            surfaceTimer = undefined
+            combined.removeEventListener('abort', cancel)
+          }
         }
       }
       check()

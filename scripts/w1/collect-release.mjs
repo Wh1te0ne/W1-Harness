@@ -24,19 +24,32 @@ const delivery = join(root, 'releases', product.version)
 if (existsSync(delivery)) throw new Error('Release directory already exists; published versions are immutable')
 const output = join(root, '.work/release-collection', randomUUID())
 mkdirSync(output, { recursive: true })
-const notes = readFileSync(join(root, 'CHANGELOG.md'), 'utf8')
+const changelog = readFileSync(join(root, 'CHANGELOG.md'), 'utf8').replaceAll('\r\n', '\n')
+const heading = `## ${product.version}\n`
+const start = changelog.indexOf(heading)
+if (start < 0) throw new Error('CHANGELOG has no section for the release version')
+const next = changelog.indexOf('\n## ', start + heading.length)
+const notes = changelog.slice(start, next < 0 ? undefined : next).trim() + '\n'
+const releaseNotes = notes
   .replaceAll('](docs/', '](https://github.com/Wh1te0ne/W1-Harness/blob/main/docs/')
-writeFileSync(join(output, 'RELEASE_NOTES.md'), notes)
+writeFileSync(join(output, 'RELEASE_NOTES.md'), releaseNotes)
 const updateAssets = new Set([`${channel}.yml`, ...feed.files.flatMap(file =>
   [file.url, ...existsSync(join(artifacts, `${file.url}.blockmap`)) ? [`${file.url}.blockmap`] : []])])
 for (const file of updateAssets) {
   copyFileSync(join(artifacts, file), join(output, file))
+}
+// Installed alpha/beta clients keep their old feed name until they install the numbered release.
+if (channel === 'latest') {
+  for (const previous of ['alpha', 'beta']) copyFileSync(join(output, 'latest.yml'), join(output, `${previous}.yml`))
 }
 const chrome = JSON.parse(readFileSync(join(root, 'packages/w1/chrome-use/extension/manifest.json'), 'utf8'))
 const extension = join(root, 'releases/w1-chrome', chrome.version)
 if (!existsSync(join(extension, 'manifest.json'))) throw new Error('Build the Chrome extension before collecting assets')
 execFileSync('tar', ['-a', '-cf', join(output, `w1-chrome-${chrome.version}.zip`), '-C', extension, '.'], { windowsHide: true })
 const relay = join(root, 'apps/w1-remote')
+const relayVersion = JSON.parse(readFileSync(join(relay, 'package.json'), 'utf8')).version
+const mobileVersion = /versionName\s+['"](\d+\.\d+\.\d+)['"]/u.exec(readFileSync(join(relay, 'android/app/build.gradle'), 'utf8'))?.[1]
+if (!mobileVersion || !/^\d+\.\d+\.\d+$/u.test(relayVersion)) throw new Error('Invalid companion component version')
 const relayPayload = join(root, '.work/relay-publication', randomUUID())
 mkdirSync(relayPayload, { recursive: true })
 for (const name of ['Dockerfile', 'compose.yaml', '.dockerignore', 'package.json', 'relay.mjs', 'crypto.mjs']) {
@@ -44,14 +57,15 @@ for (const name of ['Dockerfile', 'compose.yaml', '.dockerignore', 'package.json
 }
 writeFileSync(join(relayPayload, 'README.md'), readFileSync(join(relay, 'README.md'), 'utf8')
   .replaceAll('](../../docs/', '](https://github.com/Wh1te0ne/W1-Harness/blob/main/docs/'))
-execFileSync('tar', ['-a', '-cf', join(output, 'w1-relay-0.1.1.zip'), '-C', relayPayload, '.'], { windowsHide: true })
-const apk = join(root, '.work/deliveries/w1-remote-0.1.0/W1-Harness-Mobile-0.1.0.apk')
-if (existsSync(apk)) copyFileSync(apk, join(output, 'W1-Harness-Mobile-0.1.0.apk'))
+execFileSync('tar', ['-a', '-cf', join(output, `w1-relay-${relayVersion}.zip`), '-C', relayPayload, '.'], { windowsHide: true })
+const apkName = `W1-Harness-Mobile-${mobileVersion}.apk`
+const apk = join(root, `.work/deliveries/w1-mobile-${mobileVersion}`, apkName)
+if (existsSync(apk)) copyFileSync(apk, join(output, apkName))
 const commit = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8', windowsHide: true }).trim()
 const runtimeCommit = process.env.W1_RUNTIME_SOURCE_COMMIT ?? commit
 if (!/^[a-f0-9]{40}$/u.test(runtimeCommit)) throw new Error('Runtime source commit must be a full commit ID')
 writeFileSync(join(output, 'components.json'), JSON.stringify({ product: product.version, upstream: product.upstreamTag, commit, runtimeCommit,
-  chrome: chrome.version, mobile: existsSync(apk) ? '0.1.0' : null, relay: '0.1.1', relayProtocol: 1,
+  chrome: chrome.version, mobile: existsSync(apk) ? mobileVersion : null, relay: relayVersion, relayProtocol: 1,
   platform: 'win32', arch: 'x64', authenticode: false }, null, 2) + '\n')
 const sums = readdirSync(output).sort().map(name => `${createHash('sha256').update(readFileSync(join(output, name))).digest('hex')}  ${name}`)
 writeFileSync(join(output, 'SHA256SUMS'), sums.join('\n') + '\n')

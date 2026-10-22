@@ -46,7 +46,7 @@ if (process.versions.electron === undefined) {
       const configuration = join(cache, 'app-update.yml')
       await writeFile(configuration, 'updaterCacheDirName: w1-qualification\n')
       const forbidden = () => { throw new Error('Installer execution is forbidden during qualification') }
-      const currentVersion = mode === 'github' ? '0.1.0-alpha.3' : '1.0.0'
+      const currentVersion = mode === 'github' ? '0.1.0-alpha.4' : '1.0.0'
       const updater = new library.NsisUpdater(undefined, { version: currentVersion, name: 'W1H qualification',
         isPackaged: true, appUpdateConfigPath: configuration, userDataPath: cache, baseCachePath: cache,
         whenReady: async () => {}, quit: forbidden, relaunch: forbidden, onQuit: forbidden })

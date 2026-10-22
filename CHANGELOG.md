@@ -1,8 +1,8 @@
 # W1H release notes / 版本说明
 
-## Unreleased — 0.1.0-alpha.5 candidate / 未发布候选
+## 0.2.0
 
-Integrated DSH baseline / DSH 基线：`dsh-v0.2.1-rc.2`。This section describes the next release scope; it does not announce an available installer. / 本节记录下一版范围，不表示安装包已经发布。
+Integrated DSH baseline / DSH 基线：`dsh-v0.2.1-rc.2`。W1 now uses numbered releases without alpha/beta suffixes; existing alpha installations can update through compatible feed files. / W1 改用不带 alpha/beta 后缀的数字版本，旧 alpha 安装版通过兼容更新描述升级。
 
 ### Usage and pricing / 用量与计价
 
@@ -23,13 +23,13 @@ Integrated DSH baseline / DSH 基线：`dsh-v0.2.1-rc.2`。This section describe
 
 - Run the latest source Test build from its dedicated launcher. Apply frozen daily updates after exit, with interrupted-update recovery, directory rollback and startup diagnostics; invalidate stale runtime archives. / 专用入口运行最新源码 Test；退出后应用冻结的日用更新，提供中断恢复、目录回滚和启动诊断，并停用失效的运行归档。
 - Support the Volcengine Responses reasoning format, keep automatically opened browser tabs in the background, and avoid repeated browser fallback after HTTP failures. Desktop HTTP requests use the configured system route by default. / 适配火山 Responses 思考参数；自动创建的浏览器标签保持后台；避免 HTTP 失败后反复打开浏览器；桌面 HTTP 默认使用已配置的系统路由。
-- Update Chrome source to 0.2.5 with the W1 Harness tab-group name. Android 0.1.1 and its desktop counterpart show reasoning and tool results while preserving expanded details during updates. Relay remains 0.1.1. / Chrome 源码更新为 0.2.5，标签组统一为 W1 Harness；Android 0.1.1 与电脑端配套显示思考和工具结果，增量更新保留展开状态；中继保持 0.1.1。
+- Update Chrome to 0.2.6 with the W1 Harness tab-group name and browser-compatible screenshot timeout recovery. Android 0.1.1 and its desktop counterpart show reasoning and tool results while preserving expanded details during updates. Relay remains 0.1.1. / Chrome 更新为 0.2.6，标签组统一为 W1 Harness，并修复截图超时回退的浏览器计时器兼容；Android 0.1.1 与电脑端配套显示思考和工具结果，增量更新保留展开状态；中继保持 0.1.1。
 
 ### Upgrade and validation limits / 升级与验证边界
 
 Read the [CNY ledger upgrade guide](docs/upgrade-guide/v0.2.1-rc.2/w1-cny-pricing/guide.md), [appearance migration guide](docs/upgrade-guide/v0.2.1-rc.2/w1-theme-persistence/guide.md), and [desktop address policy](docs/upgrade-guide/v0.2.1-rc.2/desktop-web-fetch-address-policy/guide.md). Rollback of the CNY migration requires a matching application and ledger backup. Historical repricing requires a separate explicit operation; a new price does not silently rewrite old charges. / 升级前阅读[人民币账本](docs/upgrade-guide/v0.2.1-rc.2/w1-cny-pricing/guide.zh.md)、[外观迁移](docs/upgrade-guide/v0.2.1-rc.2/w1-theme-persistence/guide.zh.md)和[桌面地址策略](docs/upgrade-guide/v0.2.1-rc.2/desktop-web-fetch-address-policy/guide.zh.md)说明。人民币迁移回退需同时恢复匹配的应用和账本备份；历史重算须单独明确执行，改价不会静默改写旧费用。
 
-The isolated source candidate passes a complete build and the selected behavior tests; local Test/daily evidence is recorded in the work log. The alpha.4-to-alpha.5 packaged upgrade and companion-device acceptance remain release tasks. Usage estimates exclude unsupported storage-time, Batch/Flex and non-token charges. / 独立源码候选已通过完整构建和所选行为测试，本机 Test 与日用证据见工作记录；alpha.4 到 alpha.5 安装版升级及配套设备验收仍待执行。用量估算不含尚未适配的缓存存储时长费、Batch/Flex 和非 Token 费用。
+The isolated source candidate passes a complete build and the selected behavior tests; local Test/daily evidence is recorded in the work log. The alpha.4-to-0.2.0 packaged upgrade and companion-device acceptance remain release tasks. Usage estimates exclude unsupported storage-time, Batch/Flex and non-token charges. / 独立源码候选已通过完整构建和所选行为测试，本机 Test 与日用证据见工作记录；alpha.4 到 0.2.0 安装版升级及配套设备验收仍待执行。用量估算不含尚未适配的缓存存储时长费、Batch/Flex 和非 Token 费用。
 
 ## 0.1.0-alpha.4
 

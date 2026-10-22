@@ -101,7 +101,7 @@ export function createElectronBuilderConfig(
   // electron-builder merges extraMetadata into the packaged manifest, so a build version here reaches
   // the artifact names, the update feed, and the installed app.getVersion() the updater compares against.
   const productVersion = JSON.parse(readFileSync(fileURLToPath(new URL('../package.json', import.meta.url)), 'utf8')).version
-  const buildVersion = resolveDesktopBuildVersion(env, productVersion)
+  const buildVersion = resolveDesktopBuildVersion(env, w1.version)
   if (update?.channel === 'latest' && buildVersion.includes('-')) throw new Error('desktop package: latest requires a stable version')
   const packaged = resolveDesktopBuildCommit(env)
   const readWindowsFileBytes = async path => {
