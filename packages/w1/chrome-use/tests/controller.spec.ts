@@ -189,7 +189,7 @@ it('uses the off-screen capture after a stalled surface without keeping a deadli
   vi.useFakeTimers()
   onTestFinished(() => { vi.useRealTimers() })
   const original = sendCommand.getMockImplementation()
-  sendCommand.mockImplementation(async (target, method, params) => method === 'Page.captureScreenshot' && params?.fromSurface === true
+  sendCommand.mockImplementation(async (target, method, params) => method === 'Page.captureScreenshot' && params !== undefined && 'fromSurface' in params && params.fromSurface === true
     ? new Promise(() => {}) : original?.(target, method, params))
   try {
     const result = controller.execute({ action: 'screenshot', tab: '1' }, signal, 'chat-a')
