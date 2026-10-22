@@ -7,7 +7,7 @@ import { isDeepStrictEqual as equal } from 'node:util'
 import { appendHourBucket, pruneHourBuckets, PLAN_SAMPLE_CAP, PLAN_SAMPLE_MAX_AGE_MS } from './plan-billing.js'
 import { ledgerLockOwner, staleLedgerLockOwner } from './ledger-lock-owner.js'
 
-const fields = ['input', 'output', 'cacheRead', 'cacheWrite', 'reasoning', 'calls', 'cost', 'apiCost']
+const fields = ['input', 'output', 'cacheRead', 'cacheWrite', 'reasoning', 'calls', 'cost', 'apiCost', 'unpricedCalls', 'cacheWrite1h', 'estimatedCalls', 'stalePriceCalls']
 const safe = key => !['__proto__', 'constructor', 'prototype'].includes(key)
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value)
 const clone = value => value === undefined ? undefined : structuredClone(value)
@@ -74,7 +74,7 @@ export function readLedger(path) {
 export function writeLedger(path, state) {
   const temp = `${path}.${process.pid}-${randomUUID()}.tmp`
   try {
-    writeFileSync(temp, JSON.stringify(state), { encoding: 'utf8', flag: 'wx' })
+    writeFileSync(temp, JSON.stringify(state), { encoding: 'utf8', flag: 'wx', flush:true })
     renameSync(temp, path)
   } finally {
     try { unlinkSync(temp) } catch (error) { if (error.code !== 'ENOENT') throw error }
@@ -89,11 +89,12 @@ export function compactDay(day) {
     byProviderModel: clone(day.byProviderModel ?? {}), sessions: [] }
 }
 function add(target, values) {
-  for (const key of fields) target[key] = (Number(target[key]) || 0) + values[key]
+  for (const key of fields) target[key] = (Number(target[key]) || 0) + (values[key] ?? 0)
 }
 
 /** Replay a priced call, not a snapshot: two equal calls are still two calls. */
 export function applyAccount(state, entry) {
+  if(entry.id && (state.days[entry.date]?.receipts?.[entry.id]||state.archivedDays?.[entry.date]?.receipts?.[entry.id]))return false
   if (state.archivedDays?.[entry.date]) {
     state.days[entry.date] ??= clone(state.archivedDays[entry.date])
     delete state.archivedDays[entry.date]
@@ -101,6 +102,7 @@ export function applyAccount(state, entry) {
   const { date, sessionId, atMs, providerKey, values, planId } = entry
   if (!object(state.days[date])) state.days[date] = { date, ...empty(), byProviderModel: {}, sessions: [] }
   const day = state.days[date]
+  if(entry.id){day.receipts??={};day.receipts[entry.id]=clone(entry)}
   if (!Array.isArray(day.sessions)) day.sessions = []
   const containers = [day]
   if (typeof sessionId === 'string' && sessionId.length > 0) {

@@ -15,6 +15,8 @@ import css from './dockkit.module.css'
 export interface TabRetention {
   /** Whether a visited body survives hiding; omitted means visibility-mounted. */
   readonly keepMounted?: (tab: TabRecord) => boolean
+  /** Mount and retain background-capable bodies even before their first visible visit. */
+  readonly mountHidden?: (tab: TabRecord) => boolean
   /** Whether this layout's Session is on screen; defaults to true. */
   readonly active?: boolean
 }
@@ -35,7 +37,7 @@ interface TabHostProps extends LayoutProps {
 }
 
 /** A tab's ancestors stay identical across selection, pane moves and floating. */
-function TabHost({ state, callbacks, intents, tab, pane, column, floats, focusRequest, keepMounted,
+function TabHost({ state, callbacks, intents, tab, pane, column, floats, focusRequest, keepMounted, mountHidden,
   active = true }: TabHostProps): ReactNode {
   const floating = pane.host === 'float'
   const selected = floating || pane.activeTabId === tab.id
@@ -99,7 +101,7 @@ function TabHost({ state, callbacks, intents, tab, pane, column, floats, focusRe
             : <TabStrip state={state} pane={pane} callbacks={callbacks} />)}
         </div>
         <div ref={body} className={clsx(css.tabHostBody, floating ? css.floatBody : css.paneBody)}>
-          {visited && (retained || (active && selected)) ? callbacks.renderTab(tab) : null}
+          {mountHidden?.(tab) || (visited && (retained || (active && selected))) ? callbacks.renderTab(tab) : null}
           {!floating && <PaneDropHints pane={pane} callbacks={callbacks} />}
         </div>
         {floating && <div className={css.floatResize} data-dockkit-float-resize={pane.id}

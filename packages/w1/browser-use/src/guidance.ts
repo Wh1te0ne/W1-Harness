@@ -3,6 +3,8 @@ export const BROWSER_GUIDANCE = `## Built-in browser workflow
 
 Use w1_browser proactively within the assigned task when page rendering, interaction, or visual evidence is needed. After a frontend change, perform relevant browser verification when available and allowed; the user need not explicitly request this tool. Do not run browser or desktop acceptance when the user excluded it. Pure code or backend work does not automatically require a browser.
 
+For research, search and text fetching come first. Use this browser only when there is evidence that rendering or interaction is required; DNS, proxy, TLS, timeout, rate-limit and policy failures alone do not justify browser fallback. Never bypass a policy refusal. Reuse the relevant conversation-owned tab, keep automated work in the background and respect a closed sidebar. Stop on a repeated blocker instead of opening more copies of the page.
+
 1. Call list to find the intended conversation-owned tab. Honor a supplied tab or browser target. Reuse a matching tab; open an HTTP/HTTPS URL when no suitable tab exists. Check the returned tab id and URL. Do not navigate an unrelated tab away from the user's work.
 2. Call read to inspect the current page and obtain element refs. Use screenshot as well when appearance matters and image input is supported. Screenshots do not supply actionable element refs. If content is truncated, narrow the task or scroll and read; do not assume unseen content.
 3. Use a fresh ref from this tab's latest read for click or fill. Run dependent actions sequentially. For press, verify the intended field is focused; Enter can submit a form. Stay within the user's authorized action, including for submissions or other external changes.

@@ -1,4 +1,7 @@
 import { configuredModels } from './configured-models.js'
+import {auditHistoricalPricing} from './pricing-audit.js'
+import {createPriceSync} from './price-sync.js'
+import {PRICE_SOURCES} from './price-sources.js'
 /**
  * dsh-usage-manager 宿主插件。
  *
@@ -25,7 +28,7 @@ import { Ledger, applyConfigPatch, localDayKey, pickBalanceInfo, reconcileBalanc
 import { backfillLegacyLedger, importLegacyHistory, repairForkSeed, repairProviderDupes, recomputeLedgerPricingBasis } from './backfill.js'
 import { createLlmStreamBilling } from './billing-stream.js'
 import { installNativeSearchBilling, nativeSearchReconcile, isNativeSearchUsageEvent } from './native-search-billing.js'
-import { OFFICIAL_PRICING_URL, OFFICIAL_PRICING_URL_ZH, LEGACY_BASE_BOUNDARY, FLASH_PRICE_EFFECTIVE_AT, PRO_FLASH_ROUTING_EFFECTIVE_AT, normalizePrice, parsePricingHtml, repairDefaultPeakPrice, upgradeDeepSeekPriceTable, costOf, providerPriceEntryFor, buildPriceCatalog, usdFromCost, isWrapperProviderId, wrapperUpstreamProvider } from './pricing.js'
+import { correctCurrentDeepSeekPrices, OFFICIAL_PRICING_URL, OFFICIAL_PRICING_URL_ZH, LEGACY_BASE_BOUNDARY, FLASH_PRICE_EFFECTIVE_AT, PRO_FLASH_ROUTING_EFFECTIVE_AT, normalizePrice, parsePricingHtml, repairDefaultPeakPrice, upgradeDeepSeekPriceTable, costOf, providerPriceEntryFor, buildPriceCatalog, usdFromCost, isWrapperProviderId, wrapperUpstreamProvider } from './pricing.js'
 import { createUsageDeduper, USAGE_DEDUP_WINDOW_MS, usageFingerprint } from './usage-dedup.js'
 import { CODING_PLAN_PROVIDERS, CODING_PLAN_PROVIDER_IDS, queryCodingPlan, scnetTokenPlanWindows, qwenTokenPlanWindows, emptyCustomBalance, queryCustomBalance, normalizeVolcengineKey } from './coding-plans.js'
 import { recordSamples, buildPlanStats, canonicalWindowKey, periodStartOf, aggregateUsageSince, enabledPlanSetOf, billingClassOf, pruneHourBuckets, suggestPlanAutoClasses } from './plan-billing.js'
@@ -40,6 +43,7 @@ import { readExternalUsageSnapshot, externalTodayCostForReconcile } from './exte
 import { queryQwenCli } from './qwen-cli.js'
 import { queryBailianCli, loginBailianCli, checkBailianAuth } from './bailian-cli.js'
 import { getSessionCost as readSessionCost, sessionCostIds, readSessionHeaders, conversationRows } from './session-tree.js'
+import {enableBillingReceipts} from './billing-receipts.js'
 import { getTurnCost, getSessionBilling } from './turn-cost.js'
 import { getContextCosts, getContextIntegration } from './context-costs.js'
 import { getTurnInspection } from './turn-inspection.js'
@@ -280,6 +284,7 @@ const usageProjectionByProviderModel = z.record(z.string(), z.object({
   cost: z.number(),
 }))
 const usageProjectionStateSchema = z.object({
+  receiptSessionId:z.string().optional(),
   provider: z.string(),
   model: z.string(),
   totals: usageProjectionBuckets,
@@ -289,11 +294,13 @@ const usageProjectionStateSchema = z.object({
     key: z.string(),
     provider: z.string(),
     model: z.string(),
+    billingParameters: z.object({outputConfigEffort:z.string().nullable()}).optional(),
     buckets: z.object({
       input: z.number(),
       output: z.number(),
       cacheRead: z.number(),
       cacheWrite: z.number(),
+      cacheWrite1h: z.number().optional(),
       reasoning: z.number(),
     }),
     cost: z.number(),
@@ -323,6 +330,17 @@ const usageProjectionStateSchema = z.object({
 })
 
 /** state → wire payload 读侧投影(新版 wire.view 与旧版 view 共用同一实现)。 */
+function ledgerProjectionView(ledger,state){
+  const zeroBuckets=()=>({input:0,output:0,cacheRead:0,cacheWrite:0,reasoning:0,cost:0})
+      if(!ledger.config.prices.book?.accounting||!state.receiptSessionId)return projectionView(state)
+      const totals=zeroBuckets(),byModel={},byProviderModel={}
+      for(const day of Object.values(ledger.days)){const session=day.sessions?.find(r=>r.id===state.receiptSessionId);if(!session)continue
+        for(const k of Object.keys(totals))totals[k]+=session[k]??0
+        for(const [key,row]of Object.entries(session.byProviderModel??{})){const model=key.slice(key.indexOf(':')+1);for(const [map,id]of [[byModel,model],[byProviderModel,key]]){const out=map[id]??=zeroBuckets();for(const k of Object.keys(out))out[k]+=row[k]??0}}
+      }
+      return projectionView({...state,totals,byModel,byProviderModel})
+}
+
 function projectionView(state) {
   return {
     input: state.totals.input,
@@ -419,11 +437,12 @@ function makeCostUsageProjection(ledger) {
     // v8→v9(issue #109):默认回退补齐峰谷档位，旧金额 checkpoint 需按事件重放。
     // v10 (#130):新版宿主 init(header, inheritedEventCount) 区分恢复和继承。
     // 普通重启也追加 end-seed，不能把恢复前已付费的调用当作 fork 种子扣掉。
-    stateVersion: 11,
+    // Include reported cache TTL and actual effort in per-call cost reconstruction.
+    stateVersion: 13,
     init: (header, inheritedEventCount) => {
       const known = Number.isInteger(inheritedEventCount) && inheritedEventCount >= 0
       const boundary = known && inheritedEventCount > 0 ? inheritedEventCount : -1
-      return { provider: 'deepseek', model: 'default', totals: zeroBuckets(), byModel: {}, byProviderModel: {}, last: null,
+      return { receiptSessionId:header?.id,provider: 'deepseek', model: 'default', totals: zeroBuckets(), byModel: {}, byProviderModel: {}, last: null,
         createdAt: Number(header?.createdAt) || 0, seedEndSeq: boundary, shadow: emptyShadow(),
         seedLength: boundary, seedDeducted: known, recent: [] }
     },
@@ -576,6 +595,7 @@ function makeCostUsageProjection(ledger) {
         output: usage.outputTokens ?? 0,
         cacheRead: usage.cacheReadTokens ?? 0,
         cacheWrite: usage.cacheWriteTokens ?? 0,
+        cacheWrite1h: usage.cacheWrite1hTokens,
         reasoning: usage.reasoningTokens ?? 0,
       }
       const key = keyOverride ?? `${turn}:${step}`
@@ -583,7 +603,8 @@ function makeCostUsageProjection(ledger) {
       if (prev !== null && prev.provider === effectiveProvider && prev.model === model
         && prev.buckets.input === buckets.input && prev.buckets.output === buckets.output
         && prev.buckets.cacheRead === buckets.cacheRead && prev.buckets.cacheWrite === buckets.cacheWrite
-        && prev.buckets.reasoning === buckets.reasoning) {
+        && prev.buckets.reasoning === buckets.reasoning && prev.buckets.cacheWrite1h === buckets.cacheWrite1h
+        && JSON.stringify(prev.billingParameters) === JSON.stringify(usage.billingParameters)) {
         return state
       }
       // 按事件时刻计费(历史正确):峰谷时代前用 legacyBase,之后按峰谷两档。
@@ -605,6 +626,7 @@ function makeCostUsageProjection(ledger) {
       }
       if (keyOverride === null) recent.push({ fp, at: atMs, ...(wrapped ? { w: 1 } : {}) })
       const resolved = providerPriceEntryFor(effectiveProvider, model, ledger.config?.prices, {
+        atMs,tokens:buckets,billingParameters:usage.billingParameters,
         mode: ledger.config?.priceMatch === 'exact' ? 'exact' : 'auto',
         overrides: ledger.config?.priceOverrides,
       })
@@ -661,9 +683,9 @@ function makeCostUsageProjection(ledger) {
       }
       // createdAt/seedLength/seedDeducted 必须随状态携带:usage 样本更新不能丢掉 fork 过滤基准。
       // recent 随行:包装层转发对去重的滚动窗口状态(有界 ≤25 条)。
-      return { provider: state.provider, model: state.model, totals, byModel, byProviderModel, createdAt: state.createdAt, seedEndSeq: state.seedEndSeq, seedLength: state.seedLength, seedDeducted: state.seedDeducted, shadow: shadowAgg, recent, nativeSearchIds, last: nativeSearch ? state.last : { key, provider: effectiveProvider, model, buckets, cost: billed } }
+      return { receiptSessionId:state.receiptSessionId,provider: state.provider, model: state.model, totals, byModel, byProviderModel, createdAt: state.createdAt, seedEndSeq: state.seedEndSeq, seedLength: state.seedLength, seedDeducted: state.seedDeducted, shadow: shadowAgg, recent, nativeSearchIds, last: nativeSearch ? state.last : { key, provider: effectiveProvider, model, buckets, billingParameters:usage.billingParameters, cost: billed } }
     },
-    view: projectionView,
+    view:state=>ledgerProjectionView(ledger,state),
     // DSH 0.1.1-rc.1 起会话投影需声明 wire 才会向客户端推送(PR #39 by
     // @aaronlei):无 wire 的投影在 snapshot/onChanged/refold 中被跳过,
     // 客户端 useProjection('usageManagerUsage') 恒为空,输入区下方的会话费用随之
@@ -672,7 +694,7 @@ function makeCostUsageProjection(ledger) {
     // 时 TypeError。wire.view 与外层 view 复用同一实现,避免两份取值漂移。
     wire: {
       viewSchema: usageProjectionSchema,
-      view: projectionView,
+      view:state=>ledgerProjectionView(ledger,state),
     },
   }
 }
@@ -1445,7 +1467,7 @@ async function describeGoKey(ctx, config) {
   return legacy ? { keyConfigured: true, keySource: 'legacy' } : fallback
 }
 
-function createService(ctx, ledger, openRouterPrices) {
+function createService(ctx, ledger, openRouterPrices, priceSync) {
   const openRouterCatalog = createOpenRouterCatalog()
   ctx.effect(() => () => openRouterCatalog.dispose(), 'usage-manager: public price catalog')
   let active = true
@@ -2075,6 +2097,7 @@ function createService(ctx, ledger, openRouterPrices) {
     syncBalanceAccount()
     state.balance = { ...state.balance, ...balanceCache.value }
     state.reconcile = nativeSearchReconcile(ledger, localeOf(ledger.config, ctx), reconcileNotice)
+    if(ledger.lastWriteError)state.reconcile={ok:false,message:ledger.lastWriteError}
     return state
   }
 
@@ -2109,6 +2132,24 @@ function createService(ctx, ledger, openRouterPrices) {
   }
 
   const service = {
+    async pricingAction(action) {
+      if (action?.type === 'refresh') { await configuredModels(ctx,true); return build(false,true) }
+      if (action?.type === 'syncPrices' || action?.type === 'syncOpenRouter') {
+        await configuredModels(ctx,true); await priceSync.refresh(action.provider, true); return build(false,true)
+      }
+      if (action?.type === 'source-mode') {
+        if(!PRICE_SOURCES[action.sourceId])throw Error('不支持的价格来源')
+        ledger.updatePricing(action);await priceSync.refresh(action.provider,true);return build(false,true)
+      }
+      if (action?.type === 'record-mode') {ledger.updatePricing(action);if(action.mode==='auto')await priceSync.refresh(action.key.split(':')[0],true);return build(false,true)}
+      if (action?.type === 'fx' && action.mode === 'auto') {
+        ledger.updatePricing({type:'fx-mode',revision:action.revision,mode:'auto'});await priceSync.refreshFx(true);return build(false,true)
+      }
+      if (!['save','delete','restore','fx'].includes(action?.type)) throw new Error('不支持的价格操作')
+      let next = action
+      ledger.updatePricing(next)
+      return build(false, true)
+    },
     async getState() { return build(false) },
     // Keep getState's zero-argument contract for old source-host runtimes.
     async getLocalState() { return build(false, true) },
@@ -2415,6 +2456,7 @@ function createService(ctx, ledger, openRouterPrices) {
     getOpenRouterCatalog() { return openRouterCatalog.read() },
 
     async fetchPrices() {
+      if (ledger.config.prices.book) throw new Error('仅允许实际渠道的官方价格 API 同步；网页价目请确认后录入')
       const locale = localeOf(ledger.config, ctx)
       try {
         // 官方价格币种(issue #47):CNY 抓中文官方页(人民币价)、USD 抓英文页;
@@ -2563,7 +2605,7 @@ function createService(ctx, ledger, openRouterPrices) {
     async getTurnInspection(query) { return getTurnInspection(ctx, query) },
     async getCallInspection(query) { return getCallInspection(ctx, query) },
     async getSessionTrajectory(query) { ledger.refresh(); return getSessionTrajectory(ledger, ctx, query) },
-    async getContextCosts(query) { return getContextCosts(ledger, ctx, query) },
+    async getContextCosts(query) { ledger.refresh(); return getContextCosts(ledger, ctx, query) },
     async getContextIntegration() { return getContextIntegration(ctx) },
     async getTopSessions(limit, sort = 'cost', dir = 'desc') {
       ledger.refresh()
@@ -2900,7 +2942,17 @@ const DEFAULT_PRICE_MIGRATION_PENDING = 'default-peak-price-pending-v1'
 const SEPTEMBER_PRICE_MIGRATION = 'deepseek-september-2026-prices-v1'
 const SEPTEMBER_PRICE_PENDING = 'deepseek-september-2026-prices-pending-v1'
 
+function prepareCurrentPrices(ledger) {
+  if (ledger.config.prices.book) return
+  const marker = 'deepseek-current-prices-2026-10-21'
+  if (ledger.migrations.includes(marker)) return
+  correctCurrentDeepSeekPrices(ledger.config.prices)
+  ledger.migrations.push(marker)
+  ledger.scheduleWrite()
+}
+
 function prepareSeptemberPrices(ledger) {
+  if (ledger.config.prices.book) return
   if (ledger.migrations.includes(SEPTEMBER_PRICE_MIGRATION) || ledger.migrations.includes(SEPTEMBER_PRICE_PENDING)) return
   const changed = upgradeDeepSeekPriceTable(ledger.config.prices)
   ledger.migrations.push(changed.length > 0 ? SEPTEMBER_PRICE_PENDING : SEPTEMBER_PRICE_MIGRATION)
@@ -2908,6 +2960,7 @@ function prepareSeptemberPrices(ledger) {
 }
 
 function prepareDefaultPeakPrice(ledger) {
+  if (ledger.config.prices.book) return
   if (ledger.migrations.includes(DEFAULT_PRICE_MIGRATION) || ledger.migrations.includes(DEFAULT_PRICE_MIGRATION_PENDING)) return
   if (repairDefaultPeakPrice(ledger.config.prices)) {
     if (!ledger.migrations.includes(DEFAULT_PRICE_MIGRATION_PENDING)) ledger.migrations.push(DEFAULT_PRICE_MIGRATION_PENDING)
@@ -2924,8 +2977,10 @@ function prepareDefaultPeakPrice(ledger) {
  * @param sessionsRoot - 宿主会话根目录($DSH_HOME/sessions)。
  */
 export async function runStartupImports(ledger, sessionsRoot) {
+  if (ledger.config.prices.book) { ledger.flush(); return auditHistoricalPricing(ledger,sessionsRoot,{apply:true}) }
   prepareDefaultPeakPrice(ledger)
   prepareSeptemberPrices(ledger)
+  prepareCurrentPrices(ledger)
   const needsDefaultPriceMigration = !ledger.migrations.includes(DEFAULT_PRICE_MIGRATION)
   const defaultPriceRepaired = ledger.migrations.includes(DEFAULT_PRICE_MIGRATION_PENDING)
   const oldPrices = defaultPriceRepaired ? structuredClone(ledger.config.prices) : null
@@ -3172,18 +3227,24 @@ export async function runStartupImports(ledger, sessionsRoot) {
  */
 export function apply(ctx) {
   const ledger = Ledger.open()
+  enableBillingReceipts(ledger)
   // 必须先于监听器/投影注册，避免延迟历史修复期间的新调用仍使用旧默认谷价。
   prepareDefaultPeakPrice(ledger)
   prepareSeptemberPrices(ledger)
+  prepareCurrentPrices(ledger)
   ctx.logger?.debug?.('[usage-manager] loaded')
 
   // 卸载/退出前最终落盘。
   ctx.effect(() => () => ledger.close(), 'usage-manager: ledger close')
-  const openRouterPrices = createOpenRouterPriceRefresh(ledger)
+  const openRouterPrices = createOpenRouterPriceRefresh(ledger, {modelKeys:async()=> (await configuredModels(ctx)).filter(r=>['openrouter','llm-openrouter'].includes(r.provider)).map(r=>'openrouter:'+r.model)})
+  const priceSync = createPriceSync(ledger,{models:()=>configuredModels(ctx)})
+  ctx.effect(()=>()=>priceSync.dispose(),'usage-manager: price synchronization')
   let active = true
   ctx.effect(() => () => { active = false; openRouterPrices.dispose() }, 'usage-manager: openrouter requests')
-  const refreshOpenRouter = () => {
+  const refreshOpenRouter = async () => {
     if (!active || ledger.config.autoUpdatePrices === false) return
+    if (ledger.config.prices.book) return priceSync.refresh()
+    if (ledger.config.prices.book && !(await configuredModels(ctx)).some(r=>['openrouter','llm-openrouter'].includes(r.provider))) return
     return openRouterPrices.refresh().catch(error => {
       if (active) console.warn(`[dsh-usage-manager] OpenRouter 价格刷新失败(保留本地价格): ${String(error?.message ?? error)}`)
     })
@@ -3218,6 +3279,8 @@ export function apply(ctx) {
   const openRouterTimer = setInterval(() => { void refreshOpenRouter() }, 3600_000)
   openRouterTimer.unref?.()
   ctx.effect(() => () => clearInterval(openRouterTimer), 'usage-manager: openrouter refresh timer')
+  const fxTimer=setInterval(()=>{void priceSync.refreshFx().catch(()=>{});void refreshOpenRouter().catch(()=>{})},60000);fxTimer.unref?.();void priceSync.refreshFx().catch(()=>{})
+  ctx.effect(()=>()=>clearInterval(fxTimer),'usage-manager: exchange rate refresh')
 
   // 包裹 llm/stream:捕获 usage 块(位于 finish 之前),按官方价格计入账本。
   // 本插件是链尾监听者,next() 即适配器流;仅透传数据块,不改变流协议。
@@ -3235,8 +3298,10 @@ export function apply(ctx) {
   // 记忆插件等可创建隔离的 llm 服务；账本是全局观察者，须跨服务作用域接收用量。
   // 子会话仍按自己的 sessionId 入账；无 sessionId 的后台调用只进入日/月总计。
   ctx.on('llm/stream', createLlmStreamBilling({
-    account: (usage, model, sessionId, atMs, provider) => {
+    account: (usage, model, sessionId, atMs, provider, metadata) => {
       const buckets = {
+        cacheWrite1h: usage.cacheWrite1hTokens,
+        billingParameters: usage.billingParameters,
         input: usage.inputTokens ?? 0,
         output: usage.outputTokens ?? 0,
         cacheRead: usage.cacheReadTokens ?? 0,
@@ -3245,9 +3310,9 @@ export function apply(ctx) {
       }
       // 非字符串 provider(个别路由 header 配置异常,日志渲染为 [object Object])
       // 在去重器内归一为空串,由账本按缺省渠道处理,避免脏键。
-      const effective = usageDeduper.admit(sessionId, model, provider, buckets, atMs)
+      const effective = metadata?.id ? (wrapperUpstreamProvider(provider)??provider) : usageDeduper.admit(sessionId, model, provider, buckets, atMs)
       if (effective === null) return
-      ledger.account(buckets, model, sessionId, atMs, effective)
+      ledger.account(buckets, model, sessionId, atMs, effective, metadata)
     },
   }), { global: true })
 
@@ -3259,7 +3324,7 @@ export function apply(ctx) {
   })
 
   // RPC 服务:客户端经 remote.usageManager.* 调用(./typert 清单由 typert-loader 注册)。
-  ctx.provide('usageManager', createService(ctx, ledger, openRouterPrices))
+  ctx.provide('usageManager', createService(ctx, ledger, openRouterPrices, priceSync))
 
   // dshmarket 1.47 热安装通过独立 Include 挂载 file:// 入口；它不在根 Loader
   // 的包名扫描树中，typert-loader 因此漏注册 (#154)。正常包名启动仍由宿主注册。

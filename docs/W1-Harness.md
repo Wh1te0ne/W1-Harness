@@ -18,6 +18,10 @@
 
 ## 文档导航
 
+- [启动性能排查](启动性能排查.md)：逐插件计时、隔离 A/B 结果、候选优化及日用验证边界。
+
+- [模型接口与思考强度排查](模型接口与思考强度排查.md)：Responses／Chat Completions 的区别、火山与 VX 配置、错误定位和验证边界。
+
 - [统一工具选择](../packages/w1/tool-selection/README.zh.md)：产品级选择原则、内置与外部 Chrome 的环境分工；具体浏览器流程由 browser-use 工具维护。
 
 - [内置浏览器操控](../packages/w1/browser-use/README.zh.md)：模型工具、聊天归属、暂停与限制；不包含桌面操控。

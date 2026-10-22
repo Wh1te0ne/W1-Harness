@@ -14,6 +14,12 @@
 
 # ── surface-specific values the base deliberately omits ─────────────────────
 
+# Desktop follows the user's network. Other surfaces retain public-address enforcement;
+# later user/settings patches can explicitly select either policy.
+- id: web-fetch-http
+  config:
+    requirePublicIp: !!js "ctx.get('profileContext')?.name !== 'desktop'"
+
 - id: system-prompt
   config:
     personaPrefix: >-

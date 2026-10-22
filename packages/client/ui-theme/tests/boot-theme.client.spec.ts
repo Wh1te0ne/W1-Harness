@@ -3,6 +3,7 @@
 import { runInNewContext } from 'node:vm'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { bootThemeInjections } from '../src/boot-theme.ts'
+import { W1_DEFAULT } from '../src/w1-appearance-settings.ts'
 import type { FontSizes, ThemePreference } from '../src/theme-settings.ts'
 
 const DARK_ATTRIBUTE = 'data-ds-dark-theme'
@@ -18,6 +19,8 @@ function executeBootstrap(preference?: ThemePreference, fontSizes?: FontSizes): 
 }
 
 afterEach(() => {
+  delete document.body.dataset.w1Appearance
+  document.querySelector('[data-w1-appearance="boot"]')?.remove()
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
   delete document.documentElement.dataset.dsThemeSource
@@ -27,6 +30,17 @@ afterEach(() => {
 })
 
 describe('theme bootstrap row', () => {
+  it('boots saved colors and CSS before plugins, escaping HTML script delimiters', () => {
+    mockSystemDark(false)
+    const appearance = { ...W1_DEFAULT, preset: 'custom', light: { ...W1_DEFAULT.light, surface: '#123456' }, css: '/* </script> */ body { --custom: 1 }' }
+    const [head, body] = bootThemeInjections('light', undefined, undefined, appearance)
+    if (head?.kind !== 'style' || body?.kind !== 'script') throw Error('expected bootstrap')
+    expect(head.text).toContain('#123456'); expect(body.text).not.toContain('</script>')
+    runInNewContext(body.text, { document, matchMedia: globalThis.matchMedia })
+    expect(document.body.style.getPropertyValue('--dsw-alias-bg-base')).toBe('#123456')
+    expect(JSON.parse(document.body.dataset.w1Appearance!)).toEqual(appearance)
+    expect(document.querySelector('[data-w1-appearance="boot"]')?.textContent).toBe(appearance.css)
+  })
   it('colors the body with head CSS before applying body state', () => {
     mockSystemDark(false)
     const [head, body] = bootThemeInjections('dark')

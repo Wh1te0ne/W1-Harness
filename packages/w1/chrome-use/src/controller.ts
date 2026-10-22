@@ -234,10 +234,20 @@ export class ChromeController {
               || viewport.clientWidth <= 0 || viewport.clientHeight <= 0) throw new Error('Chrome viewport is not ready. Read the page before taking another screenshot.')
             const width = Math.min(viewport.clientWidth, 4096)
             const height = Math.min(viewport.clientHeight, 4096)
-            const image = await send('Page.captureScreenshot', { format: 'jpeg', quality: 75, fromSurface: true,
-              captureBeyondViewport: true, optimizeForSpeed: true,
-              clip: { x: viewport.pageX, y: viewport.pageY, width, height, scale: Math.min(1, 1600 / Math.max(width, height)) },
-            }) as { data?: string }
+            const clip = { x: viewport.pageX, y: viewport.pageY, width, height, scale: Math.min(1, 1600 / Math.max(width, height)) }
+            const base = { format: 'jpeg', quality: 75, optimizeForSpeed: true, clip }
+            // fromSurface:true requires active GPU compositing; a minimized window pauses the compositor
+            // and may hang indefinitely. Race it against 3 s and fall back to the off-screen buffer.
+            const surfaceShot = send('Page.captureScreenshot', { ...base, fromSurface: true, captureBeyondViewport: true })
+            const surfaceStall = new Promise<never>((_, reject) => { setTimeout(() => { reject(new Error('stall')) }, 3000).unref() })
+            let image: { data?: string }
+            try {
+              image = await Promise.race([surfaceShot, surfaceStall]) as { data?: string }
+            } catch (err) {
+              if ((err as Error).message !== 'stall') throw err
+              // Surface capture stalled; the off-screen buffer does not require an active compositor.
+              image = await send('Page.captureScreenshot', { ...base, fromSurface: false, captureBeyondViewport: false }) as { data?: string }
+            }
             await current()
             if (!image.data || image.data.length > 8000000) throw new Error('Screenshot unavailable or exceeds the output limit')
             return { text: JSON.stringify({ tab: id, url: grant.tab.url }), screenshot: image.data }

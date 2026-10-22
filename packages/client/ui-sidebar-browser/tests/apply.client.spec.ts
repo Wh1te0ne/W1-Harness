@@ -81,7 +81,7 @@ describe('ui-sidebar-browser apply', () => {
     const h = await boot()
     receive?.({ sessionId: 'owner', requestId: 'request', url: 'https://example.test/' })
     expect(h.sidebar.openTabIn).toHaveBeenCalledWith('owner', 'browser', {
-      params: { url: 'https://example.test/', automationRequestId: 'request' }, revealIfOpened: false,
+      params: { url: 'https://example.test/', automationRequestId: 'request' }, revealIfOpened: false, background: true,
     })
     await h.fiber.dispose()
     expect(unsubscribe).toHaveBeenCalledOnce()

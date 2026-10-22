@@ -68,6 +68,7 @@ export function parseExternalUsageSnapshot(value, config, nowMs = Date.now()) {
         if (raw.reasoning !== undefined && !count(raw.reasoning)) return null
         if (typeof raw.provider !== 'string' || !raw.provider || typeof raw.model !== 'string' || !raw.model) return null
         const resolved = providerPriceEntryFor(raw.provider, raw.model, config?.prices, {
+          atMs: at, tokens:{input:raw.input,output:raw.output,cacheRead:raw.cached,cacheWrite:raw.cacheWrite??0},
           mode: config?.priceMatch === 'exact' ? 'exact' : 'auto', overrides: config?.priceOverrides,
         })
         if (!resolved.priced) return null
@@ -80,6 +81,8 @@ export function parseExternalUsageSnapshot(value, config, nowMs = Date.now()) {
         const day = days[date] ?? (days[date] = zeroDay(date))
         for (const key of ['input', 'output', 'cacheRead', 'cacheWrite', 'reasoning']) day[key] += tokens[key]
         day.calls++
+        day.estimatedCalls += resolved.estimated?1:0
+        day.stalePriceCalls += resolved.stale?1:0
         day.cost += usd
         day.apiCost += usd
       }

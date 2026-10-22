@@ -62,6 +62,7 @@ import type { ResolvedPiAiProviderProfile } from './config.ts'
 import { requestImageTarget, toPiContext } from './context.ts'
 import { conversationUpdates, createModels, getSupportedThinkingLevels } from './models.ts'
 import { toStreamChunks } from './stream.ts'
+import { createBillingCapture } from './billing-usage.ts'
 
 /**
  * Initially active declaration added to an Anthropic request whose projected
@@ -413,8 +414,24 @@ export class PiAiAdapter extends LlmAdapter {
             maxBytes: profile.requestImageMaxBytes,
           },
         }, onReplayDegrade)
+      const billing = createBillingCapture()
       const events = snapshot.models.streamSimple(model, context, {
         ...profileOptions(profile, reasoning, apiKey),
+        ...['anthropic-messages', 'openai-completions', 'openai-responses'].includes(model.api) ? { fetch: billing.fetch } : {},
+        onPayload(payload) {
+          if (model.api === 'openai-responses' && profile.responsesReasoningFormat === 'effort-only' && typeof payload === 'object' && payload !== null) {
+            if ('reasoning' in payload && typeof payload.reasoning === 'object' && payload.reasoning !== null
+                  && 'summary' in payload.reasoning) {
+              delete payload.reasoning.summary
+            }
+            if ('include' in payload && Array.isArray(payload.include)) {
+              const include = payload.include.filter(value => value !== 'reasoning.encrypted_content')
+              if (include.length === 0) delete payload.include
+              else payload.include = include
+            }
+          }
+          billing.onPayload(payload)
+        },
         ...options.temperature === undefined ? {} : { temperature: options.temperature },
         ...options.maxTokens === undefined ? {} : { maxTokens: options.maxTokens },
         ...options.sessionId === undefined ? {} : { sessionId: String(options.sessionId) },
@@ -432,7 +449,7 @@ export class PiAiAdapter extends LlmAdapter {
             exhausted = true
             return
           }
-          yield result.value
+          yield result.value.type === 'usage' ? { ...result.value, usage: billing.decorate(result.value.usage) } : result.value
         }
       } finally {
         if (!exhausted) {

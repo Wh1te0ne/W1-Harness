@@ -49,7 +49,7 @@ const apk = join(root, '.work/deliveries/w1-remote-0.1.0/W1-Harness-Mobile-0.1.0
 if (existsSync(apk)) copyFileSync(apk, join(output, 'W1-Harness-Mobile-0.1.0.apk'))
 const commit = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8', windowsHide: true }).trim()
 const runtimeCommit = process.env.W1_RUNTIME_SOURCE_COMMIT ?? commit
-if (!/^[a-f0-9]{40}$/u.test(runtimeCommit)) throw new Error('Runtime provenance must be a full source commit')
+if (!/^[a-f0-9]{40}$/u.test(runtimeCommit)) throw new Error('Runtime source commit must be a full commit ID')
 writeFileSync(join(output, 'components.json'), JSON.stringify({ product: product.version, upstream: product.upstreamTag, commit, runtimeCommit,
   chrome: chrome.version, mobile: existsSync(apk) ? '0.1.0' : null, relay: '0.1.1', relayProtocol: 1,
   platform: 'win32', arch: 'x64', authenticode: false }, null, 2) + '\n')

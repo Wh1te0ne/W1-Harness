@@ -2,11 +2,17 @@
 
 ## W1 Harness downstream workspace
 
-Product versions, DSH baselines, daily/test/release environments and self-development: [versions](docs/版本与发布.md). Windows release packaging, assets and verification: [release operations](docs/发布操作.md). Keep the active daily source runtime separate from full release builds. W1H binary updates and DSH source updates must retain separate sources and product entries.
+Read [W1](docs/W1-Harness.md), [versions](docs/版本与发布.md) and [releases](docs/发布操作.md). Keep W1H binary and DSH source updates separate. Preserve installed DSH/plugins; authorized private-data migration requires backups and preserves originals. Keep real credentials/user data outside this repository. Use PowerShell 7.
 
-Read the [W1 project](docs/W1-Harness.md). Use [local development](scripts/w1/Start-W1.ps1) for daily use; [baseline isolation](scripts/w1/Start-W1Baseline.ps1) is for disposable experiments. Preserve installed DSH and plugins. Never put real credentials or runtime data in this repository. User-authorized migration between private application data directories requires a backup and preserves the original application. Use PowerShell 7.
+Model API and reasoning-effort failures: see [configuration, incident, and diagnostics](docs/模型接口与思考强度排查.md).
 
-W1 is currently for one local user. Follow [the local iteration workflow](docs/开发与上游维护.md): default to a targeted build and checks for the changed surface. Do not run packaging, installer cycles, or repository-wide gates by default; use them only when the requested delivery or affected contracts require them. The translation manifest lists Chinese-only W1 internal documents; maintain their [work record](docs/工作记录.md). Upstream product documentation keeps its bilingual rules.
+Startup latency: see [diagnostics](docs/启动性能排查.md); isolate diagnostic launches and candidate builds from daily.
+
+**Development order: source Test → explicitly approved daily promotion → separately authorized GitHub release.** Desktop Test launches `.work/self-dev/scripts/w1/Start-W1Test.ps1`. Before promotion, reconcile daily changes into Test and verify the candidate loads; a queued build is insufficient. See [workflow](docs/开发与上游维护.md#w1-self-development).
+
+**Edit/build in the [source-test worktree](docs/开发与上游维护.md#w1-self-development):** prepare and verify it; no daily fallback. Docs-only work is exempt. On explicit promotion: stage verified artifacts, save handoff, finish; the external launcher applies after daily exit.
+
+Use the [daily launcher](scripts/w1/Start-W1.ps1); [baseline](scripts/w1/Start-W1Baseline.ps1) is disposable. Follow [local iteration](docs/开发与上游维护.md): targeted builds/checks; packaging, installer cycles and full checks require delivery/contract need. Isolate release builds. Maintain the [work record](docs/工作记录.md); the manifest exempts Chinese-only W1 docs, otherwise retain bilingual rules.
 
 DeepSeek Harness is an all-plugin Cordis agent harness. Read [docs/architecture.md](docs/architecture.md) before changing `packages/`; follow [docs/AGENTS.md](docs/AGENTS.md) for documentation.
 
@@ -20,7 +26,7 @@ Record each externally perceptible breaking change immediately in an [upgrade gu
 
 **Application launch.** Only `dsh` profiles launch supported Node apps; package bins, demos, and public SDK argv escapes are forbidden ([rule](docs/architecture.md#application-launch)).
 
-W1 remote companion and NAS relay: see [deployment and verification](docs/远程访问与NAS中继.md) and [component README](apps/w1-remote/README.md). The relay is standalone forwarding infrastructure, not a Harness execution profile; keep credentials and production history out of its package.
+W1 remote companion: see [deployment](docs/远程访问与NAS中继.md) and [README](apps/w1-remote/README.md). The relay forwards traffic independently of Harness profiles; exclude credentials and production history from packages.
 
 W1 built-in Windows notifications and legacy-bundle migration: see [notification ownership and verification](packages/w1/notifications/README.md). Preserve the original DSH profile and keep native IPC restricted to the product window.
 

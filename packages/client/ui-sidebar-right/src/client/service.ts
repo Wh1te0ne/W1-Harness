@@ -149,6 +149,8 @@ export interface SidebarRightHost {
 
 /** Where an open lands; every field is optional and the defaults are the common case. */
 export interface SidebarRightPlacement {
+  /** Create content without expanding the panel or changing the reader's selection. */
+  readonly background?: boolean
   /** Land a new tab in this pane instead of the active docked one. */
   readonly paneId?: PaneId
   /** Prefer a new pane for new content; use the target pane when splitting is unavailable. */
@@ -434,6 +436,7 @@ export class SidebarRightController implements ISidebarRight {
     const targetPane = surface === undefined ? undefined : placement.paneId ?? activeDockPaneId(surface.layout)
     const target = targetPane === undefined ? undefined : surface?.layout.nodes[targetPane]
     const preferNewPane = placement.preferNewPane === true
+      && placement.background !== true
       && placement.replaceTab === undefined
       && surface !== undefined
       && target?.kind === 'pane'
@@ -447,13 +450,14 @@ export class SidebarRightController implements ISidebarRight {
       kind: claim.kind,
       contentId: claim.contentId,
       title: claim.title,
+      ...placement.background === undefined ? {} : { background: placement.background },
       ...placement.paneId === undefined ? {} : { paneId: placement.paneId },
       ...preferNewPane ? { preferNewPane: true } : {},
       ...placement.replaceTab === undefined ? {} : { replaceTab: placement.replaceTab },
       ...placement.revealIfOpened === undefined ? {} : { revealIfOpened: placement.revealIfOpened },
     }, (tabId) => { this.tabDomain.navigate(sessionId, tabId, { address, params }) }) }
     const layout = surface?.layout
-    const replaced = placement.replaceTab === undefined ? undefined : layout?.tabs[placement.replaceTab]
+    const replaced = placement.background || placement.replaceTab === undefined ? undefined : layout?.tabs[placement.replaceTab]
     const replacementPane = replaced === undefined || layout === undefined ? undefined : findTabPane(layout, replaced.id)
     const revealed = layout === undefined ? undefined
       : claim.contentId === pageAddress(claim.kind)

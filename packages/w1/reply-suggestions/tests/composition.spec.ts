@@ -170,6 +170,7 @@ describe('W1 reply suggestions in a Loader-composed conversation', () => {
     h.send('可以给输入框增加一个回复建议吗？')
     await vi.waitFor(() => { expect(h.suggestion()?.text).toBe('请先说明需要改哪些地方。') })
     expect(h.adapter.requests.map(r => r.model)).toEqual(['main', 'main', 'small'])
+    expect(h.adapter.requests.map(r=>r.purpose)).toEqual([undefined,'reply-selection','reply-suggestion'])
     expect(h.adapter.requests.slice(1).map(r => ({
       model: r.model, system: r.system, tools: r.tools ?? [], maxTokens: r.maxTokens,
     }))).toMatchSnapshot()

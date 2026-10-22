@@ -11,7 +11,7 @@ test('the lazy overview loads without a removed wallet component', async () => {
     useState:()=>[null,++stateCalls===1?value=>{loaded=value}:value=>{failure=value}],
     useEffect:effect=>effect(), el:stub, USAGE_MANAGER_VERSION:'test',
     require:{async:async()=>({createComponents:()=>({overview:stub})})},
-    QuotasSection:stub,BudgetPanel:stub,PeakPanel:stub,manualPriceKey:stub,
+    primitives:{},PRICE_BOOK:{},normalizeClientPrice:stub,QuotasSection:stub,BudgetPanel:stub,PeakPanel:stub,manualPriceKey:stub,
     validManualPrice:stub,resolveClientPrice:stub,wawaPricePreset:stub,formatMoneyUsd:stub,formatTokens:stub,
   }
   const source=readFileSync(new URL('../src/client/03-custom-settings.js',import.meta.url),'utf8')

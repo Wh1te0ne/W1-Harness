@@ -2,13 +2,13 @@
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-api-remotes/client'
 import type {} from '@deepseek-ai/dsh-api-session-controller/client'
-import type { ComposerChainProps } from '@deepseek-ai/dsh-client-ui-conversation/client'
+import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type { PendingInteractionPublisher } from '@deepseek-ai/dsh-client-ui-session/client'
 import type { TypertClientEventListener } from '@deepseek-ai/dsh-typert-protocol'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type { ShortcutCommandId } from '@deepseek-ai/dsh-client-shortcuts/client'
-import { ApprovalPanel, InlineApproval, type InlineApprovalInjected } from './ApprovalPanel.tsx'
+import { ApprovalTail } from './ApprovalPanel.tsx'
 import { PendingApproval } from './contract/slots.ts'
 import { en, zh } from './locales.ts'
 
@@ -88,17 +88,10 @@ export function apply(ctx: ClientContext): void {
   const registerPendingInteraction = ctx.uiSession.registerPendingInteraction<PendingApproval>(
     () => 0,
   )
-  ctx.effect(() => ctx.slots.inject('tool.call.interaction', () => ctx.slots.register({
-    name: 'tool.call.interaction', locale: NS,
-    inject: (sessionId): InlineApprovalInjected => ({ sessionId,
-      resolveReason: reason => ctx.locale.resolveText(reason), hooks: { approvalStatus: ctx.uiSession.sessionStatus },
-    }),
-  }, InlineApproval)))
-  ctx.slots.inject('conversation.composer', () => ctx.slots.register({
-    name: 'conversation.composer',
-    priority: 1,
-    select: ({ pendingInteraction }: ComposerChainProps): PendingApproval | null =>
-      pendingInteraction instanceof PendingApproval ? pendingInteraction : null,
+  ctx.slots.inject('conversation.pending', () => ctx.slots.register({
+    name: 'conversation.pending',
+    id: 'approval',
+    order: 0,
     locale: NS,
     inject: () => ({
       resolveReason: (reason: NonNullable<PendingApproval['displayReason']>) => ctx.locale.resolveText(reason),
@@ -106,7 +99,7 @@ export function apply(ctx: ClientContext): void {
     children: {
       'conversation.approval.detail': { kind: 'single', scope: 'session' },
     },
-  }, ApprovalPanel))
+  }, ApprovalTail))
   ctx.remote.$on('approval/request', function (request, next) {
     return answerApproval(ctx, this, request, next, registerPendingInteraction)
   })

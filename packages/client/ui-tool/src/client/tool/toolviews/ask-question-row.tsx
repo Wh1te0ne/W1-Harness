@@ -13,6 +13,7 @@ import { singleResultText } from '../models/raw-tool-call.ts'
 import { toolRowModel } from '../models/tool-call-model.ts'
 import { ToolRow } from '../components/ToolRow.tsx'
 import { QuestionToolRow } from '../components/QuestionToolRow.tsx'
+import { AskQuestionCard } from '../components/AskQuestionCard.tsx'
 import { CONVERSATION_NS as NS } from '../../locale.ts'
 
 /** One paired question and its visible answer lines. */
@@ -343,13 +344,14 @@ export function AskQuestionRow({
       rowActionLabel = t('ask.review')
     }
   }
-  if (rowAction !== undefined) return (
+  const visibleAnswer = transcript?.kind === 'answered' ? transcript : null
+  const foldedCard = visibleAnswer === null ? transcript : null
+  const row = rowAction !== undefined ? (
     <QuestionToolRow useDisclosure={useDisclosure} t={t} summary={summary}
       bodyRaw={transcript === null ? model.bodyRaw : null} output={transcript === null ? model.output : null}
-      askQuestion={transcript} state={state} inspect={inspect}
+      askQuestion={foldedCard} state={state} inspect={inspect}
       openPanel={rowAction} panelLabel={rowActionLabel} />
-  )
-  return (
+  ) : (
     <ToolRow
       useDisclosure={useDisclosure}
       t={t}
@@ -360,11 +362,12 @@ export function AskQuestionRow({
       summary={summary}
       bodyRaw={transcript === null ? model.bodyRaw : null}
       output={transcript === null ? model.output : null}
-      askQuestion={transcript}
+      askQuestion={foldedCard}
       state={state}
       inspect={inspect}
     />
   )
+  return <>{row}{visibleAnswer !== null && <AskQuestionCard card={visibleAnswer} />}</>
 }
 
 /** Registers the ask-user-question conversation row. */

@@ -260,6 +260,57 @@ async function until(predicate: () => boolean): Promise<void> {
   if (!predicate()) throw new Error('condition did not become true')
 }
 
+describe('review model compatibility', () => {
+  it.each(['native', 'ptc-inner'] as const)('executes an allowed %s call with a default-temperature-only reviewer', async (mode) => {
+    const { ctx, adapter } = await harness([async function* (options) {
+      if (options.temperature !== undefined) {
+        throw new Error('claude-sonnet-5-5 does not support non-default temperature')
+      }
+      yield* decisionChunks('{"risk":"low","decision":"allow"}')
+    }])
+    const probe = registerProbe(ctx)
+    const { session, agent } = autoSession(ctx, `default-temperature-${mode}`)
+    const schema: ToolSchema = {
+      name: 'probe',
+      description: 'Read a project-local file',
+      parameters: { type: 'object', properties: { path: { type: 'string' } }, required: ['path'] },
+    }
+    appendHeader(session, [schema], { provider: 'review', model: 'claude-sonnet-5-5' })
+    appendUser(session, 'Read the project README.', { kind: 'user' })
+    const rootCallId = ToolCallId('temperature-root')
+    const callId = mode === 'native' ? rootCallId : ToolCallId('temperature-root:code:0')
+    const rootName = mode === 'native' ? 'probe' : RUN_CODE_NAME
+    const rootArguments = mode === 'native' ? '{"path":"README.md"}' : '{"code":"probe()"}'
+    appendAssistant(session, [{ type: 'tool-call', id: rootCallId, name: rootName, arguments: rootArguments }])
+    appendNativeCall(session, rootCallId, rootName, rootArguments)
+    if (mode === 'ptc-inner') {
+      session.append('tool/ptc-dispatch-start', {
+        rootCallId, parentCallId: rootCallId, subCallId: callId, name: 'probe', arguments: { path: 'README.md' },
+      })
+    }
+
+    const result = await ctx.tools.execute({
+      signal: new AbortController().signal,
+      callId,
+      name: 'probe',
+      arguments: { path: 'README.md' },
+      agent,
+      ...mode === 'native' ? {} : {
+        rootCallId,
+        parent: Symbol('outer execution') as ToolExecutionToken,
+        schema,
+      },
+    })
+
+    expect(result.isError).toBe(false)
+    expect(result.content).toEqual([{ type: 'text', text: 'ran' }])
+    expect(probe.runs()).toBe(1)
+    expect(adapter.requests).toHaveLength(1)
+    expect(adapter.requests[0]).toMatchObject({ provider: 'review', model: 'claude-sonnet-5-5' })
+    expect(adapter.requests[0]).not.toHaveProperty('temperature')
+  })
+})
+
 describe('native review request', () => {
   it('uses the latest route and exactly the filtered logged five-section input', async () => {
     const { ctx, adapter } = await harness([
@@ -386,8 +437,8 @@ describe('native review request', () => {
       provider: 'review',
       model: 'same-model',
       system: EXPECTED_REVIEW_POLICY,
-      temperature: 0,
     })
+    expect(request).not.toHaveProperty('temperature')
     expect(request).not.toHaveProperty('sessionId')
     expect(request.maxTokens).toBeUndefined()
     expect(request.tools).toBeUndefined()

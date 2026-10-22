@@ -111,6 +111,7 @@ export function useChatScroll(input: ChatScrollInput): ChatScrollState {
       },
       interact: () => { navigation.cancel() },
       intent: () => { cancelPendingFollow(); reading.interruptFollow() },
+      historyStart: () => { if (content.current.opened) navigation.loadEarlier() },
       resize: () => {
         if (!content.current.opened) return
         if (navigation.contentCommitted()) {

@@ -12,11 +12,8 @@ import type { ChatStoreState } from '../contract/store.ts'
 import type { ChatFlowSlotProps } from '../contract/slots.ts'
 import { turnProcessOpen } from '../stores.ts'
 import { ChatNodeSeat } from './ChatNodeSeat.tsx'
-import { hiddenOrCollapsing } from './flow-motion.ts'
 import { chatRenderKey } from './render-entry.ts'
 import { processTitle } from './step-process.ts'
-import { useDisclosure } from './use-disclosure.ts'
-import { useProcessScroll } from './use-process-scroll.ts'
 import css from './ChatGroupSeat.module.css'
 
 type SeatProps = Omit<ComponentProps<typeof ChatNodeSeat>, 'nodeKey' | 'groupPart'>
@@ -132,9 +129,11 @@ const ProcessGroupHeader = memo(function ProcessGroupHeader({ groupKey, useChatG
 export const ChatGroupSeat = memo(function ChatGroupSeat({ groupKey, useChatGroup, useGroupHeaderAction, ...props }: ChatGroupSeatProps) {
   const members = useChatGroup(groupKey, group => group?.members)
   const turn = useChatGroup(groupKey, group => group?.data.turn)
-  const closed = useChatGroup(groupKey, group => group?.data.closed)
   const foldCompleted = props.usePresentation(policy => policy.foldCompletedTurns)
-  const { expanded: open, setExpanded: setOpen } = useDisclosure()
+  const open = props.useStore(state => state.processGroups[groupKey] === true)
+  const setOpen = useCallback((value: boolean) => {
+    props.actions.setProcessGroupOpen(groupKey, value)
+  }, [props.actions, groupKey])
   const firstKey = members?.[0]?.key ?? ''
   const bottom = props.useChatNodeBottom(firstKey)
   const deferCollapse = bottom === true && props.deferCollapse
@@ -164,24 +163,13 @@ export const ChatGroupSeat = memo(function ChatGroupSeat({ groupKey, useChatGrou
   const headerRef = useRef<HTMLDivElement>(null)
   const deferCompletedTurns = props.usePresentation(policy => policy.collapseTiming === 'next-input')
   useGroupHeaderAction(headerRef, !grouped || (deferCompletedTurns && outerHidden))
-  useEffect(() => {
-    if (outerHidden && rootRef.current !== null && hiddenOrCollapsing(rootRef.current)) setOpen(false)
-  }, [outerHidden, rootRef, setOpen])
   const reveal = useCallback(() => { setOpen(true) }, [setOpen])
   const bodyRef = props.useGroupAction(grouped && !open, reveal)
-  const contentRef = useRef<HTMLDivElement>(null)
   const bodyId = useId()
-  const { edges, events, initialize } = useProcessScroll(bodyRef, contentRef, open, grouped)
   const toggle = useCallback(() => {
-    if (!open) initialize(closed === false ? 'bottom' : 'top')
     setOpen(!open)
-  }, [closed, initialize, open, setOpen])
+  }, [open, setOpen])
   if (members === undefined) return null
-  // The height cap applies only to a group the reader opened; a body that is closing keeps its flat
-  // height so the transition starts from what is on screen instead of snapping to the cap first.
-  const capped = grouped && (!deferCompletedTurns || open)
-  const classes = [css.body, !capped ? css.expandedBody : '',
-    capped && edges.canScrollUp ? css.fadeTop : '', capped && edges.canScrollDown ? css.fadeBottom : '']
   return (
     <div ref={rootRef} className={css.root} data-chat-group-key={groupKey}
       data-chat-flow-key={groupKey} data-chat-anchor-key={`group:${groupKey}`} data-chat-turn={turn}
@@ -191,10 +179,8 @@ export const ChatGroupSeat = memo(function ChatGroupSeat({ groupKey, useChatGrou
         <ProcessGroupHeader groupKey={groupKey} useChatGroup={useChatGroup}
           usePresentation={props.usePresentation} t={props.t} open={open} bodyId={bodyId} toggle={toggle} />
       </div>
-      <div ref={bodyRef} id={bodyId} className={classes.join(' ')} data-step-process-body
-        data-scroll-up={edges.canScrollUp || undefined} data-scroll-down={edges.canScrollDown || undefined}
-        {...events}>
-        <div ref={contentRef} className={css.content} data-step-process-content data-chat-flow="">
+      <div ref={bodyRef} id={bodyId} className={`${css.body} ${css.expandedBody}`} data-step-process-body>
+        <div className={css.content} data-step-process-content data-chat-flow="">
           <GroupMembers {...props} members={members} />
         </div>
       </div>

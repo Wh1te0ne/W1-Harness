@@ -3,7 +3,7 @@
  * 宿主的 parentSession 也用于普通 fork,只有 origin=subagent 的连续链才属于子代理。
  */
 
-const FIELDS = ['input', 'output', 'cacheRead', 'cacheWrite', 'reasoning', 'calls', 'cost', 'apiCost']
+const FIELDS = ['input', 'output', 'cacheRead', 'cacheWrite', 'reasoning', 'calls', 'cost', 'apiCost', 'unpricedCalls', 'cacheWrite1h', 'estimatedCalls', 'stalePriceCalls']
 const amount = value => typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : 0
 const validId = value => typeof value === 'string' && value.length > 0 && value.length <= 512
 const emptyBuckets = () => Object.fromEntries(FIELDS.map(key => [key, 0]))

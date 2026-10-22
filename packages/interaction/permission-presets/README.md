@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Offer named permission modes that set sandbox and approval together while each enforcement service keeps its own value. Configured presets supply future-session defaults; an explicitly loaded Auto review integration can add one current-session-only option. Clients read selectable entries from a process catalog and the current choice from the Session projection. Unmatched knob combinations appear as `custom`, which users can leave but cannot select. This package owns selection and defaults; the sandbox, approval, and Auto integration own execution.
+Offer named permission modes that set sandbox and approval together while each enforcement service keeps its own value. Configured presets supply future-session defaults; an explicitly loaded Auto review integration can add an option for current sessions and future-session defaults. Clients read selectable entries from a process catalog and the current choice from the Session projection. Unmatched knob combinations appear as `custom`, which users can leave but cannot select. This package owns selection and defaults; the sandbox, approval, and Auto integration own execution.
 
 ## Table of Contents
 
@@ -61,7 +61,7 @@ Clients render selectable entries from the process catalog: configured presets i
 
 ### Session defaults
 
-The `permission` settings namespace holds `defaultPreset` for future sessions and accepts configured presets only. Session creation reads it, applies it to the sandbox mode and approval policy, and records the applied preset as a `permission/preset` selection. Later settings changes never alter an existing session. A resumed seed, including an explicitly empty one marked by `session/end-seed`, preserves its effective permission and receives only missing durable facts rather than the latest user default; a persisted `auto` identity requires the live Auto registration and its admission before publication.
+The `permission` settings namespace holds `defaultPreset` for future sessions and accepts configured presets and Auto while its reviewer integration is live. Session creation reads it, applies it to the sandbox mode and approval policy, and records the applied preset as a `permission/preset` selection. Later settings changes never alter an existing session. A resumed seed, including an explicitly empty one marked by `session/end-seed`, preserves its effective permission and receives only missing durable facts rather than the latest user default; a persisted `auto` identity requires the live Auto registration and its admission before publication.
 
 -----
 
@@ -133,8 +133,8 @@ These limits define what the preset service does not offer. They are current pac
 - **Only two mechanism knobs are bundled** — presets select sandbox mode and approval policy; the fixed Auto integration adds admission behavior, but an agent/profile choice is not part of `PresetSpec`.
 - **`custom` is derived-only** — callers can switch away from an unmatched knob combination but cannot target or persist a named custom preset through this service.
 - **The configured preset table is fixed for the plugin lifetime** — only the fixed Auto contribution can change the live process catalog without reloading this service.
-- **Auto cannot become a default** — it exists only while its integration effect is live and is intentionally absent from the `permission` settings schema.
-- **Configured defaults must name a configured preset** — removing a referenced preset requires changing `defaultPreset` in the same Config edit.
+- **Auto defaults require a live reviewer** — every fresh Auto session passes reviewer admission before permission facts are written. An absent or unavailable reviewer prevents session creation without silently granting Full access.
+- **Defaults must name an available preset** — removing a referenced preset requires changing `defaultPreset` in the same Config edit.
 
 <a id="dev-note"></a>
 ### Dev Note

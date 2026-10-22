@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-有了 `dsh-web-fetch-http`，harness 可以通过 web 服务（`ctx.web`）抓取公共 HTTP(S) 页面，并在不发送凭据的情况下获得状态码与有界、解码后的内容。当组合需要 URL 校验、公开地址解析、连接固定、仅同源重定向、字节和字符上限及显式产品 `User-Agent` 时选择它。它把非 2xx 响应作为结果而非错误返回，并拒绝非公开目标、二进制数据与不受支持的内容类型。面向模型的 `web_fetch` 工具位于 `dsh-tool-web`，由它渲染本提供方的正文。
+通过 `dsh-web-fetch-http`，harness 可经 `ctx.web` 获取匿名 HTTP(S) 文本，保留输出上限、URL 校验和同源重定向限制。严格模式验证并固定公网地址；系统模式沿用已配置网络而不进行此前置检查。两种模式均不携带浏览器 Cookie。非 2xx 响应仍作为结果而非错误返回。面向模型的 `web_fetch` 工具位于 `dsh-tool-web`。
 
 ## 目录
 
@@ -29,7 +29,7 @@ kind: "package-reference"
 
 ### 何时选择
 
-当部署必须以有界输出和安全传输抓取公共页面时选择此后端：不发送凭据，每个已解析地址必须是公共地址，每次连接都固定到已校验的地址集合，重定向无法逃出源站，每个响应都有上限。
+此后端用于有界的匿名文本获取。提供方默认 `requirePublicIp: true`：直接连接验证并固定公网地址，显式代理路径由已配置代理解析目标。W1 Desktop 将它设为 `false`，沿用系统 DNS、路由和已安装代理策略，不预先检查地址；真实内网目标也因此可达。其他 profile 保留严格默认值，不对特定代理产品或网段特殊处理。
 
 ### 最小配置
 
@@ -42,13 +42,14 @@ kind: "package-reference"
 
 | 字段 | 默认值 | 含义 |
 |---|---|---|
+| `requirePublicIp` | `true`（Desktop 为 `false`） | 对直接连接实施公网地址校验 |
 | `maxResponseBytes` | `5,000,000` | 响应主体最大字节数 |
 | `maxBodyChars` | `100,000` | 解码主体最大字符数 |
 | `timeoutMs` | `30,000` | 抓取超时——资源兜底，不是面向模型的工具预算 |
 | `maxRedirects` | `5` | 同源重定向最大跳数（`0` 表示不跟随） |
 | `userAgent` | `deepseek-harness/…` | 每次请求发送的 `User-Agent` 标头 |
 
-生成的[配置目录](../../../docs/config-catalog.zh.md#deepseek-aidsh-web-fetch-http)是每个受支持字段及其 JSDoc 的穷尽式真源。
+生成的[配置目录](../../../docs/config-catalog.zh.md#deepseek-aidsh-web-fetch-http)是每个受支持字段及其 JSDoc 的穷尽式真源。在 profile 的 `cordis.patch.yml` 的 `web-fetch-http` 行或该插件现有设置命名空间中，设 `requirePublicIp: true` 即可启用严格模式；用户设置优先于 bundle 默认值。动态修改从下一次读取生效，正在进行的读取及其全部重定向保持同一策略。
 
 ### 抓取返回什么
 
@@ -95,7 +96,7 @@ const page = await ctx.web.fetch({ url: 'https://example.com' })
 
 ### 读取路径
 
-抓取先校验 URL，只解析一次主机名，结果中只要有非公开地址就拒绝，并把连接固定到已接受地址。每次同源重定向都重复该检查；跨源重定向或非公开目标在接收响应字节前失败。最终响应按 `Content-Type` 分类、依声明的 charset 解码，并在字节上限内读取；解码后的文本再截断到字符上限。
+抓取先校验 URL，再选择传输。严格模式的直接连接只解析一次、拒绝非公网结果并固定已接受地址；显式代理仍由代理解析目标。系统模式使用已安装的进程 dispatcher，不执行此前置检查。每次重定向都遵守选定策略，两种模式均拒绝跨源重定向。响应继续受到内容类型、字符集、字节和字符上限约束。
 
 </details>
 

@@ -8,7 +8,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Browser approval presentation over the Agent-scoped Remote Event waterfall. The plugin publishes each pending request through `ctx.uiSession`, renders it beside its correlated Tool operation, and leaves a waiting strip in the composer. The strip locates the operation or opens a fallback approval panel. Requests without a call identity use the composer panel directly. Both presentations return the same one-shot decision to the waiting Host request.
+Browser approval presentation over the Agent-scoped Remote Event waterfall. Each pending request appears as a compact card in the `conversation.pending` slot after the transcript and before the composer, outside folded Tool rows. A new card scrolls into view without taking keyboard focus. The ordinary input and its draft stay mounted; there is no waiting strip or secondary review button. The reason, scope and action buttons remain visible; operation details expand on demand. Reject and Allow once settle the same scoped Host request.
 
 ## Table of Contents
 
@@ -18,7 +18,7 @@ Browser approval presentation over the Agent-scoped Remote Event waterfall. The 
 
 -----
 
-Focus the approval detail region to approve with Enter or reject with Escape. The mounted plugin reserves both keys against editable shortcuts. Enter on the focused Reject button retains its native reject action. Input controls and IME candidates keep their own keys. Keyboard and pointer actions share one pending-request lock; a withdrawn or replaced request cannot accept another answer, and an earlier failed answer cannot unlock its replacement.
+Focus the approval detail region to approve with Enter or reject with Escape. The mounted plugin reserves both keys against editable shortcuts. Enter on the focused Reject button retains its native reject action. The operation-details disclosure keeps its native Enter action. Input controls and IME candidates keep their own keys. Keyboard and pointer actions share one pending-request lock; a withdrawn or replaced request cannot accept another answer, and an earlier failed answer cannot unlock its replacement.
 
 <a id="model-experience"></a>
 ## Model Experience

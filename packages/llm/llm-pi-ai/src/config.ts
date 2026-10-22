@@ -152,6 +152,11 @@ export interface PiAiProviderProfile {
   headers?: Record<string, string>
   /** Provider-neutral pi-ai reasoning level. */
   reasoning?: ModelThinkingLevel
+  /**
+   * Responses reasoning fields accepted by this route. `effort-only` omits
+   * OpenAI summaries and encrypted-reasoning requests. Other protocols are unaffected.
+   */
+  responsesReasoningFormat?: 'openai' | 'effort-only'
   /** Token budgets used by reasoning providers that support them. */
   thinkingBudgets?: ThinkingBudgets
   /** Prompt-cache retention preference. */
@@ -336,6 +341,7 @@ const profile = z.object({
   defaultInput: z.array(z.union(MODALITIES)).default([...DEFAULT_INPUT]),
   headers: z.dict(z.string()),
   reasoning: z.union(THINKING_LEVELS),
+  responsesReasoningFormat: z.union(['openai', 'effort-only']),
   thinkingBudgets,
   cacheRetention: z.union(['none', 'short', 'long']),
   transport: z.union(['sse', 'websocket', 'websocket-cached', 'auto']),

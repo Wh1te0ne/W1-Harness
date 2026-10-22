@@ -806,6 +806,8 @@ describe('ui-workspace apply', () => {
     const startSession = vi.spyOn(b.ctx.uiWorkspace, 'startSession').mockImplementation(() => undefined)
 
     const browser = faceOf(b.slots.entries('sidebar.workspaces')[0]!) as WorkspaceBrowserInjected
+    await expect(browser.pickProjectFolder!()).resolves.toBe('/projects/picked')
+    expect(b.pickDirectory).toHaveBeenCalledOnce()
     // The browser share delegates to the shared Session navigation action.
     browser.startSession('ws' as never)
     expect(startSession).toHaveBeenLastCalledWith('ws', undefined)
@@ -830,6 +832,24 @@ describe('ui-workspace apply', () => {
     const picker = faceOf(b.slots.entries('conversation.hero.workspace')[0]!) as WorkspacePickerInjected
     await picker.createWorkspace({ path: '/tmp/project' })
     expect(b.create).toHaveBeenCalledWith({ path: '/tmp/project' })
+  })
+
+  it('opens project source folders through Desktop and does not open a second chooser after cancellation or failure', async () => {
+    const pick = vi.fn<() => Promise<string | null>>().mockResolvedValue('/project/source')
+    vi.stubGlobal('__DSH_DIRECTORY_PICKER__', { pick })
+    onTestFinished(() => { vi.unstubAllGlobals() })
+    const b = await bench()
+    declare(b.slots, 'sidebar.workspaces', 'conversation.hero.workspace')
+    const fiber = b.ctx.plugin({ inject: [...inject], apply })
+    await fiber.await()
+    onTestFinished(() => fiber.dispose())
+    const browser = faceOf(b.slots.entries('sidebar.workspaces')[0]!) as WorkspaceBrowserInjected
+    await expect(browser.pickProjectFolder!()).resolves.toBe('/project/source')
+    pick.mockResolvedValueOnce(null)
+    await expect(browser.pickProjectFolder!()).resolves.toBeNull()
+    pick.mockRejectedValueOnce(new Error('dialog failed'))
+    await expect(browser.pickProjectFolder!()).rejects.toThrow('dialog failed')
+    expect(b.pickDirectory).not.toHaveBeenCalled()
   })
 
   it('declares the browser child slots and reports directory-flow occupancy per surface', async () => {

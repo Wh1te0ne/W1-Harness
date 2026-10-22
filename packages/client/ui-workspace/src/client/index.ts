@@ -112,6 +112,10 @@ export const inject = [
 export function apply(ctx: Context): void {
   const sessions = ctx.get('sessions') as ISessions
   const workspaces = ctx.get('workspaces') as IWorkspaces
+  // Desktop owns this chooser as a modal child of its current BrowserWindow.
+  const desktopPicker = (globalThis as typeof globalThis & {
+    __DSH_DIRECTORY_PICKER__?: { pick: () => Promise<string | null> }
+  }).__DSH_DIRECTORY_PICKER__
   // One viewing-store instance, created here as ui-layout does for its layout
   // store: the browser declares the handle, and the UiWorkspace service writes
   // view order through the same instance the renderer hands the browser.
@@ -273,7 +277,7 @@ export function apply(ctx: Context): void {
     renameWorkspace: async (workspaceId, title) => { await workspaces.rename(workspaceId, title) },
     createProject: input => workspaces.createProject(input),
     updateProject: input => workspaces.updateProject(input),
-    pickProjectFolder: () => uiWorkspace.pickDirectory(),
+    pickProjectFolder: () => desktopPicker === undefined ? uiWorkspace.pickDirectory() : desktopPicker.pick(),
     deleteWorkspace: async (workspaceId) => { await workspaces.delete(workspaceId) },
     insertWorkspaceBefore: async (workspaceId, beforeWorkspaceId) => {
       await workspaces.insertBefore(workspaceId, beforeWorkspaceId)

@@ -5,7 +5,7 @@
  * @module @deepseek-ai/dsh-web-fetch-http
  */
 
-import type { Context } from '@deepseek-ai/cordis'
+import type { Context, Volatile } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 import type {} from '@deepseek-ai/dsh-web'
 import { HttpFetchProvider } from './provider.ts'
@@ -30,6 +30,11 @@ export const inject = ['web']
 
 /** Plugin config: the provider's transport and size limits plus its `User-Agent` (all defaulted). */
 export interface Config {
+  /**
+   * Require public destination IPs on direct connections. Disable to use the system network's
+   * DNS and routing; private destinations then remain reachable.
+   */
+  requirePublicIp: Volatile<boolean>
   /** Maximum response body size in bytes. */
   maxResponseBytes?: number
   /** Maximum decoded body length in characters. */
@@ -42,7 +47,8 @@ export interface Config {
   userAgent?: string
 }
 
-export const Config: z<Config> = z.object({
+export const Config = z.object({
+  requirePublicIp: z.boolean().default(true).volatile(),
   maxResponseBytes: z.number().default(5_000_000),
   maxBodyChars: z.number().default(100_000),
   timeoutMs: z.number().default(30_000),
@@ -90,5 +96,5 @@ export function apply(ctx: Context, config: Config): void {
     maxRedirects: resolved.maxRedirects,
     userAgent: resolved.userAgent,
   }
-  ctx.web.registerFetchProvider(new HttpFetchProvider(limits))
+  ctx.web.registerFetchProvider(new HttpFetchProvider(limits, undefined, () => resolved.requirePublicIp.get()))
 }

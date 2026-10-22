@@ -82,6 +82,8 @@ function seedRecord(id: TabId, seed: () => SidebarRightSeed): TabRecord {
  * claimed. Placement is by `replaceTab` first, then `paneId`, then the active pane.
  */
 export interface OpenContentIntent {
+  /** Preserve panel visibility and selection while creating content. */
+  readonly background?: boolean
   readonly kind: string
   readonly contentId: string
   readonly title: string
@@ -301,14 +303,15 @@ export function createSidebarRightStore(
           return next
         })
       },
-      // One entry carries the whole open: revealing the column (an open behind
-      // a collapsed panel is not an open), focusing or seating the tab, and
+      // One entry carries the whole open: revealing the column for foreground
+      // navigation, focusing or seating the tab, and
       // closing the tab it replaces. `settled` reports the tab the planner
       // landed on, synchronously, because actions return nothing.
       openContent: (d, sessionId: string, intent, settled) => {
         d.bySession = seat(d, sessionId, s => advance(s, (state, mint) => {
-          const { kind, contentId, title, replaceTab: replace } = intent
-          const ops: LayoutOp[] = [...planSetExpanded(state, true)]
+          const { kind, contentId, title } = intent
+          const replace = intent.background ? undefined : intent.replaceTab
+          const ops: LayoutOp[] = intent.background ? [] : [...planSetExpanded(state, true)]
           // A replaced tab lends its pane and slot; one that floats cannot (a
           // floating pane holds one tab), so the new tab lands as if unplaced.
           const replaced = replace === undefined ? undefined : findTabPane(state, replace)
@@ -325,7 +328,7 @@ export function createSidebarRightStore(
             ? held
             : intent.revealIfOpened === false ? undefined : findContentTab(state, contentId, kind)
           let openedInNewPane: TabId | undefined
-          const split = intent.preferNewPane === true && replace === undefined && revealed === undefined
+          const split = intent.background !== true && intent.preferNewPane === true && replace === undefined && revealed === undefined
             ? planSplitPane(state, mint, paneId, (id) => {
               openedInNewPane = id
               return { id, kind, contentId, title }
@@ -345,7 +348,8 @@ export function createSidebarRightStore(
                   ? { revealIfOpened: false }
                   : intent.revealIfOpened === undefined ? {} : { revealIfOpened: intent.revealIfOpened },
               })
-          ops.push(...planned.ops)
+          ops.push(...(intent.background ? planned.ops.flatMap((op): LayoutOp[] =>
+            op.type === 'focusTab' ? [] : op.type === 'openTab' ? [{ ...op, type: 'insertTab' }] : [op]) : planned.ops))
           if (replace !== undefined && replace !== planned.tabId) ops.push({ type: 'closeTab', tabId: replace })
           settled(planned.tabId)
           return ops

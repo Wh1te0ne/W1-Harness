@@ -238,11 +238,26 @@ export async function requestVia(
   return { response, close: () => Promise.resolve() }
 }
 
-/** Production network operations kept as an object so provider tests can replace resolution only. */
+/**
+ * Send through the installed process transport without pre-resolving or filtering destinations.
+ * URL, redirect, timeout and response-size restrictions remain owned by the provider.
+ * @param url - validated HTTP(S) URL.
+ * @param headers - anonymous request headers.
+ * @param signal - cancellation of the request and response body.
+ * @returns response with a no-op disposer; the process owns the shared dispatcher.
+ */
+export async function requestSystem(url: URL, headers: Record<string, string>, signal: AbortSignal): Promise<PinnedResponse> {
+  const { fetch } = await import('undici')
+  const response = await fetch(url, { method: 'GET', redirect: 'manual', headers, signal })
+  return { response, close: () => Promise.resolve() }
+}
+
+/** Production network operations, replaceable by focused transport tests. */
 export const publicHttpNetwork = {
   resolve: resolvePublicAddresses,
   request: requestPinned,
   requestVia,
+  requestSystem,
 }
 
 type LookupCallback = (

@@ -126,7 +126,7 @@ export class SideChatService extends TypertRemoteService {
       chat.log.append('w1/side-request', { system: sideSystem, messages, config: call.config })
       chat.history.push(user)
       admitted = true
-      for await (const chunk of call.stream({ ...call.config, system: sideSystem, messages, sessionId: chat.log.id, signal: combined })) {
+      for await (const chunk of call.stream({ ...call.config, system: sideSystem, messages, sessionId: chat.log.id, purpose: 'side-chat', signal: combined })) {
         combined.throwIfAborted()
         assembler.push(chunk)
         if (chunk.type === 'text-delta') yield { kind: 'text', text: chunk.text }

@@ -181,6 +181,7 @@ export const questionReplyDefinition: ConversationNodeDefinition<QuestionReplySt
       anchorSeq: seq,
       location: context.start?.location ?? { kind: 'unresolved' },
       visibility: 'visible',
+      groupTree: 'input',
       data,
     }
   },

@@ -15,7 +15,7 @@ This package lets users browse grouped or flat Session lists, choose a Workspace
 
 ## W1 projects
 
-The W1 sidebar adds an independent project through its add button. A project row menu opens Edit project for the name, associated folders and primary selection. Edits remain local until Save; Cancel leaves stored data unchanged. Select another primary before removing the current primary from a nonempty project. New Sessions use the selected primary; existing Sessions, including a restored blank, retain their cwd. Separate projects may share directories. Source folders use the native directory picker.
+The W1 sidebar adds an independent project through its add button. A project row menu opens Edit project for the name, associated folders and primary selection. Edits remain local until Save; Cancel leaves stored data unchanged. Select another primary before removing the current primary from a nonempty project. New Sessions use the selected primary; existing Sessions, including a restored blank, retain their cwd. Separate projects may share directories. Source folders prefer the Desktop bridge, which opens a modal directory picker owned by the current application window; cancellation or failure never opens a second Host chooser. Without that bridge, the Host picker remains available. An empty folder list shows no managed-directory explanation.
 
 ## Table of Contents
 

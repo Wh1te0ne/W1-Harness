@@ -4,6 +4,7 @@ import type {} from '@deepseek-ai/dsh-settings'
 import type { Volatile } from '@deepseek-ai/cordis'
 import type { ThemePreference } from './theme-settings.ts'
 import z from '@deepseek-ai/schemastery'
+import { W1AppearanceSchema, type W1Appearance } from './w1-appearance-settings.ts'
 
 import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-host-webserver'
@@ -18,6 +19,8 @@ export {
 
 /** Runtime preferences projected to the browser. */
 export interface Config {
+  /** Durable W1 palette and local CSS; null until a selection is migrated or saved. */
+  appearance: Volatile<W1Appearance | null | undefined>
   /** Browser palette preference. */
   preference: Volatile<ThemePreference>
   /** Browser font size in pixels. */
@@ -36,6 +39,7 @@ export interface Config {
 
 /** Live theme and typography preferences. */
 export const Config = z.object({
+  appearance: z.union([W1AppearanceSchema, z.const(null)]).default(null).volatile(),
   preference: z.union([...THEME_PREFERENCES]).default(DEFAULT_PREFERENCE).volatile(),
   fontSize: fontSizeSchema(FONT_SIZE_SPECS.text).volatile(),
   codeFontSize: fontSizeSchema(FONT_SIZE_SPECS.code).volatile(),
@@ -60,6 +64,6 @@ export function apply(ctx: Context, config: Config): void {
       text: config.textFontFamily.get(),
       code: config.codeFontFamily.get(),
       terminal: config.terminalFontFamily.get(),
-    }))
+    }, config.appearance.get()))
   }, { prepend: true })
 }

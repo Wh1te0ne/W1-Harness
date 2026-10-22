@@ -37,7 +37,7 @@
           out[key] = {
             ...mapFields(raw, ['input', 'output', 'cacheRead', 'cacheWrite', 'reasoning', 'cost'], num),
             // API 渠道金额(issue #64):缺席 = 旧数据按 cost 全额 API 口径。
-            apiCost: raw.apiCost === undefined ? num(raw.cost) : num(raw.apiCost),
+            apiCost: raw.apiCost === undefined ? num(raw.cost) : num(raw.apiCost), cacheWrite1h: num(raw.cacheWrite1h), estimatedCalls: num(raw.estimatedCalls), stalePriceCalls: num(raw.stalePriceCalls), unpricedCalls: num(raw.unpricedCalls),
           }
         }
       }
@@ -47,7 +47,7 @@
       needObject(v, path)
       const out = {
         reasoning: v.reasoning === undefined ? 0 : needNum(v.reasoning, path + '.reasoning'),
-        apiCost: v.apiCost === undefined ? undefined : needNum(v.apiCost, path + '.apiCost'),
+        apiCost: v.apiCost === undefined ? undefined : needNum(v.apiCost, path + '.apiCost'), cacheWrite1h: Number(v.cacheWrite1h) || 0, estimatedCalls: Number(v.estimatedCalls) || 0, stalePriceCalls: Number(v.stalePriceCalls) || 0, unpricedCalls: Number(v.unpricedCalls) || 0,
         byModel: aggregateModelMap(v.byModel, path + '.byModel'),
         byProviderModel: aggregateModelMap(v.byProviderModel, path + '.byProviderModel'),
       }
@@ -207,6 +207,7 @@
         })(),
         autoUpdatePrices: v.autoUpdatePrices !== false,
         prices: {
+          book: v.prices?.book,
           manual: v.prices?.manual ?? {},
           models,
           default: parsePrice(v.prices?.default ?? { cacheHit: 0, cacheMiss: 0, output: 0 }, path + '.prices.default'),
@@ -503,6 +504,7 @@
       package: 'dsh-usage-manager',
       descriptors: [
         ...['getState', 'getLocalState'].map(method => ({ method, result: strictCodec('CostState', stateCodec) })),
+        { method:'pricingAction',parameters:[rpcParam('action','ConfigPatch',patchCodec)],result:strictCodec('CostState',stateCodec) },
         {
           method: 'updateConfig',
           parameters: [rpcParam('patch', 'ConfigPatch', patchCodec)],
@@ -838,7 +840,11 @@
         else if (Object.hasOwn(MODEL_VENDOR_PREFIXES, vendor)) return null
       }
       // Formatting a request must not create a literal hit that bypasses alias collisions.
-      return matchModelIdLocal(target, Object.keys(models), modelId)
+      const matched = matchModelIdLocal(target, Object.keys(models), modelId)
+      if (matched !== null || provider !== 'deepseek') return matched
+      // Mirror the host's explicit channel snapshot aliases; no blanket provider fallback.
+      const alias = { deepseekv41flash261017: 'deepseek-v4.1-flash', deepseekv4flashga260731: 'deepseek-v4-flash' }[canonModelIdLocal(target)]
+      return alias ? matchModelIdLocal(alias, Object.keys(models)) : null
     }
     /**
      * 客户端价格解析(与 pricing.js providerPriceEntryFor 同口径):手动覆盖 → 精确 → 自动匹配。
@@ -913,7 +919,7 @@
         const entry = Object.hasOwn(models, targetModel) ? models[targetModel] : null
         return { entry, priced: entry !== null && entry.unpriced !== true, billingMode: 'flat', matched: entry !== null }
       }
-      if (targetProvider === 'deepseek' || targetProvider.includes('deepseek')) {
+      if (['deepseek', 'deepseek-official'].includes(targetProvider)) {
         const models = prices.models ?? {}
         const hit = priceModelHit(targetModel, models, 'deepseek', mode, prices)
         if (hit !== null) return models[hit]?.unpriced === true
@@ -942,6 +948,7 @@
           if (ambiguous) return { entry: null, priced: false, billingMode: 'flat', matched: false }
           if (bestEntry !== null) return { entry: bestEntry, priced: bestEntry.unpriced !== true, billingMode: bestMode, matched: true }
         }
+        if (!/^deepseek[-/]/i.test(targetModel)) return { entry: null, priced: false, billingMode: 'flat', matched: false }
         return { entry: prices.default ?? { cacheHit: 0, cacheMiss: 0, output: 0 }, priced: prices.default?.unpriced !== true, billingMode: 'deepseek-peak', matched: false }
       }
       const catalog = prices.providers?.[targetProvider]?.models ?? {}
@@ -976,6 +983,7 @@
       return { entry: null, priced: false, billingMode: 'flat', matched: false }
     }
     function resolveClientPrice(provider, modelId, config) {
+      if (config?.prices?.book) return PRICE_BOOK.resolveBookPrice(provider, modelId, config.prices)
       const manual = resolveManualPrice(provider, modelId, config?.prices)
       if (manual) return manual
       let result = resolveClientPriceRaw(provider, modelId, config)
@@ -1098,6 +1106,7 @@
      */
     function usageSplit(usage, config) {
       if (!usage || !config) return { total: 0, api: 0 }
+      if (config.prices?.book) return {total:Number(usage.cost)||0,api:Number(usage.apiCost ?? usage.cost)||0}
       const peak = {
         enabled: config.peakEnabled === true,
         effectiveAtMs: Date.parse(config.peakEffectiveAt || ''),
@@ -1209,6 +1218,9 @@
           return () => { listeners.delete(fn) }
         },
         set: next => {
+            const currentRevision = snapshot.state?.config?.prices?.book?.revision
+            const nextRevision = next.state?.config?.prices?.book?.revision
+            if (Number.isInteger(currentRevision) && Number.isInteger(nextRevision) && nextRevision < currentRevision) return
           next = decorate(next)
           if (next === snapshot) return
           snapshot = next
@@ -1439,7 +1451,7 @@
       }, [sessionId, start, end, pricingKey, config?.hideTurnCost])
       if (!config || config.hideTurnCost || start == null || end == null) return null
       const en = resolveLocale(config) === 'en'
-      const names = en ? { input: 'Input', output: 'Output', cacheRead: 'Cache read', cacheWrite: 'Cache write', reasoning: 'Reasoning' } : { input: '输入', output: '输出', cacheRead: '缓存读取', cacheWrite: '缓存写入', reasoning: '推理' }
+      const names = en ? { input: 'Input', output: 'Output', cacheRead: 'Cache read', cacheWrite: 'Cache write', cacheWrite1h: 'Cache write (1h)', reasoning: 'Reasoning' } : { input: '输入', output: '输出', cacheRead: '缓存读取', cacheWrite: '缓存写入', cacheWrite1h:'缓存写入（1h）', reasoning: '推理' }
       const money = n => formatMoneyUsd(n, { ...config, decimals: Math.max(8, config.decimals ?? 2) })
       const kinds = en ? { model: 'Model call', compaction: 'Context compaction', search: 'Native search' } : { model: '模型调用', compaction: '上下文压缩', search: '原生搜索' }
       const rowView = (row, i) => el('div', { key: i, style: { marginBottom: 4, overflowWrap: 'anywhere' } },
@@ -1559,6 +1571,7 @@
       // 官方模式只取 deepseek 渠道费用;自定义 Provider 余额无渠道映射,维持全量(与既有行为一致)。
       const usd = mode === 'official' ? todayOfficialUsd(state) : Number(state.today?.cost) || 0
       const unit = mode === 'custom' ? customBalanceUnitOf(config, custom, entryCfg) : state.balance?.currency
+      if (config.prices?.book) return unit === 'CREDITS' ? 0 : unit === 'USD' ? usd / PRICE_BOOK.bookFxAt(config.prices.book).rate : usd
       if (unit === 'USD') return usd
       // 积分不能由美元花费换算。
       if (unit === 'CREDITS') return 0
@@ -2280,8 +2293,7 @@
                   })),
               el('div', { className: 'cm-bbox-line cm-num' },
                 t('usedOf', { used: formatMoneyValue(used, config), amount: formatMoneyValue(amount, config) })))
-            : null,
-          peakNoticeEl(state, config, t)),
+            : null),
       }
     }
 
@@ -3000,6 +3012,29 @@
           wide ? peakNoticeEl(state, config, t) : null))
     }
 
+    function PricingSyncNotice({config}) {
+      const book=config.prices?.book, [notice,setNotice]=useState(null),previous=useRef('')
+      const errors=Object.entries(book?.sync??{}).filter(([,s])=>s.status==='error'||s.status==='partial').map(([p,s])=>p+':'+s.status).sort()
+      if(book?.fxStatus?.status==='error')errors.push('汇率')
+      const key=errors.join('|')
+      useEffect(()=>{if(key&&key!==previous.current)setNotice('价格或汇率同步需要关注，正在保留旧值；请到模型价格页查看。');else if(!key&&previous.current)setNotice('价格与汇率同步已恢复。');previous.current=key},[key])
+      return notice&&primitives.Toast?el(primitives.Toast,{text:notice,onDone:()=>setNotice(null)}):null
+    }
+    function TodayUsageSummary({ state, wide, api }) {
+      const config = state.config, t = makeT(resolveLocale(config)), today = state.today
+      const tokens = row => (row.input ?? 0) + (row.cacheRead ?? 0) + (row.cacheWrite ?? 0) + (row.output ?? 0)
+      const money = row => formatMoneyUsd(row.apiCost ?? row.cost ?? 0, config) + (row.unpricedCalls > 0 ? ' + ' + t('priceUnknown') : '')
+      const rows = Object.entries(today.byProviderModel ?? {}).sort((a, b) => (b[1].apiCost ?? b[1].cost ?? 0) - (a[1].apiCost ?? a[1].cost ?? 0))
+      const detail = [t('todayCostTitle') + ' ' + money(today) + ' · ' + tokens(today).toLocaleString() + ' Token',
+        ...rows.slice(0, 8).map(([key, row]) => key + ' · ' + money(row) + ' · ' + formatTokens(tokens(row)) + ' Token'),
+        rows.length > 8 ? t('todayMoreModels', { count: rows.length - 8 }) : '', t('todayOpenUsage')].filter(Boolean).join('\n')
+      const needsAttention=config.prices?.book?.fxStatus?.status==='error'||Object.values(config.prices?.book?.sync??{}).some(s=>s.status==='error'||s.status==='partial')
+      return el(Fragment,null,el(PricingSyncNotice,{config}),el(Tooltip, { label: el('span', { style: { whiteSpace: 'pre-line' } }, detail+(needsAttention?'\n价格同步需要关注，暂用旧价或部分费用未知。':'')), side: 'right', delayMs: 300 },
+        el('button', { type: 'button', className: 'cm-today-summary' + (wide ? '' : ' rail'), onClick: api.openUsage, 'aria-label': detail },
+          wide ? el(Fragment, null, el('span', null, t('todayCostShort') + ' ', el('span', { className: 'cm-num' }, money(today))),
+            el('span', null, t('todayTokenShort') + ' ', el('span', { className: 'cm-num' }, formatTokens(tokens(today)))),needsAttention?el('span',{'aria-label':'价格同步需要关注'},' ⚠'):null) : el(WalletIcon, { size: 16 }))))
+    }
+
     function SidebarFooter(props) {
       const costStore = props.useCost ? props.useCost(s => s) : undefined
       useCodexQuota(costStore?.state?.config?.codexQuotaEnabled === true && costStore?.state?.config?.codexQuotaSidebar !== false)
@@ -3054,11 +3089,8 @@
       // (CSS 于 .cm-footer-stack.compact 生效);卡片本身与收起(rail)态维持原样。
       const simple = config.sidebarSimple === true
       const compactWide = !simple && wide && config.sidebarStyle === 'compact'
-      const mergedBudget = simple && wide && showToday && budgetOn
       const nodes = []
-      if (mergedBudget) nodes.push(el(BudgetBoxContent, { state, wide, summary: true }))
-      else if (simple && wide && showToday) nodes.push(el('div', { className: 'cm-simple-summary' },
-        el('span', null, t('today')), el('span', { className: 'cm-num' }, sidebarTodayValue(state.today, config, t))))
+      if (showToday) nodes.push(el(TodayUsageSummary, { state, wide, api: props.api }))
       if (showBalanceBar) nodes.push(el(BalanceBox, { state, wide, api: props.api }))
       else if (showBalance) nodes.push(el(BalanceRowContent, { state, wide, api: props.api }))
       if (showCustomBalanceBar) nodes.push(el(CustomBalanceBox, { state, wide, api: props.api }))
@@ -3081,13 +3113,8 @@
           el('div', { className: 'cm-bbox-section' + (budgetView.level === 'ok' ? '' : ' ' + budgetView.level) }, budgetView.body)))
       } else {
         if (goOk) nodes.push(el(GoQuotaBox, { state, wide }))
-        if (budgetOn && !mergedBudget) nodes.push(el(BudgetBoxContent, { state, wide }))
+        if (budgetOn) nodes.push(el(BudgetBoxContent, { state, wide }))
       }
-      if (!budgetOn && showToday && !(simple && wide)) nodes.push(el(BudgetBoxContent, { state, wide }))
-      // 简化摘要不再承载峰谷条；单独渲染宽栏条，避免漏掉无预算配置或合并后重复。
-      if (simple && wide && showToday) nodes.push(peakNoticeEl(state, config, t))
-      // 收起(rail)态:无论预算/Go 额度开关状态,统一在图框下方追加竖向峰谷进度条(受 peakNotice 等门控,内部自行返回 null)。
-      if (!wide) nodes.push(peakNoticeRailEl(state, config, t))
       if (modelsOn) nodes.splice(config.sidebarModels.position === 'first' ? 0 : config.sidebarModels.position === 'afterBalance' ? afterBalance : nodes.length, 0,
         el(SidebarModelCosts, { key: 'models', state, wide }))
       return el('div', { ...(simple ? { tabIndex: 0, role: 'region', 'aria-label': t('sidebarSimple') } : {}), className: 'cm-footer-stack' + (wide ? '' : ' rail') + (compactWide ? ' compact' : '') + (simple ? ' simple' : '') }, ...nodes)

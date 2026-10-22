@@ -29,7 +29,7 @@ export const QuestionReplyView = memo(function QuestionReplyView({ node, t }: Qu
  */
 export function QuestionReplyBubble({ data, t }: { data: QuestionReplyData; t: PropsLocale<'question'>['t'] }) {
   const label = t('reply.label')
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(true)
   const toggleLabel = t(open ? 'reply.close' : 'reply.open')
   const summary = data.questions.map(question => replyAnswerValues(data, question.id)).flat().join(', ')
   const copyText = replyClipboardText(data, t)

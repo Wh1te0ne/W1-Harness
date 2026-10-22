@@ -14,6 +14,7 @@ export const ChatFlow = memo(function ChatFlow({
   useSession, useChat, useChatNode, useChatNodeBottom, useChatNodeProcess, useChatGroup, usePresentation,
   useStore, actions, renderSlot, renderFactorySlot, t, useGroupAction, useGroupHeaderAction,
   cwd, openFile, inspectCall, forkAt, loadImage, fileMentions,
+  useChatTurnAssistants,
 }: ChatFlowSlotProps) {
   const nodeStore = useChat(snapshot => snapshot.nodes)
   const running = useSession(snapshot => snapshot.running)
@@ -23,6 +24,11 @@ export const ChatFlow = memo(function ChatFlow({
     return location?.kind === 'turn' || location?.kind === 'step'
       ? location.turn.status === 'open' ? location.turn.start?.time : undefined
       : undefined
+  })
+  const runningTurn = useChatNode(latestTurnAnchor ?? '', (node) => {
+    const location = node?.location
+    return (location?.kind === 'turn' || location?.kind === 'step') && location.turn.status === 'open'
+      ? location.turn.turn : undefined
   })
   const seatProps = {
     nodeStore, useChatNode, useChatNodeBottom, useChatNodeProcess, usePresentation,
@@ -57,5 +63,6 @@ export const ChatFlow = memo(function ChatFlow({
     const index = pendingInputs.findIndex(item => 'requestId' in item && item.placement === 'transcript')
     if (index !== -1) rows.splice(rows.length - 1, 0, ...pendingRows.splice(index, 1))
   }
-  return [...rows, ...pendingRows, ...running ? [<RunningStatus key="running" startTime={runningStartTime} t={t} />] : []]
+  return [...rows, ...pendingRows, ...running ? [<RunningStatus key="running" startTime={runningStartTime}
+    turn={runningTurn} useChatTurnAssistants={useChatTurnAssistants} t={t} />] : []]
 })

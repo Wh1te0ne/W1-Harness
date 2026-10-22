@@ -8,7 +8,9 @@
   "files": [
     "src/boot-theme.ts",
     "src/index.ts",
-    "src/theme-settings.ts"
+    "src/theme-settings.ts",
+    "src/w1-appearance-settings.ts",
+    "src/w1-presets.ts"
   ],
   "references": [
     {

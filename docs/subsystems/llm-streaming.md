@@ -357,6 +357,12 @@ interface TokenUsage {
   totalTokens?: number
   cacheReadTokens?: number
   cacheWriteTokens?: number
+  /** Reported 1-hour cache writes, a subset of cacheWriteTokens. Absence means the TTL split is unknown. */
+  cacheWrite1hTokens?: number
+  /** Billing-relevant values observed on the outgoing wire; null means that field was absent. */
+  billingParameters?: { outputConfigEffort: string | null }
+  /** Local accounting identity. Repeated stream/final log representations share this ID. */
+  billingCallId?: string
   reasoningTokens?: number
 }
 ```
@@ -659,7 +665,7 @@ interface GenerateOptions {
    * map the purpose to model-hidden transport metadata. Ordinary conversation
    * requests leave it unset.
    */
-  purpose?: 'compaction' | 'session-title'
+  purpose?: 'compaction' | 'session-title' | 'reply-selection' | 'reply-suggestion' | 'side-chat'
 }
 ```
 

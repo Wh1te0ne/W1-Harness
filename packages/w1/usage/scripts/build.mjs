@@ -29,6 +29,10 @@ const productVersion = JSON.parse(readFileSync(resolve(projectRoot, 'package.jso
 writeFileSync(resolve(clientDir, '02-product.js'), '// Generated from package.json.\nconst USAGE_MANAGER_VERSION = ' + JSON.stringify(productVersion) + ';\n')
 writeFileSync(resolve(clientDir, '02-manual-prices.js'), '// Generated from lib/manual-prices.js; run npm run build.\n' + readFileSync(resolve(projectRoot, 'lib/manual-prices.js'), 'utf8').replaceAll('export function', 'function'))
 writeFileSync(resolve(clientDir, '02-wawa-prices.js'), '// Generated from lib/wawa-prices.js; run npm run build.\n' + readFileSync(resolve(projectRoot, 'lib/wawa-prices.js'), 'utf8').replaceAll('export function', 'function'))
+const bookSource = readFileSync(resolve(projectRoot, 'lib/price-book.js'),'utf8')
+  .replace(/export function validPriceBook[\s\S]*?(?=export function bookFxAt)/, '')
+  .split('export function createPriceBook')[0].replaceAll('export function','function')
+writeFileSync(resolve(clientDir, '02-price-book.js'), 'const PRICE_BOOK = (() => {\n' + bookSource + '\nreturn {resolveBookPrice, bookFxAt, bookRecordAt, defaultPeakRule, validBookRate}; })();\n')
 const fragments = readdirSync(clientDir).filter(name => name.endsWith('.js')).sort()
 if (fragments.length === 0) {
   console.error('✗ src/client/ contains no .js source fragments')

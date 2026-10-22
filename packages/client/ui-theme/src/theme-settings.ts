@@ -1,6 +1,7 @@
 /** Theme preferences stored in the Host user-settings document. */
 
 import z from '@deepseek-ai/schemastery'
+import { W1AppearanceSchema, type W1Appearance } from './w1-appearance-settings.ts'
 
 /** Built-in preferences accepted at the registry and settings boundaries. */
 export const THEME_PREFERENCES = ['light', 'dark', 'system'] as const
@@ -90,6 +91,8 @@ export type FontFamilies = Readonly<Record<FontRole, string>>
 
 /** Durable theme section shared by the Host schema and the browser scope. */
 export interface ThemeSettings {
+  /** Durable W1 palette and CSS; null or absent only before legacy migration. */
+  appearance?: W1Appearance | null
   /** Selected built-in preference. */
   preference: ThemePreference
   /** Conversation content font size in px (integer within {@link FONT_SIZE_MIN}..{@link FONT_SIZE_MAX}). */
@@ -137,6 +140,7 @@ export function isFontSize(role: FontRole, px: number): boolean {
 
 /** Durable theme schema; also the wire envelope the browser scope validates against. */
 export const ThemeSettingsSchema: z<ThemeSettings> = z.object({
+  appearance: z.union([W1AppearanceSchema, z.const(null)]).default(null),
   [THEME_PREFERENCE_FIELD]: z.union([...THEME_PREFERENCES]).default(DEFAULT_PREFERENCE),
   [FONT_SIZE_FIELD]: fontSizeSchema(FONT_SIZE_SPECS.text),
   [FONT_SIZE_SPECS.code.field]: fontSizeSchema(FONT_SIZE_SPECS.code),

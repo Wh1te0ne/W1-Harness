@@ -6,7 +6,7 @@
       useEffect(() => {
         let active = true
         if (!customSettingsPromise) customSettingsPromise = (typeof require.async === 'function'
-          ? require.async('./client.custom.js').then(module => module.createComponents({ QuotasSection, BudgetPanel, PeakPanel, manualPriceKey, validManualPrice, resolveClientPrice, wawaPricePreset, formatMoneyUsd, formatTokens, version: USAGE_MANAGER_VERSION }))
+          ? require.async('./client.custom.js').then(module => module.createComponents({ primitives, PRICE_BOOK, QuotasSection, BudgetPanel, PeakPanel, manualPriceKey, validManualPrice, resolveClientPrice, normalizeClientPrice, wawaPricePreset, formatMoneyUsd, formatTokens, version: USAGE_MANAGER_VERSION }))
           : Promise.reject(new Error('此页面需要 DSH 0.2.0-rc.2 或更高版本'))).catch(error => { customSettingsPromise = null; throw error })
         customSettingsPromise.then(value => { if (active) setViews(value) }, error => { if (active) setError(error.message) })
         return () => { active = false }

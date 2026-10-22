@@ -92,6 +92,20 @@ const queuedReply = (callId: string, entries: unknown[]): unknown => ({
   }) }],
 })
 
+it('shows persisted question answers immediately, including after remount', () => {
+  const block = resultNode(READABLE_ARGS, answers([
+    { id: 'goal', selected: ['Keep my history visible'] },
+    { id: 'scope', selected: [] },
+    { id: 'notes', selected: [] },
+  ]))
+  const first = render(<AskQuestionRow {...rowProps(block)} />)
+  expect(screen.getByText('What do you want to accomplish?')).toBeTruthy()
+  expect(screen.getByText('Keep my history visible')).toBeTruthy()
+  first.unmount()
+  render(<AskQuestionRow {...rowProps(block)} />)
+  expect(screen.getByText('Keep my history visible')).toBeTruthy()
+})
+
 /** Every pill the row can offer, by its visible copy. */
 const PILL = { reopen: '回答', review: '查看回答' } as const
 
@@ -187,7 +201,7 @@ describe('AskQuestionRow', () => {
     expect(screen.getByText('2/3 已回答')).toBeTruthy()
     expect(screen.queryByRole('button', { name: PILL.reopen })).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: PILL.review }))
-    expect(screen.getByRole('button', { expanded: true })).toBeTruthy()
+    expect(screen.queryByRole('button', { expanded: true })).toBeNull()
     expect(screen.getByText('the web app')).toBeTruthy()
     expect(reviewPanel).not.toHaveBeenCalled()
     expect(revealPanel).not.toHaveBeenCalled()
@@ -324,7 +338,6 @@ describe('AskQuestionRow', () => {
     expect(screen.queryByText('已结束')).toBeNull()
     expect(screen.queryByRole('button', { name: PILL.reopen })).toBeNull()
 
-    fireEvent.click(screen.getByRole('button', { expanded: false }))
     expect(screen.getByText('What do you want to accomplish?')).toBeTruthy()
     expect(screen.getByText('the web app')).toBeTruthy()
     expect(screen.getByText('未回答')).toBeTruthy()
@@ -385,14 +398,12 @@ describe('AskQuestionRow', () => {
     expect(screen.queryByText(/"pending"/)).toBeNull()
   })
 
-  it('expands a successful result as paired questions and readable answer lines', () => {
+  it('shows a successful result as paired questions and readable answer lines without expansion', () => {
     render(<AskQuestionRow {...rowProps(resultNode(READABLE_ARGS, answers([
       { id: 'scope', selected: ['deepseek-harness'] },
       { id: 'goal', selected: ['Develop a feature'], custom: 'Keep the API small' },
       { id: 'notes', selected: [] },
     ])))} />)
-
-    fireEvent.click(screen.getByRole('button', { expanded: false }))
 
     expect(screen.getByText('What do you want to accomplish?')).toBeTruthy()
     expect(screen.getByText('Develop a feature')).toBeTruthy()
@@ -435,7 +446,7 @@ describe('AskQuestionRow', () => {
     })
   })
 
-  it('an answered legacy call reads exactly as before timed questions existed: transcript, no pill', () => {
+  it('an answered legacy call shows its transcript directly without a panel pill', () => {
     // The projection never lists a call the blocking legacy tool made, so the
     // row has nothing to reopen and no panel to read the answers back in.
     const view = render(<AskQuestionRow {...rowProps(resultNode(READABLE_ARGS, answers([
@@ -448,7 +459,6 @@ describe('AskQuestionRow', () => {
     expect(screen.queryByRole('button', { name: PILL.review })).toBeNull()
     expect(screen.queryByRole('button', { name: PILL.reopen })).toBeNull()
     expect(view.container.querySelector('[class*="rowAction"]')).toBeNull()
-    fireEvent.click(screen.getByRole('button', { expanded: false }))
     expect(screen.getByText('the web app')).toBeTruthy()
     expect(screen.getByText('未回答')).toBeTruthy()
   })

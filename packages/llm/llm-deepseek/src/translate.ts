@@ -33,6 +33,11 @@ function indexOf(event: Record<string, unknown>): number {
 
 function updateUsage(usage: TokenUsage, raw: unknown): void {
   const fields = object(raw)
+  const creation = fields.cache_creation
+  if (typeof creation === 'object' && creation !== null && 'ephemeral_1h_input_tokens' in creation) {
+    const oneHour = creation.ephemeral_1h_input_tokens
+    if (typeof oneHour === 'number' && Number.isSafeInteger(oneHour) && oneHour >= 0) usage.cacheWrite1hTokens = oneHour
+  }
   const keys = { input_tokens: 'inputTokens', output_tokens: 'outputTokens', cache_read_input_tokens: 'cacheReadTokens', cache_creation_input_tokens: 'cacheWriteTokens' } as const
   for (const [wire, local] of Object.entries(keys)) {
     const value = fields[wire]
@@ -40,6 +45,7 @@ function updateUsage(usage: TokenUsage, raw: unknown): void {
     if (!Number.isSafeInteger(value) || (value as number) < 0) return malformed(`invalid ${wire}`)
     usage[local] = value as number
   }
+  if (usage.cacheWrite1hTokens !== undefined && usage.cacheWrite1hTokens > (usage.cacheWriteTokens ?? 0)) delete usage.cacheWrite1hTokens
 }
 
 function startBlock(event: Record<string, unknown>, index: number): Block {

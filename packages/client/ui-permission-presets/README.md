@@ -35,7 +35,7 @@ When the live catalog withdraws a preset, the composer closes its pending confir
 
 ### The Settings row
 
-The row derives its options from the host's dynamic `defaultPreset` enum, uses the same localized built-in labels as the current-session picker, and writes one settings mutation. Current-session-only contributions such as `auto` are absent. The value applies only when a later session is created; changing it never switches or rewrites the current session.
+The row derives its options from the host permission catalog, uses the same localized built-in labels as the current-session picker, and writes one settings mutation. Auto review appears while its reviewer integration is live and requires acknowledgement before it is saved as the default. The value applies only when a later session is created; changing it never switches or rewrites the current session.
 
 -----
 
@@ -80,7 +80,7 @@ No direct invalidation; the knob consumers own any request-prefix changes.
 These limits define the current permission surfaces. They are current package constraints, not a general policy comparison or a task backlog.
 
 - **The Settings row is Web-only** — non-Web clients may still switch the current session through `/permission`, but do not receive this browser contribution.
-- **Auto review is current-session-only** — the General-settings row intentionally omits it, and only visible picker selection receives the experimental confirmation; an explicitly typed `/permission auto` is already explicit consent.
+- **Auto review needs its integration** — both the General-settings default and current-session picker require the live reviewer. Visible selections require acknowledgement; an explicitly typed `/permission auto` is already explicit consent.
 - **Preset descriptions come from the host** — localized built-in labels may therefore appear beside a description written in another language.
 
 <a id="dev-note"></a>

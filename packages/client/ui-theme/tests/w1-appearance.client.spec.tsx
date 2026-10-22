@@ -1,88 +1,175 @@
 // @vitest-environment jsdom
 import { afterEach, expect, it, vi } from 'vitest'
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { createW1Appearance, validateAppearance, W1_DEFAULT } from '../src/client/w1-appearance.ts'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { stubConfigForm } from '@deepseek-ai/dsh-client-test-runtime'
+import { appearanceTokens, createW1Appearance, validateAppearance, W1_DEFAULT } from '../src/client/w1-appearance.ts'
 import { W1AppearanceControls } from '../src/client/W1Appearance.tsx'
 import { W1_PRESETS } from '../src/client/w1-presets.ts'
 import type { W1Appearance } from '../src/client/w1-appearance.ts'
+import type { ThemeSettings } from '../src/theme-settings.ts'
+import type { ConfigForm } from '@deepseek-ai/dsh-client-ui-settings/client'
 const controllers: ReturnType<typeof createW1Appearance>[] = []
+const settings = (appearance: W1Appearance | null = null): ThemeSettings => ({ appearance, preference:'system',fontSize:14,codeFontSize:11,terminalFontSize:13,textFontFamily:'',codeFontFamily:'',terminalFontFamily:'' })
+const selected = validateAppearance({ ...W1_PRESETS[0]!, preset: W1_PRESETS[0]!.id, css: 'body { --test: 1 }' })
 const saved = () => JSON.parse(localStorage.getItem('w1.appearance.v1') ?? 'null') as W1Appearance
-afterEach(() => {
-  cleanup(); controllers.splice(0).forEach((c) =>{  c.dispose() }); localStorage.clear()
-})
-function setup(storage?: Pick<Storage, 'getItem' | 'setItem'>) {
-  const theme = { overrideTokens: vi.fn(() => vi.fn()) }
-  const controller = createW1Appearance(theme, storage)
+const settle = () => act(async () => { await Promise.resolve()
+  await Promise.resolve() })
+afterEach(() => { cleanup()
+  controllers.splice(0).forEach((c)=>{ c.dispose() })
+  localStorage.clear()
+  delete document.body.dataset.w1Appearance })
+function setup({ ready=true,value=null,storage=localStorage }:{
+  ready?:boolean
+  value?:W1Appearance|null
+  storage?:Pick<Storage,'getItem'|'setItem'> }={}) {
+  const host=stubConfigForm<ThemeSettings>(),theme={ overrideTokens:vi.fn(()=>vi.fn()) }
+  if(ready)host.publish({ status:'ready',writable:true,revision:3,value:settings(value) })
+  const set=vi.fn<ConfigForm<ThemeSettings>['set']>(async (_field,value)=>{host.publish({ value:settings(validateAppearance(value)),revision:4 })
+    return true})
+  host.scope.set=set
+  const controller=createW1Appearance(theme,host.scope,storage)
   controllers.push(controller)
-  return { theme, controller }
+  return { host:{ ...host,set },theme,controller }
 }
-it('applies and persists a selected theme immediately and restores it after remount', () => {
-  const { controller, theme } = setup()
-  render(<W1AppearanceControls controller={controller} />)
-  fireEvent.change(screen.getByRole('combobox', { name: '主题' }), { target: { value: 'absolutely' } })
-  expect(theme.overrideTokens).toHaveBeenLastCalledWith('w1-appearance', expect.objectContaining({ '--dsw-alias-bg-base': { light: '#f9f9f7', dark: '#2d2d2b' } }))
-  expect(saved().preset).toBe('absolutely')
-  expect(screen.queryByRole('button', { name: '保存外观' })).toBeNull()
-  expect(screen.queryByRole('button', { name: '预览外观' })).toBeNull()
-  const second = setup()
-  expect(second.controller.getSnapshot().saved).toEqual(controller.getSnapshot().saved)
-  act(() => { second.controller.reset() })
+it('applies each palette to send, stop and bubble colors in both modes',()=>{
+  for(const p of W1_PRESETS){const t=appearanceTokens({ ...p,preset:p.id,css:'' })
+    for(const mode of ['light','dark'] as const){expect(t['--dsw-alias-button-info-fill']?.[mode]).toBe(p[mode].accent)
+      expect(t['--dsw-specific-bubble']?.[mode]).toContain(p[mode].accent)}}
+  expect(appearanceTokens(W1_DEFAULT)).toEqual({})
+})
+it('saves selection through the Host and restores it with an empty browser cache',async()=>{
+  const { controller,host }=setup()
+  render(<W1AppearanceControls controller={controller}/>)
+  fireEvent.change(screen.getByRole('combobox',{ name:'主题' }),{ target:{ value:selected.preset } })
+  expect(host.set).toHaveBeenCalledWith('appearance',expect.objectContaining({ preset:selected.preset }))
+  await settle()
+  expect(saved().preset).toBe(selected.preset)
+  const stored=host.scope.getSnapshot().value!.appearance!
+  localStorage.clear()
+  const restarted=setup({ value:stored })
+  expect(restarted.controller.getSnapshot().saved).toEqual(stored)
+  act(()=>{ restarted.controller.reset() })
+  await settle()
+  expect(restarted.host.set).toHaveBeenCalledWith('appearance',W1_DEFAULT)
   expect(saved()).toEqual(W1_DEFAULT)
 })
-it('retains the last applied palette while a hex value is incomplete and applies the completed edit', () => {
-  const { controller, theme } = setup()
-  render(<W1AppearanceControls controller={controller} />)
-  const field = screen.getByRole('textbox', { name: '强调色色值' })
-  fireEvent.change(field, { target: { value: '#123456' } })
+it('migrates legacy storage only after an empty durable section arrives and fences its revision',async()=>{
+  localStorage.setItem('w1.appearance.v1',JSON.stringify(selected))
+  const { controller,host }=setup({ ready:false })
+  expect(controller.getSnapshot().saved).toEqual(selected)
+  expect(host.mutate).not.toHaveBeenCalled()
+  host.publish({ status:'ready',writable:true,revision:7,value:settings() })
+  await settle()
+  expect(host.mutate).toHaveBeenCalledExactlyOnceWith([{ op:'set',path:['appearance'],value:selected }],7)
+  host.publish({ value:settings() })
+  expect(host.mutate).toHaveBeenCalledTimes(1)
+})
+it('a loaded Host value wins over a stale local cache and synchronizes the open form',async()=>{
+  localStorage.setItem('w1.appearance.v1',JSON.stringify(selected))
+  const { controller,host }=setup({ ready:false })
+  render(<W1AppearanceControls controller={controller}/>)
+  act(()=>{ host.publish({ status:'ready',writable:true,revision:5,value:settings(W1_DEFAULT) }) })
+  await waitFor(()=>{ expect(screen.getByRole<HTMLSelectElement>('combobox',{ name:'主题' }).value).toBe('w1') })
+  expect(host.mutate).not.toHaveBeenCalled()
+  expect(saved()).toEqual(W1_DEFAULT)
+})
+it('read failures retain valid colors and never write defaults',()=>{
+  localStorage.setItem('w1.appearance.v1',JSON.stringify(selected))
+  const { host,controller }=setup({ ready:false })
+  host.publish({ status:'unavailable' })
+  expect(controller.getSnapshot().saved).toEqual(selected)
+  expect(host.set).not.toHaveBeenCalled()
+  expect(host.mutate).not.toHaveBeenCalled()
+})
+it('failed Host writes restore the last durable value without reporting success',async()=>{
+  const { host,controller }=setup({ value:selected })
+  host.set.mockRejectedValue(new Error('offline'))
+  controller.reset()
+  await settle()
+  expect(controller.getSnapshot().saved).toEqual(selected)
+  expect(controller.getSnapshot().message).toContain('保存失败')
+  expect(saved()).toEqual(selected)
+})
+it('earlier acknowledgements cannot replace a later edit',async()=>{
+  const { host,controller }=setup({ value:W1_DEFAULT })
+  let first!:(v:boolean)=>void,second!:(v:boolean)=>void
+  host.set.mockImplementationOnce(()=>new Promise<boolean>((r)=>{first=r}))
+    .mockImplementationOnce(()=>new Promise<boolean>((r)=>{second=r}))
+  controller.update(selected)
+  const next={ ...selected,css:'body { --test: 2 }' }
+  controller.update(next)
+  first(true)
+  await settle()
+  expect(controller.getSnapshot().saved).toEqual(next)
+  expect(controller.getSnapshot().message).toContain('正在保存')
+  second(true)
+  await settle()
+  expect(saved()).toEqual(next)
+})
+it('a migration conflict adopts the newer Host preference instead of overwriting it',async()=>{
+  localStorage.setItem('w1.appearance.v1',JSON.stringify(selected))
+  const { host,controller }=setup({ ready:false })
+  host.mutate.mockImplementation(async()=>{host.publish({ value:settings(W1_DEFAULT) })
+    return false})
+  host.publish({ status:'ready',writable:true,revision:9,value:settings() })
+  await settle()
+  expect(controller.getSnapshot().saved).toEqual(W1_DEFAULT)
+  expect(host.mutate).toHaveBeenCalledTimes(1)
+})
+it('a later rejected edit keeps the earlier accepted palette in both runtime and cache',async()=>{
+  const { host,controller }=setup({ value:W1_DEFAULT })
+  let accept!:(v:boolean)=>void,reject!:(e:Error)=>void
+  host.set.mockImplementationOnce(()=>new Promise<boolean>((r)=>{accept=r}))
+    .mockImplementationOnce(()=>new Promise<boolean>((_r,j)=>{reject=j}))
+  controller.update(selected)
+  controller.reset()
+  accept(true)
+  await settle()
+  reject(Error('offline'))
+  await settle()
+  expect(controller.getSnapshot().saved).toEqual(selected)
+  expect(saved()).toEqual(selected)
+})
+it('Host persistence works when localStorage is unavailable',async()=>{
+  const { controller,host }=setup({ storage:{ getItem:()=>{throw Error('blocked')},setItem:()=>{throw Error('blocked')} } })
+  controller.update(selected)
+  await settle()
+  expect(host.set).toHaveBeenCalled()
+  expect(controller.getSnapshot().message).toBe('已自动保存')
+})
+it('keeps incomplete color drafts and rejects external CSS without writing it',async()=>{
+  const { controller,host }=setup()
+  render(<W1AppearanceControls controller={controller}/>)
+  const field=screen.getByRole('textbox',{ name:'强调色色值' })
+  fireEvent.change(field,{ target:{ value:'#123456' } })
+  await settle()
+  fireEvent.change(field,{ target:{ value:'#123' } })
   expect(saved().light.accent).toBe('#123456')
-  const calls = theme.overrideTokens.mock.calls.length
-  fireEvent.change(field, { target: { value: '#123' } })
-  expect(saved().light.accent).toBe('#123456')
-  expect(theme.overrideTokens).toHaveBeenCalledTimes(calls)
   fireEvent.blur(field)
   expect(screen.getByRole('alert').textContent).toContain('#RRGGBB')
-  fireEvent.change(field, { target: { value: '#abcdef' } })
-  expect(saved().light.accent).toBe('#abcdef')
-  fireEvent.click(screen.getByRole('button', { name: '深色' }))
-  fireEvent.change(screen.getByLabelText('背景选择器'), { target: { value: '#112233' } })
-  expect(saved().dark.surface).toBe('#112233')
-  expect(saved().light.accent).toBe('#abcdef')
-})
-it('applies CSS as it is edited and preserves the last valid CSS when external resources are rejected', () => {
-  const { controller } = setup()
-  render(<W1AppearanceControls controller={controller} />)
   fireEvent.click(screen.getByText('高级 · 自定义 CSS'))
-  const field = screen.getByRole('textbox', { name: '自定义 CSS' })
-  const css = 'body { --test: 1 }'
-  fireEvent.change(field, { target: { value: css } })
-  expect(document.querySelector('[data-w1-appearance]')?.textContent).toBe(css)
-  expect(saved().css).toBe(css)
-  fireEvent.change(field, { target: { value: '@import "https://example.test/style.css"' } })
-  expect(screen.getByRole('alert').textContent).toContain('@import')
-  expect(saved().css).toBe(css)
-  expect(document.querySelector('[data-w1-appearance]')?.textContent).toBe(css)
-  fireEvent.click(screen.getByRole('button', { name: '恢复默认' }))
-  expect(saved()).toEqual(W1_DEFAULT)
-  expect(document.querySelector('[data-w1-appearance]')?.textContent).toBe('')
+  const css=screen.getByRole('textbox',{ name:'自定义 CSS' })
+  fireEvent.change(field,{ target:{ value:'#abcdef' } })
+  await settle()
+  fireEvent.change(css,{ target:{ value:'body { --test: 1 }' } })
+  await settle()
+  const calls=host.set.mock.calls.length
+  fireEvent.change(css,{ target:{ value:'@import "https://example.test/x.css"' } })
+  expect(host.set).toHaveBeenCalledTimes(calls)
+  expect(saved().css).toContain('--test: 1')
 })
-it('reports a persistence failure without claiming success or applying an unsaved theme', () => {
-  const { controller, theme } = setup({ getItem: () => null, setItem: () => { throw new Error('Storage is full') } })
-  render(<W1AppearanceControls controller={controller} />)
-  fireEvent.change(screen.getByRole('combobox', { name: '主题' }), { target: { value: 'absolutely' } })
-  expect(screen.getByRole('alert').textContent).toBe('Storage is full')
-  expect(controller.getSnapshot().saved).toEqual(W1_DEFAULT)
-  expect(theme.overrideTokens).toHaveBeenCalledTimes(1)
+it('boot snapshot keeps the saved palette while Host settings are loading',()=>{
+  document.body.dataset.w1Appearance=JSON.stringify(selected)
+  const { controller }=setup({ ready:false })
+  expect(controller.getSnapshot().saved).toEqual(selected)
 })
-it('rejects malformed imports while accepting every recovered palette', () => {
-  for (const preset of W1_PRESETS) expect(validateAppearance({ preset: preset.id, light: preset.light, dark: preset.dark, css: '' }).preset).toBe(preset.id)
-  expect(() => validateAppearance({ ...W1_DEFAULT, light: { ...W1_DEFAULT.light, accent: 'red' } })).toThrow('#RRGGBB')
-})
-it('removes its CSS and token override when unloaded without deleting saved preferences', () => {
-  const retract = vi.fn()
-  const controller = createW1Appearance({ overrideTokens: () => retract })
-  controller.update({ ...W1_DEFAULT, css: 'body { --test: 1 }' })
+it('validates all presets and disposes subscriptions and CSS without deleting saved settings',async()=>{
+  for(const p of W1_PRESETS)expect(validateAppearance({ ...p,preset:p.id,css:'' }).preset).toBe(p.id)
+  const { controller,host }=setup()
+  controller.update(selected)
+  await settle()
   controller.dispose()
-  expect(document.querySelector('[data-w1-appearance]')).toBeNull()
-  expect(retract).toHaveBeenCalled()
-  expect(saved().css).toContain('--test')
+  expect(host.listenerCount()).toBe(0)
+  expect(saved()).toEqual(selected)
+  expect(document.querySelector('[data-w1-appearance="custom"]')).toBeNull()
 })

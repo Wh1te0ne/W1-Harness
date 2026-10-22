@@ -74,6 +74,85 @@ beforeEach(() => {
 })
 
 describe('PiAiAdapter provider routing', () => {
+  it.each([undefined, 'low', 'high', 'max'] as const)('keeps DeepSeek gateway effort %s separate from other models', async (effort) => {
+    const server = await mockServer([{ events: textEvents }, { events: textEvents }])
+    const ctx = new Context()
+    onTestFinished(() => ctx.fiber.dispose())
+    await ctx.plugin(LlmRuntime)
+    await ctx.plugin(LlmPiAi, {
+      providers: {
+        gateway: {
+          apiKeyEnv: 'PI_TEST_KEY', api: 'openai-completions', baseURL: server.url,
+          models: [
+            {
+              id: 'deepseek-test', reasoningEfforts: { low: 'low', high: 'high', max: 'max' },
+              compat: { thinkingFormat: 'deepseek', supportsDeveloperRole: false },
+            },
+            { id: 'other-model' },
+          ],
+        },
+      },
+    })
+    await assemble(ctx, {
+      provider: 'gateway', model: 'deepseek-test', messages: [],
+      ...effort === undefined ? {} : { reasoningEffort: ReasoningEffortId(effort) },
+    })
+    if (effort === undefined) {
+      expect(server.requests[0]).not.toHaveProperty('thinking')
+      expect(server.requests[0]).not.toHaveProperty('reasoning_effort')
+    } else {
+      expect(server.requests[0]).toMatchObject({ thinking: { type: 'enabled' }, reasoning_effort: effort })
+    }
+    await assemble(ctx, { provider: 'gateway', model: 'other-model', messages: [] })
+    expect(server.requests[1]).not.toHaveProperty('thinking')
+    expect(server.requests[1]).not.toHaveProperty('reasoning_effort')
+  })
+
+  it.each(['low', 'high', 'max'] as const)('sends only the selected %s effort to a strict Responses gateway', async (effort) => {
+    const server = await mockServer([{ status: 401, body: JSON.stringify({ error: { message: 'request captured' } }) }])
+    const ctx = new Context()
+    onTestFinished(() => ctx.fiber.dispose())
+    await ctx.plugin(LlmRuntime)
+    await ctx.plugin(LlmPiAi, {
+      providers: {
+        ark: {
+          apiKeyEnv: 'PI_TEST_KEY', api: 'openai-responses', baseURL: server.url,
+          responsesReasoningFormat: 'effort-only',
+          models: [{ id: 'deepseek-test', reasoningEfforts: { low: 'low', high: 'high', max: 'max' } }],
+        },
+      },
+    })
+    const info = await ctx.llm.resolveModelInfo('ark', 'deepseek-test')
+    expect(info.reasoning?.efforts.map(value => value.id)).toEqual(['low', 'high', 'max'])
+    await assemble(ctx, {
+      provider: 'ark', model: 'deepseek-test', reasoningEffort: ReasoningEffortId(effort), messages: [],
+    })
+    expect(server.requests[0]).toMatchObject({ reasoning: { effort } })
+    expect(server.requests[0]).not.toHaveProperty('reasoning.summary')
+    expect(server.requests[0]).not.toHaveProperty('include')
+  })
+
+  it('preserves OpenAI reasoning summaries unless the route opts out', async () => {
+    const server = await mockServer([{ status: 401, body: JSON.stringify({ error: { message: 'request captured' } }) }])
+    const ctx = new Context()
+    onTestFinished(() => ctx.fiber.dispose())
+    await ctx.plugin(LlmRuntime)
+    await ctx.plugin(LlmPiAi, {
+      providers: {
+        gateway: {
+          apiKeyEnv: 'PI_TEST_KEY', api: 'openai-responses', baseURL: server.url,
+          models: [{ id: 'reasoner', reasoningEfforts: { high: 'high' } }],
+        },
+      },
+    })
+    await assemble(ctx, {
+      provider: 'gateway', model: 'reasoner', reasoningEffort: ReasoningEffortId('high'), messages: [],
+    })
+    expect(server.requests[0]).toMatchObject({
+      reasoning: { effort: 'high', summary: 'auto' }, include: ['reasoning.encrypted_content'],
+    })
+  })
+
   it('resolves a catalog model dynamically and uses a private endpoint', async () => {
     const server = await mockServer([{ events: textEvents }])
     const ctx = await harness(server.url)
@@ -86,7 +165,7 @@ describe('PiAiAdapter provider routing', () => {
     })
     expect(result.message.content).toEqual([{ type: 'text', text: 'hello' }])
     expect(result.finish).toEqual({ kind: 'stop' })
-    expect(result.usage).toEqual({ inputTokens: 3, outputTokens: 1, totalTokens: 4 })
+    expect(result.usage).toEqual({ inputTokens: 3, outputTokens: 1, totalTokens: 4, billingParameters: { outputConfigEffort: null } })
     expect(server.paths).toEqual(['/chat/completions'])
   })
 

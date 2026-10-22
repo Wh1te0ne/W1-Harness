@@ -7,6 +7,7 @@
  */
 
 import { pathToFileURL } from 'node:url'
+import { installStartupTiming } from './startup-timing.ts'
 import { readFileSync } from 'node:fs'
 import { inspect, parseEnv } from 'node:util'
 import { basename, dirname, isAbsolute, resolve } from 'node:path'
@@ -1218,6 +1219,7 @@ export async function boot(
   // Two failure labels: `prepare` runs before any config-tree entry mounts,
   // so its failure is host setup, not the plugin tree.
   let stage = 'host preparation failed'
+  let finishTiming: ((outcome?: 'ready' | 'failed') => void) | undefined
   try {
     ctx.baseUrl = pathToFileURL(dirname(absoluteConfigPath)).href + '/'
     ctx.provide('dshHomePath', dshHomePath)
@@ -1228,6 +1230,9 @@ export async function boot(
     }, { global: true, prepend: true })
     await ctx.plugin(Loader)
     await prepare?.(ctx)
+    if (process.env.DSH_STARTUP_TRACE === '1') {
+      finishTiming = installStartupTiming(ctx, (record) => { console.info('[dsh-startup-plugin]', JSON.stringify(record)) })
+    }
     stage = 'plugin tree failed to load'
     await mountRootInclude(ctx, absoluteConfigPath, patches, bareModuleBaseUrl, binName)
     // A surface can finish and dispose the whole tree while startup is still
@@ -1240,6 +1245,7 @@ export async function boot(
     await auditStartupEntries(ctx, binName)
     return ctx
   } catch (cause) {
+    finishTiming?.('failed')
     // Root-fiber disposal contains cleanup failures per observer (Cordis
     // fiber.ts hardening) and a repeated call returns the settled single-shot
     // result, so this await cannot reject and replace `cause`.
@@ -1261,6 +1267,7 @@ export async function boot(
       : deepest instanceof Error && deepest !== cause ? `\n${deepest.stack ?? deepest.message}` : ''
     throw new Error(`${binName}: ${stage}: ${detail}${stack}`, { cause })
   } finally {
+    finishTiming?.()
     await diagnostics.fiber.dispose()
   }
 }

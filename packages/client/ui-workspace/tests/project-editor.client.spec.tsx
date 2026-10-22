@@ -23,6 +23,7 @@ it('saves a new primary atomically and only then allows the former primary to be
 it('keeps unsaved folder edits out of persisted data when cancelled', async () => {
   const save=vi.fn(async()=>{}),close=vi.fn()
   render(<ProjectEditor t={t} save={save} close={close} pickFolder={async()=>'/new-folder'} />)
+  expect(screen.queryByText(/W1 管理的项目工作目录/)).toBeNull()
   fireEvent.click(screen.getByRole('button',{ name:/添加文件夹/ }))
   await screen.findByText('/new-folder')
   fireEvent.click(screen.getByRole('button',{ name:'取消' }))

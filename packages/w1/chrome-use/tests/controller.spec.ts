@@ -94,6 +94,7 @@ it('groups only used pages, reuses the window group and preserves it after relea
   expect(api.tabs.group).not.toHaveBeenCalled()
   await controller.execute({ action: 'read', tab: '1' }, signal, 'chat-a')
   expect(groups.size).toBe(1)
+  expect(groups.get(1)?.title).toBe('W1 Harness')
   expect(tabs.get(1)?.groupId).toBe(1)
   expect(tabs.get(2)?.groupId).toBeUndefined()
   controller.release('chat-a')
@@ -103,6 +104,27 @@ it('groups only used pages, reuses the window group and preserves it after relea
   expect(groups.size).toBe(1)
   expect(tabs.get(2)?.groupId).toBe(1)
   expect(api.tabs.update).not.toHaveBeenCalled()
+})
+
+it('renames the legacy group in place without moving its existing tab', async () => {
+  const { controller, api, signal, tabs, groups } = await fixture()
+  groups.set(7, { id: 7, windowId: 1, title: 'W1' })
+  tabs.get(1)!.groupId = 7
+  await controller.execute({ action: 'read', tab: '1' }, signal, 'chat-a')
+  expect(groups.get(7)?.title).toBe('W1 Harness')
+  expect(groups.size).toBe(1)
+  expect(api.tabs.group).not.toHaveBeenCalled()
+  expect(api.tabs.update).not.toHaveBeenCalled()
+})
+
+it('prefers the named Harness group when both new and legacy names exist', async () => {
+  const { controller, signal, tabs, groups } = await fixture()
+  groups.set(7, { id: 7, windowId: 1, title: 'W1' })
+  groups.set(8, { id: 8, windowId: 1, title: 'W1 Harness' })
+  await controller.execute({ action: 'read', tab: '1' }, signal, 'chat-a')
+  expect(tabs.get(1)?.groupId).toBe(8)
+  expect(groups.get(7)?.title).toBe('W1')
+  expect(groups.size).toBe(2)
 })
 
 it('does not silently unpin a page to group it', async () => {

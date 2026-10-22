@@ -20,17 +20,18 @@ window.__ModuleLoader__.load({
       return Object.fromEntries(Object.entries(spec).map(([key, parse]) => [key, parse(v[key])]))
     }
     const bucketSpec = Object.fromEntries(fields.map(key => [key, number]))
+    for (const key of ['unpricedCalls','cacheWrite1h','estimatedCalls','stalePriceCalls']) bucketSpec[key] = v => number(v ?? 0)
     const buckets = object(bucketSpec)
-    const costRow = object({ provider: string, model: string, bucket: string, tokens: number, rate: number, cost: number, priced: boolean, plan: boolean })
+    const costRow = object({ provider: string, model: string, bucket: string, tokens: number, rate: number, cost: number, apiCost:v=>number(v??0), priced: boolean, plan: boolean })
     const sessionId = v => string(v ?? '')
-    const callRow = object({ sessionId, logSeq: v => nullableNumber(v ?? null), kind: string, turn: nullableNumber, step: nullableNumber, provider: string, model: string, atMs: number, cost: number, apiCost: number, plan: boolean, priced: boolean, longContext: boolean, rows: array(costRow) })
+    const callRow = object({ calls:v=>number(v??1),receiptId:v=>v==null?null:string(v),outcome:v=>v==null?null:string(v),sessionId, logSeq: v => nullableNumber(v ?? null), kind: string, turn: nullableNumber, step: nullableNumber, provider: string, model: string, atMs: number, cost: number, apiCost: number, plan: boolean, priced: boolean, longContext: boolean, rows: array(costRow) })
     const parseStatistics = object({ from: string, to: string, retainedFrom: string, retainedTo: string, totals: buckets,
       days: array(object({ ...bucketSpec, date: string })), models: array(object({ ...bucketSpec, key: string, provider: string, model: string, priced: boolean })),
       sessions: array(object({ ...bucketSpec, id: string, title: string, own: v => v ? buckets(v) : null, orphan: v => boolean(v ?? false), unpriced: v => boolean(v ?? false), childCount: v => number(v ?? 0),
         children: v => array(object({ ...bucketSpec, id: string, title: string, parentId: string, unpriced: boolean }))(v ?? []) })), providers: array(string), modelOptions: array(string),
       mainSessionCount: v => number(v ?? 0), childCount: v => number(v ?? 0), archived: v => v ? buckets(v) : null, unassigned: v => v ? buckets(v) : null,
       sessionCount: number, offset: number, unassignedCost: number, unmodeledCost: number })
-    const parseDetail = object({ found: boolean, cost: number, apiCost: number, rows: array(costRow), calls: array(callRow), totalCalls: number, offset: number, recorded: buckets, agents: v => array(object({ ...bucketSpec, id: string, title: string }))(v ?? []),
+    const parseDetail = object({ found: boolean, cost: number, apiCost: number, rows: array(costRow), calls: array(callRow), totalCalls: number, representedCalls:v=>v==null?null:number(v), offset: number, recorded: buckets, agents: v => array(object({ ...bucketSpec, id: string, title: string }))(v ?? []),
       callShares: v => array(object({ index: number, cost: number, apiCost: number, tokens: number, calls: number, other: boolean, unpriced: boolean }))(v ?? []),
       kinds: array(object({ ...bucketSpec, kind: string, unpriced: boolean })), turns: array(object({ ...bucketSpec, sessionId, turn: nullableNumber, unpriced: boolean })), totalTurns: number, turnOffset: number,
       stepShares: object(Object.fromEntries(['cost', 'calls'].map(key => [key, array(object({ ...bucketSpec, sessionId, turn: nullableNumber, step: nullableNumber, other: boolean, unpriced: boolean }))]))) })
@@ -246,7 +247,7 @@ window.__ModuleLoader__.load({
     // Keep categorical colors consistent across standalone and peer panels.
     // Own variables avoid inheriting another plugin's muted category palette.
     const contextColors = ['#627bff', '#f6b64b', '#30c89c', '#ad78f5', '#fb8c6f', '#42b4f5', '#24bdc9', '#a0aec5'].map((color, i) => 'var(--cm-chart-' + i + ',' + color + ')')
-    const bucketColors = { input: 0, cacheRead: 6, cacheWrite: 1, output: 5, reasoning: 3 }
+    const bucketColors = { input: 0, cacheRead: 6, cacheWrite: 1, cacheWrite1h: 2, output: 5, reasoning: 3 }
     const spendCss = `
       .cm-context-compact>.cm-plan-head{margin-bottom:10px}.cm-context-compact .cm-context-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.cm-context-compact .cm-context-current,.cm-context-compact .cm-plan-last{min-width:0;container-type:inline-size}.cm-context-compact .cm-plan-last{border:0;border-left:1px solid var(--cmp-border);padding:0 0 0 18px;margin:0}.cm-context-compact .cm-plan-summary{margin:10px 0;padding:8px 0;gap:8px}.cm-context-compact .cm-plan-amount{font-size:18px}.cm-context-compact .cm-cost-chart{margin-top:10px;gap:6px 10px}.cm-context-compact .cm-cost-legend{grid-template-columns:1fr}.cm-context-compact .cm-plan-sub{font-size:10px}.cm-context-compact .cm-plan-total{margin-top:6px!important}.cm-context-compact .cm-plan-note{grid-column:1/-1}
       @container(max-width:740px){.cm-context-compact .cm-context-columns{grid-template-columns:1fr}.cm-context-compact .cm-plan-last{border:0;border-top:1px solid var(--cmp-border);padding:12px 0 0}}
@@ -317,7 +318,7 @@ window.__ModuleLoader__.load({
       const countText = value => Math.round(value).toLocaleString()
       const costText = value => priced ? '≈ ' + money(value) : text('未定价', 'Unpriced')
       const call = data.lastCall
-      const buckets = { input: text('非缓存输入', 'Uncached input'), cacheRead: text('缓存读取', 'Cache reads'), cacheWrite: text('缓存写入', 'Cache writes'), output: text('输出（含推理 Token）', 'Output (including reasoning tokens)'), reasoning: text('单独推理费用', 'Separate reasoning fees') }
+      const buckets = { input: text('非缓存输入', 'Uncached input'), cacheRead: text('缓存读取', 'Cache reads'), cacheWrite: text('缓存写入', 'Cache writes'), cacheWrite1h:text('缓存写入（1h）','Cache writes (1h)'), output: text('输出（含推理 Token）', 'Output (including reasoning tokens)'), reasoning: text('单独推理费用', 'Separate reasoning fees'),legacy:text('历史汇总（费用未拆分）','Historical aggregate (unsplit cost)') }
       return wrap(el('div', { className: 'cm-context-columns' },
         el('div', { className: 'cm-context-current' }, el('p', { className: 'cm-plan-sub' }, data.provider + ' / ' + data.model),
         el('div', { className: 'cm-plan-summary' }, el('div', null, el('div', { className: 'cm-plan-sub' }, text('当前上下文', 'Current context')), el('div', { className: 'cm-plan-amount' }, '≈ ' + countText(data.contextTokens) + ' tokens')),
@@ -329,7 +330,7 @@ window.__ModuleLoader__.load({
             el('div', { className: 'cm-plan-part-meta' }, el('span', null, '≈ ' + countText(row.tokens) + ' tokens'), el('span', null, priced ? pct(row.cost, breakdown.cost) : '—')))
         })))),
         call ? el('section', { className: 'cm-plan-last' }, el('h3', null, text('最近一次调用 · 用量计费', 'Latest call · usage-based costs')),
-          el('p', { className: 'cm-plan-sub' }, call.provider + ' / ' + call.model + ' · ' + new Date(call.atMs).toLocaleString()),
+          el('p', { className: 'cm-plan-sub' }, call.provider + ' / ' + call.model + ' · ' + (call.kind==='legacy'?new Date(call.atMs).toLocaleDateString():new Date(call.atMs).toLocaleString())),
           el(CostBreakdown, { rows: call.rows.filter(row => row.tokens > 0 && (row.bucket !== 'reasoning' || row.rate > 0)).map(row => ({ key: row.bucket, label: buckets[row.bucket] ?? row.bucket, tokens: row.tokens, value: row.cost, amount: call.priced ? money(row.cost) : text('未定价', 'Unpriced'), color: contextColors[bucketColors[row.bucket] ?? 7] })), total: call.priced ? call.cost : 0, label: text('费用占比', 'Cost share'), text }),
           el('details', { className: 'cm-cost-table', open: expanded }, el('summary', null, text('调用计费明细', 'Call billing details')), el('ul', { className: 'cm-plan-parts', style: { marginTop: 12 } }, ...call.rows.filter(row => row.bucket !== 'reasoning' || row.rate > 0).map(row => el('li', { key: row.bucket },
             el('div', { className: 'cm-plan-part-head' }, el('span', null, buckets[row.bucket] ?? row.bucket), el('span', null, call.priced ? money(row.cost) : text('未定价', 'Unpriced'))),
@@ -663,12 +664,12 @@ window.__ModuleLoader__.load({
       `),
         el('section', { className: 'cm-plan cm-call-bill', 'aria-label': text('本次计费明细', 'Call billing breakdown') },
           el('div', { className: 'cm-stat-panel-head' }, el('h3', null, call.plan ? text('订阅用量折算', 'Plan equivalent') : text('API 费用', 'API cost')), el('strong', { className: 'cm-stat-value' }, call.priced ? money(call.cost) : '?')),
-          el('p', { className: 'cm-stat-sub' }, new Date(call.atMs).toLocaleString()),
+          el('p', { className: 'cm-stat-sub' }, (call.kind==='legacy'?new Date(call.atMs).toLocaleDateString():new Date(call.atMs).toLocaleString())),
           el(CostBreakdown, { rows: chartRows, total: call.cost, label: text('本次费用构成', 'This call’s costs'), text, amounts: true, onSelect: row => setView(['output', 'reasoning'].includes(row.key) ? 'output' : 'input') }),
           el('div', { className: 'cm-stat-scroll' }, el('table', { className: 'cm-stat-table' },
             el('thead', null, el('tr', null, ...[text('计费项目', 'Component'), 'Tokens', text('单价 / 百万', 'Rate / 1M'), text('金额', 'Cost'), text('占比', 'Share')].map(label => el('th', { key: label }, label)))),
             el('tbody', null, ...rows.map(row => { const included = row.bucket === 'reasoning' && row.priced && row.rate === 0; return el('tr', { key: row.bucket },
-              el('td', null, names[row.bucket]), el('td', null, row.tokens.toLocaleString()), el('td', null, row.priced ? money(row.rate) : '?'),
+              el('td', null, names[row.bucket]), el('td', null, row.tokens.toLocaleString()), el('td', null, row.priced ? (row.bucket==='legacy'?'—':money(row.rate)) : '?'),
               el('td', null, included ? text('未单独计费', 'No separate charge') : row.priced ? money(row.cost) : '?'), el('td', null, row.priced && !included ? pct(row.cost, call.cost) : '—')) }))))),
         call.logSeq != null ? el(CallInspection, { api, sessionId: call.sessionId || sessionId, seq: call.logSeq, atMs: call.atMs, revision, text, view, onViewChange: setView })
           : el('p', { className: 'cm-stat-sub' }, text('未保存调用内容', 'Call content not stored')))
@@ -680,10 +681,11 @@ window.__ModuleLoader__.load({
       useEffect(() => { setOffset(0); setPages([]); setExpanded(''); setCollapsed([]) }, [sessionId, revision, basis])
       useEffect(() => { if (result.value?.offset === offset) setPages(previous => offset === 0 ? result.value.steps : [...new Map([...previous, ...result.value.steps].map(row => [row.key, row])).values()]) }, [result.value, offset])
       const value = result.value
-      const names = { input: text('输入', 'Input'), cacheRead: text('缓存读取', 'Cache read'), cacheWrite: text('缓存写入', 'Cache write'), output: text('输出', 'Output'), reasoning: text('推理', 'Reasoning') }
-      const kindName = kind => ({ model: text('模型调用', 'Model calls'), compaction: text('上下文压缩', 'Compaction'), search: text('原生搜索', 'Native search') })[kind] ?? kind
+      const names = { input: text('输入', 'Input'), cacheRead: text('缓存读取', 'Cache read'), cacheWrite: text('缓存写入', 'Cache write'), cacheWrite1h:text('缓存写入（1h）','Cache write (1h)'), output: text('输出', 'Output'), reasoning: text('推理', 'Reasoning'),legacy:text('历史汇总（费用未拆分）','Historical aggregate (unsplit cost)') }
+      const kindName = kind => ({ model: text('模型调用', 'Model calls'), compaction: text('上下文压缩', 'Compaction'), search: text('原生搜索', 'Native search'),legacy:text('历史汇总','Historical aggregate'),'reply-selection':text('回复建议选模','Suggestion model selection'),'reply-suggestion':text('回复建议','Reply suggestion'),'session-title':text('标题生成','Title generation'),'side-chat':text('旁路对话','Side chat') })[kind] ?? kind
       const selectedRows = row => row.rows.filter(r => basis === 'total' || (basis === 'plan' ? r.plan : !r.plan))
       const bucketCost = (row, buckets) => {
+        if(row.kind==='legacy')return '—'
         const parts = selectedRows(row).filter(r => buckets.includes(r.bucket))
         return money(parts.reduce((n, r) => n + r.cost, 0)) + (parts.some(r => !r.priced) ? ' + ?' : '')
       }
@@ -716,7 +718,7 @@ window.__ModuleLoader__.load({
             el('div', { style: { textAlign: 'right' } }, el('strong', null, money(amount(row, basis)) + (row.unpriced ? ' + ?' : '')), el('small', null, pct(amount(row, basis), total) + text(' 会话费用', ' of session cost')))),
             el(CostBreakdown, { rows: [...parts.values()].map(p => ({ ...p, amount: money(p.value) + (p.unpriced ? ' + ?' : '') })), total: amount(row, basis), label: text('本步费用', 'Step cost'), text, amounts: true }),
             isOpen(row) ? el('div', { className: 'cm-step-rates cm-stat-scroll' }, el('table', { className: 'cm-stat-table' }, el('thead', null, el('tr', null, ...[text('计费项目', 'Billing item'), 'Tokens', text('单价 / 百万', 'Rate / million'), text('金额', 'Cost')].map(label => el('th', { key: label }, label)))),
-              el('tbody', null, ...selectedRows(row).map((r, i) => el('tr', { key: i }, el('td', { title: r.provider + ' / ' + r.model }, names[r.bucket] ?? r.bucket), el('td', null, r.tokens.toLocaleString()), el('td', null, r.priced ? money(r.rate) : '—'), el('td', null, r.priced ? money(r.cost) : text('未定价', 'Unpriced'))))))) : null)
+              el('tbody', null, ...selectedRows(row).map((r, i) => el('tr', { key: i }, el('td', { title: r.provider + ' / ' + r.model }, names[r.bucket] ?? r.bucket), el('td', null, r.tokens.toLocaleString()), el('td', null, r.bucket==='legacy'?'—':r.priced ? money(r.rate) : '—'), el('td', null, r.priced ? money(r.cost) : text('未定价', 'Unpriced'))))))) : null)
         })) : null), individualOpen && shown.length < value.totalSteps ? el('div', { className: 'cm-step-more' }, button(result.loading ? text('读取中…', 'Loading…') : text('展开更多步骤', 'Show more steps'), () => setOffset(offset + 100), { disabled: result.loading })) : null)
       return el('section', { className: 'cm-step-costs cm-plan', 'aria-label': text('步骤计费', 'Step billing') }, el('style', null, `
         .cm-stat-session .cm-step-costs{margin:6px 0}.cm-step-costs .cm-step-name{border:0!important;padding:0!important;background:transparent!important;flex-direction:row!important;align-items:center;gap:8px!important}.cm-step-costs .cm-step-name small{max-width:150px!important}.cm-step-cost-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:start}.cm-step-cost-grid>section{min-width:0}.cm-step-cost-grid>section:last-child{grid-column:1/-1}.cm-step-costs .cm-spend-card{padding:12px!important}.cm-step-costs .cm-cost-chart{grid-template-columns:98px minmax(0,1fr);gap:4px 8px;margin-top:8px}.cm-step-costs .cm-cost-donut{width:98px;height:98px}.cm-step-costs .cm-cost-center{inset:24px 12px}.cm-step-costs .cm-cost-center b{font-size:18px}.cm-step-costs .cm-cost-key{padding:4px 2px!important;font-size:11px!important}.cm-step-costs .cm-cost-legend{grid-template-columns:1fr}.cm-step-costs .cm-cost-inspect{min-height:16px}.cm-step-costs .cm-stat-table td,.cm-step-costs .cm-stat-table th{padding:6px;font-size:11px}.cm-step-costs td:not(:first-child){white-space:nowrap}.cm-step-costs .cm-step-name{display:flex;flex-direction:column;gap:2px;min-width:100px;font-size:12px}.cm-step-costs .cm-step-name small{color:var(--cm-muted);font-size:10px;max-width:190px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cm-step-costs .cm-step-rates{padding:10px;background:var(--cm-surface)}.cm-step-costs .cm-step-more{margin-top:8px;text-align:center}.cm-step-costs .cm-stat-panel-head{margin-bottom:6px}
@@ -730,7 +732,7 @@ window.__ModuleLoader__.load({
                 el('td', null, el('button', { type: 'button', className: 'cm-step-name', 'aria-expanded': isOpen(row), onClick: () => toggle(row) },
                   el('span', null, (isOpen(row) ? '⌄ ' : '› ') + (row.sessionId !== sessionId ? text('子代理 · ', 'Subagent · ') : '') + (row.turn == null ? kindName(row.kind) : text('轮次 ', 'Turn ') + row.turn + (row.step == null ? '' : text(' · 步骤 ', ' · step ') + row.step))),
                   el('small', { title: row.tools.join(' + ') }, row.tools.length ? row.tools.join(' + ') : kindName(row.kind)))),
-                el('td', null, bucketCost(row, ['input'])), el('td', null, bucketCost(row, ['output', 'reasoning'])), el('td', null, bucketCost(row, ['cacheRead', 'cacheWrite'])),
+                el('td', null, bucketCost(row, ['input'])), el('td', null, bucketCost(row, ['output', 'reasoning'])), el('td', null, bucketCost(row, ['cacheRead', 'cacheWrite','cacheWrite1h'])),
                 el('td', null, money(amount(row, basis)) + (row.unpriced ? ' + ?' : '')), el('td', null, pct(amount(row, basis), total))),
                 isOpen(row) ? el('tr', null, el('td', { colSpan: 6, className: 'cm-step-rates' }, el('table', { className: 'cm-stat-table' }, el('thead', null, el('tr', null, ...[text('模型 / 项目', 'Model / item'), 'Tokens', text('单价 / 百万', 'Rate / million'), text('金额', 'Cost')].map(label => el('th', { key: label }, label)))),
                   el('tbody', null, ...selectedRows(row).map((r, i) => el('tr', { key: i }, el('td', null, r.model + ' · ' + (names[r.bucket] ?? r.bucket)), el('td', null, r.tokens.toLocaleString()), el('td', null, r.priced ? money(r.rate) : '—'), el('td', null, r.priced ? money(r.cost) : text('未定价', 'Unpriced')))))))) : null))))),
@@ -750,8 +752,8 @@ window.__ModuleLoader__.load({
         }
       }, [result.loading, result.value, offset, selected, view])
       const detail = result.value, basis = query.basis
-      const names = { input: text('非缓存输入', 'Uncached input'), output: text('输出', 'Output'), cacheRead: text('缓存读取', 'Cache read'), cacheWrite: text('缓存写入', 'Cache write'), reasoning: text('推理', 'Reasoning') }
-      const kinds = { model: text('模型调用', 'Model call'), compaction: text('上下文压缩', 'Compaction'), search: text('原生搜索', 'Native search') }
+      const names = { input: text('非缓存输入', 'Uncached input'), output: text('输出', 'Output'), cacheRead: text('缓存读取', 'Cache read'), cacheWrite: text('缓存写入', 'Cache write'), cacheWrite1h:text('缓存写入（1h）','Cache write (1h)'), reasoning: text('推理', 'Reasoning'),legacy:text('历史汇总（费用未拆分）','Historical aggregate (unsplit cost)') }
+      const kinds = { model: text('模型调用', 'Model call'), compaction: text('上下文压缩', 'Compaction'), search: text('原生搜索', 'Native search'),legacy:text('历史汇总','Historical aggregate'),'reply-selection':text('回复建议选模','Suggestion model selection'),'reply-suggestion':text('回复建议','Reply suggestion'),'session-title':text('标题生成','Title generation'),'side-chat':text('旁路对话','Side chat') }
       const turnName = turn => turn == null ? text('未标明轮次', 'Turn not recorded') : text('轮次 ', 'Turn ') + turn
       if (showsPlaceholder(result)) return result.loading
         ? el('p', { className: 'cm-stat-empty', role: 'status' }, text('正在读取本对话的用量明细…', 'Loading this conversation’s usage records…'))
@@ -767,14 +769,14 @@ window.__ModuleLoader__.load({
       const agentName = id => !id || id === query.sessionId ? text('主会话', 'Main conversation') : text('子代理 ', 'Subagent ') + ((detail.agents ?? []).find(row => row.id === id)?.title || id).slice(0, 80)
       const turnKey = row => JSON.stringify([row.sessionId || query.sessionId, row.turn])
       const turnLabel = row => ((detail.agents?.length ?? 0) > 1 ? agentName(row.sessionId) + ' · ' : '') + turnName(row.turn)
-      const visible = row => basis === 'total' || (basis === 'plan' ? row.plan : !row.plan)
+      const visible = row => row.kind==='legacy'||row.bucket==='legacy'?basis==='total'||amount(row,basis)>0:basis === 'total' || (basis === 'plan' ? row.plan : !row.plan)
       const parts = Object.keys(names).map(bucket => {
         const rows = detail.rows.filter(r => r.bucket === bucket && visible(r))
-        return { bucket, tokens: rows.reduce((n, r) => n + r.tokens, 0), cost: rows.reduce((n, r) => n + r.cost, 0), unpriced: rows.some(r => !r.priced) }
+        return { bucket, tokens: rows.reduce((n, r) => n + r.tokens, 0), cost: rows.reduce((n, r) => n + (r.bucket==='legacy'?amount(r,basis):r.cost), 0), unpriced: rows.some(r => !r.priced) }
       })
       const cost = amount(detail, basis), recorded = amount(detail.recorded, basis)
-      const mismatch = Math.abs(cost - recorded) > Math.max(1e-8, Math.abs(recorded) * 1e-8) || detail.totalCalls !== detail.recorded.calls
-      const unknown = parts.some(row => row.unpriced)
+      const mismatch = Math.abs(cost - recorded) > Math.max(1e-8, Math.abs(recorded) * 1e-8) || (detail.representedCalls??detail.totalCalls) !== detail.recorded.calls
+      const unknown = detail.recorded.unpricedCalls>0 || parts.some(row => row.unpriced)
       const shareLabel = unknown ? text('已知费用占比', 'Known cost share') : text('费用占比', 'Cost share')
       const selectCall = index => { setView('summary'); jump.current = true; setOffset(Math.floor(index / 50) * 50); setSelected(index % 50) }
       const chartPart = row => ({ key: row.bucket, label: names[row.bucket], tokens: row.tokens, value: row.cost, unpriced: row.unpriced,
@@ -782,7 +784,7 @@ window.__ModuleLoader__.load({
       const models = new Map()
       for (const row of detail.rows.filter(visible)) {
         const key = JSON.stringify([row.provider, row.model]), model = models.get(key) ?? { key, label: row.model, provider: row.provider, tokens: 0, value: 0, unpriced: false }
-        model.value += row.cost; model.tokens += row.bucket === 'reasoning' ? 0 : row.tokens; model.unpriced ||= !row.priced
+        model.value += row.bucket==='legacy'?amount(row,basis):row.cost; model.tokens += row.bucket === 'reasoning' ? 0 : row.tokens; model.unpriced ||= !row.priced
         models.set(key, model)
       }
       const modelRows = [...models.values()].sort((a, b) => b.value - a.value).map((row, i) => ({ ...row, label: row.provider + ' / ' + row.label,
@@ -792,7 +794,7 @@ window.__ModuleLoader__.load({
         modelRows.push({ key: 'other-models', label: text('其余 ', 'Other ') + rest.length + text(' 个模型', ' models'), value,
           tokens: rest.reduce((n, row) => n + row.tokens, 0), unpriced, amount: unpriced && !value ? text('未定价', 'Unpriced') : money(value) + (unpriced ? ' + ?' : ''), color: contextColors[7] })
       }
-      const cacheRead = parts.find(row => row.bucket === 'cacheRead'), inputs = parts.filter(row => ['input', 'cacheRead', 'cacheWrite'].includes(row.bucket))
+      const cacheRead = parts.find(row => row.bucket === 'cacheRead'), inputs = parts.filter(row => ['input', 'cacheRead', 'cacheWrite','cacheWrite1h'].includes(row.bucket))
       const cacheComparison = cacheRead.tokens > 0 ? el('div', { className: 'cm-cache-compare' }, el('h3', null, text('缓存读取的占比', 'Cache read share')),
         ...[[text('输入 Token', 'Input tokens'), cacheRead.tokens, inputs.reduce((n, row) => n + row.tokens, 0)],
           [text('输入费用', 'Input cost'), cacheRead.cost, inputs.some(row => row.unpriced) ? 0 : inputs.reduce((n, row) => n + row.cost, 0)]].map(([label, value, total]) => el('div', { key: label },
@@ -812,10 +814,10 @@ window.__ModuleLoader__.load({
       return el('section', { className: 'cm-stat-panel' }, el('style', null, contextCostsCss + spendCss),
         overview ? el('nav', { className: 'cm-session-tabs', 'aria-label': text('费用视图', 'Cost views') }, ...[['summary', text('费用概览', 'Overview')], ['context', text('费用明细', 'Cost details')]].map(([id, label]) => button(label, () => { setView(id); setSelected(-1); setCallSectionOpen(false) }, { key: id, 'aria-pressed': view === id }))) : null,
         overview ? el('div', { className: 'cm-stat-metrics' }, ...[
-          [basis === 'total' ? text('API + 订阅折算', 'API + Plan equivalent') : basis === 'plan' ? text('订阅用量折算', 'Plan equivalent') : text('API 费用', 'API cost'), money(cost) + (parts.some(row => row.unpriced) ? ' + ?' : ''), text('按本对话调用日志估算', 'Estimated from this conversation’s call logs')],
-          [text('调用次数', 'Calls'), detail.totalCalls.toLocaleString(), (detail.agents?.length ?? 0) > 1 ? text('包含子代理', 'Includes subagents') : text('本会话', 'This conversation')],
+          [basis === 'total' ? text('API + 订阅折算', 'API + Plan equivalent') : basis === 'plan' ? text('订阅用量折算', 'Plan equivalent') : text('API 费用', 'API cost'), money(cost) + (unknown ? ' + ?' : ''), text('新调用按消费凭据，旧记录按已保存汇总', 'Saved receipts for new calls; recorded aggregates for history')],
+          [text('调用次数', 'Calls'), (detail.representedCalls??detail.totalCalls).toLocaleString(), (detail.agents?.length ?? 0) > 1 ? text('包含子代理', 'Includes subagents') : text('本会话', 'This conversation')],
           [text('Token 用量', 'Token usage'), formatTokens(parts.reduce((n, row) => n + (row.bucket === 'reasoning' ? 0 : row.tokens), 0)), text('输入、缓存与输出', 'Input, cache and output')],
-          [text('缓存命中率', 'Cache hit rate'), pct(parts.find(row => row.bucket === 'cacheRead')?.tokens ?? 0, parts.filter(row => ['input', 'cacheRead', 'cacheWrite'].includes(row.bucket)).reduce((n, row) => n + row.tokens, 0)), text('输入 Token 中的缓存读取', 'Cache reads among input tokens')],
+          [text('缓存命中率', 'Cache hit rate'), pct(detail.recorded.cacheRead,detail.recorded.input+detail.recorded.cacheRead+detail.recorded.cacheWrite), text('输入 Token 中的缓存读取', 'Cache reads among input tokens')],
         ].map(([label, value, sub]) => el('div', { className: 'cm-stat-metric', key: label }, el('div', { className: 'cm-stat-sub' }, label), el('div', { className: 'cm-stat-value' }, value), el('div', { className: 'cm-stat-sub' }, sub)))) : null,
         overview && view === 'context' ? el(StepCosts, { api, sessionId: query.sessionId, revision, money, text, basis, detailed: true }) : null,
         !overview ? children : view === 'context' ? el('details', { className: 'cm-stat-secondary' }, el('summary', { style: { padding: '8px 0' } }, text('上下文费用参考', 'Context cost reference')), children) : null,
@@ -834,7 +836,7 @@ window.__ModuleLoader__.load({
               amount: money(amount(row, basis)) + (row.unpriced ? ' + ?' : ''), color: contextColors[i] }))) : null)) : null,
         overview && view === 'summary' ? el(StepCosts, { api, sessionId: query.sessionId, revision, money, text, basis, composition: costCard(text('费用构成', 'Cost composition'), parts.filter(row => row.tokens > 0 && (row.bucket !== 'reasoning' || row.cost > 0 || row.unpriced)).map(chartPart)) }) : null,
         !overview || view === 'summary' ? el('details', { className: 'cm-call-section', open: !overview || callSectionOpen || selected >= 0, onToggle: e => { if (e.target === e.currentTarget) { setCallSectionOpen(e.currentTarget.open); if (!e.currentTarget.open) setSelected(-1) } } },
-        el('summary', { style: { padding: '10px 0', fontSize: 13 } }, text('逐次调用明细', 'Individual calls') + ' · ' + detail.totalCalls),
+        el('summary', { style: { padding: '10px 0', fontSize: 13 } }, (detail.calls.some(c=>c.kind==='legacy')?text('消费记录（含历史汇总）','Consumption records (including historical aggregates)'):text('逐次调用明细', 'Individual calls')) + ' · ' + detail.totalCalls),
         overview ? el('div', { className: 'cm-plan cm-spend-grid' }, callShareCard, modelRows.length > 1 ? costCard(text('模型费用分布', 'Cost by model'), modelRows) : cacheComparison) : null,
         !overview ? el('details', { className: 'cm-stat-secondary', open: !overview }, el('summary', null, text('轮次、步骤与单价', 'Turns, steps and rates')),
         el('section', { className: 'cm-stat-breakdown' },
@@ -860,7 +862,7 @@ window.__ModuleLoader__.load({
         el('div', { style: { marginTop: 24 } }, el(Chart, { rows: detail.calls.map((call, i) => ({ label: '#' + (offset + i + 1), index: i, value: amount(call, basis) })), money, text,
           label: text('逐次调用费用 · 当前页', 'Cost per call · current page'), onSelect: row => { setSelected(row.index); document.getElementById('cm-stat-call-' + row.index)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }) } })),
         detail.calls.map((call, i) => el('details', { key: offset + i, id: 'cm-stat-call-' + i, className: 'cm-stat-call', open: selected === i, onToggle: event => { if (event.currentTarget.open) setSelected(i); else setSelected(previous => previous === i ? -1 : previous) } },
-          el('summary', null, '#' + (offset + i + 1) + ' · ' + turnLabel(call) + (call.step == null ? '' : text(' / 步骤 ', ' / step ') + call.step) + ' · ' + (kinds[call.kind] ?? call.kind) + ' · ' + call.provider + ' / ' + call.model + ' · ' + (call.plan ? 'Plan ' : 'API ') + (call.priced ? money(call.cost) : '?') + (call.longContext ? text(' · 长上下文价', ' · long-context rate') : ''),
+          el('summary', null, '#' + (offset + i + 1) + ' · ' + turnLabel(call) + (call.step == null ? '' : text(' / 步骤 ', ' / step ') + call.step) + ' · ' + (kinds[call.kind] ?? call.kind) + (call.kind==='legacy'?'（'+call.calls+text(' 次）',' calls)'):'') + ' · ' + call.provider + ' / ' + call.model + ' · ' + (call.plan ? 'Plan ' : 'API ') + (call.priced ? money(call.cost) : '?') + (call.longContext ? text(' · 长上下文价', ' · long-context rate') : ''),
             el('span', { className: 'cm-call-share' }, (call.priced ? pct(amount(call, basis), cost) : '—') + ' · ' + shareLabel)),
           selected === i ? el(CallDetail, { key: (call.sessionId || query.sessionId) + ':' + (call.logSeq ?? i), call, sessionId: query.sessionId, api, revision, money, text, names }) : null)),
         el(Pager, { offset, count: detail.totalCalls, size: 50, onChange: n => { setOffset(n); setSelected(-1) }, text })) : null)
@@ -917,7 +919,7 @@ window.__ModuleLoader__.load({
       const chooseScope = row => { setScope(row); setOffset(0); setProvider(''); setModel('') }
       const basisName = basis === 'total' ? text('API + 订阅折算', 'API + Plan equivalent') : basis === 'plan' ? text('订阅用量折算', 'Plan equivalent') : text('API 费用', 'API cost')
       const pick = (label, value, onChange, choices, saving = false) => el('label', null, label, el('select', { value, disabled: saving, onChange: e => { onChange(e.target.value); setOffset(0) } }, choices.map(([value, title]) => el('option', { key: value, value }, title))))
-      const inputNames = { input: text('未缓存输入', 'Uncached input'), cacheRead: text('缓存读取', 'Cache read'), cacheWrite: text('缓存写入', 'Cache write'), output: text('输出', 'Output') }
+      const inputNames = { input: text('未缓存输入', 'Uncached input'), cacheRead: text('缓存读取', 'Cache read'), cacheWrite: text('缓存写入', 'Cache write'), cacheWrite1h:text('缓存写入（1h）','Cache write (1h)'), output: text('输出', 'Output') }
       const panel = (title, content) => el('section', { className: 'cm-stat-panel' }, el('div', { className: 'cm-stat-panel-head' }, el('h3', null, title)), content)
       const top = data?.totals
       const metric = (label, value, sub) => el('div', { className: 'cm-stat-metric', key: label }, el('div', { className: 'cm-stat-sub' }, label), el('div', { className: 'cm-stat-value' }, value), el('div', { className: 'cm-stat-sub' }, sub))

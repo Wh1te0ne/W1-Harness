@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import type { BrowserWindow } from 'electron'
 import { configureW1Identity, configureW1StartMenu, configureW1Taskbar, isW1Development, relaunchW1 } from '../src/w1-identity.ts'
 import type { W1Product } from '../src/w1-upstream.ts'
 
@@ -11,6 +12,24 @@ const owned: string[] = []
 afterEach(() => { vi.unstubAllEnvs(); for (const dir of owned.splice(0)) rmSync(dir, { recursive: true, force: true }) })
 
 describe.skipIf(process.platform !== 'win32')('W1 Windows taskbar relaunch', () => {
+  it('reopens source Test through its queue-aware launcher rather than as a packaged executable', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'w1-source-test-pin-'))
+    owned.push(directory)
+    const launcher = join(directory, 'Start-W1Test.ps1'), powershell = join(directory, 'pwsh.exe')
+    writeFileSync(launcher, '')
+    writeFileSync(powershell, '')
+    vi.stubEnv('W1_TEST_MODE', '1')
+    vi.stubEnv('W1_TEST_LAUNCHER', launcher)
+    vi.stubEnv('W1_TEST_POWERSHELL', powershell)
+    const window = { setIcon: vi.fn(), setAppDetails: vi.fn<BrowserWindow['setAppDetails']>() }
+    configureW1Taskbar({ isPackaged: false, getAppPath: () => directory }, window, { ...product, name: 'W1 Harness Test' })
+    expect(window.setAppDetails.mock.calls[0]?.[0].relaunchCommand).toContain('"' + launcher + '"')
+    expect(window.setAppDetails.mock.calls[0]?.[0].relaunchCommand).not.toContain('-Executable')
+    const relaunch = vi.fn()
+    relaunchW1({ isPackaged: false, relaunch })
+    expect(relaunch).toHaveBeenCalledWith({ execPath: powershell,
+      args: ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', launcher] })
+  })
   it('keeps a packaged test pin on the isolated launcher after its original environment is gone', () => {
     const directory = mkdtempSync(join(tmpdir(), 'w1-test-pin-'))
     owned.push(directory)

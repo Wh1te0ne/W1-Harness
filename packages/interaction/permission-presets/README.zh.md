@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-提供具名权限模式，同时设置沙箱与审批，但各执行服务仍保留自己的值。配置预设提供未来会话默认值；显式加载的 Auto review integration 可以增加一个仅限当前会话的选项。客户端从进程目录读取可选项，从 Session 投影读取当前选择。不匹配任何预设的旋钮组合显示为 `custom`，用户可以离开该状态，但不能选择它。本包拥有选择与默认值；沙箱、审批和 Auto integration 拥有执行行为。
+提供具名权限模式，同时设置沙箱与审批，但各执行服务仍保留自己的值。配置预设提供未来会话默认值；显式加载的 Auto review integration 可以增加一个适用于当前会话及未来会话默认值的选项。客户端从进程目录读取可选项，从 Session 投影读取当前选择。不匹配任何预设的旋钮组合显示为 `custom`，用户可以离开该状态，但不能选择它。本包拥有选择与默认值；沙箱、审批和 Auto integration 拥有执行行为。
 
 ## 目录
 
@@ -61,7 +61,7 @@ kind: "package-reference"
 
 ### 会话默认值
 
-`permission` 设置命名空间为未来会话持有 `defaultPreset`，且只接受配置预设。创建会话时读取它，将其应用于沙箱模式与审批策略，并把应用的预设记录为一次 `permission/preset` 选择。之后的设置变更绝不会改变现有会话。恢复的 seed（包括由 `session/end-seed` 明确标记的空 seed）会保留其有效权限，并只接收缺失的持久事实，而不会接收最新用户默认值；持久化的 `auto` 身份在发布前必须存在 live Auto 注册并通过准入。
+`permission` 设置命名空间为未来会话持有 `defaultPreset`，接受配置预设及审查器 integration 存活时的 Auto。创建会话时读取它，将其应用于沙箱模式与审批策略，并把应用的预设记录为一次 `permission/preset` 选择。之后的设置变更绝不会改变现有会话。恢复的 seed（包括由 `session/end-seed` 明确标记的空 seed）会保留其有效权限，并只接收缺失的持久事实，而不会接收最新用户默认值；持久化的 `auto` 身份在发布前必须存在 live Auto 注册并通过准入。
 
 -----
 
@@ -133,8 +133,8 @@ kind: "package-reference"
 - **只组合两个机制级旋钮**：预设选择沙箱模式和审批策略；固定 Auto integration 可以增加准入行为，但 agent（智能体）／profile 选择不属于 `PresetSpec`。
 - **`custom` 只能推导得出**：调用方可以从不匹配的旋钮组合切换出去，但无法通过此服务选中或持久化一个名为 custom 的预设。
 - **配置预设表在插件生命周期内固定**：只有固定的 Auto contribution 可以在不重新加载本服务的情况下改变实时进程目录。
-- **Auto 不能成为默认值**：它只在 integration effect 存活期间存在，并且有意不进入 `permission` 设置 schema。
-- **配置的默认值必须指向已配置预设**——移除被引用预设时，必须在同一次 Config 编辑中修改 `defaultPreset`。
+- **Auto 默认值依赖可用审查器**：每个全新 Auto 会话均在写入权限事实前通过审查器准入；审查器缺失或不可用时阻止创建，不会静默授予完全权限。
+- **默认值必须指向可用预设**——移除被引用预设时，必须在同一次 Config 编辑中修改 `defaultPreset`。
 
 <a id="dev-note"></a>
 ### 开发备注

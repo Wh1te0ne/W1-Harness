@@ -1,4 +1,4 @@
-import { useState, useSyncExternalStore } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import type { PropsRenderSlots, PropsLocale } from '@deepseek-ai/dsh-client-ui-slots'
 import type { W1AppearanceController, W1Appearance, W1Palette } from './w1-appearance.ts'
 import { W1_DEFAULT, validateAppearance } from './w1-appearance.ts'
@@ -13,6 +13,7 @@ export function W1AppearanceSection({ renderSlot, t }: PropsRenderSlots<'setting
 export function W1AppearanceControls({ controller }: { controller: W1AppearanceController }) {
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot)
   const [draft, setDraft] = useState<W1Appearance>(() => structuredClone(state.saved))
+  useEffect(() => { setDraft(structuredClone(state.saved)) }, [state.saved])
   const [mode, setMode] = useState<'light' | 'dark'>('light')
   const [error, setError] = useState('')
   const colors = draft[mode]

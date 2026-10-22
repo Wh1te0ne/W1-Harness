@@ -20,14 +20,17 @@ import { installDesktopUpdateTaskControl } from './update-tasks.ts'
 import { installDesktopQuitInspection } from './quit-inspection.ts'
 import { installPlatformSessionPublisher } from './platform-session.ts'
 import { installOfficeEngineResolution } from './office-engine.ts'
+import { markHostStartup } from './startup.ts'
 
 async function main(): Promise<void> {
+  markHostStartup('host-modules-ready')
   const runtimeDir = process.argv[2] as string
   const projectDir = process.argv[3] as string
   installOfficeEngineResolution(runtimeDir)
   const installAnchor = join(runtimeDir, 'node_modules', '@deepseek-ai', 'dsh', 'package.json')
   const profile = loadProfileDirectory('dsh', projectDir, installAnchor)
   reportSkippedBundles('dsh', profile)
+  markHostStartup('host-profile-start')
   const application = runProfile({
     environment: loadLayeredEnv('dsh'),
     profile: 'desktop',
@@ -108,6 +111,7 @@ async function main(): Promise<void> {
   })
   process.once('disconnect', () => { void stop() })
   const { ctx } = await application
+  markHostStartup('host-profile-ready')
   await ctx.plugin(w1ToolSelection)
   await ctx.plugin(BrowserUseRegistry)
   const browser = new BrowserIpc()
@@ -117,15 +121,18 @@ async function main(): Promise<void> {
   void chrome.start().catch(() => { console.warn('W1 Chrome bridge unavailable; the local discovery ports are occupied.') })
   await ctx.plugin(w1BrowserUse, { request: browser.request, chromeRequest: chrome.request,
     timeoutMs: 30000, maxTextChars: 12000, maxElements: 100 })
+  markHostStartup('host-browser-ready')
   control.updateTasks = installDesktopUpdateTaskControl(ctx)
   control.quitInspection = installDesktopQuitInspection(ctx)
   try { control.remote = await installW1Remote(ctx) }
   catch (error) { console.warn('W1 remote device service unavailable:', error instanceof Error ? error.message : String(error)) }
+  markHostStartup('host-remote-ready')
   await ctx.plugin(desktopOffice, {
     runtimeDir,
     source: process.argv[4] ?? join(runtimeDir, '..', 'runtime', 'primary-runtime'),
     root: join(resolveDshHome(), 'dsh-runtimes', 'dsh-primary-runtime'),
   })
+  markHostStartup('host-office-ready')
   installPlatformSessionPublisher(ctx, (session) => {
     if (process.connected) process.send?.({ type: 'platform-session', session })
   })

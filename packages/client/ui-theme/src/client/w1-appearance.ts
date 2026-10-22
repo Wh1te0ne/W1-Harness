@@ -1,115 +1,99 @@
-/** W1 appearance presets and automatically saved, local-only customization. */
-import type { ThemeRuntime, ThemeTokenOverrides } from './index.ts'
-import { W1_PRESETS } from './w1-presets.ts'
+/** W1 palette and CSS persisted through the Host settings form. */
+import type { ThemeRuntime } from './index.ts'
+import type { ConfigForm } from '@deepseek-ai/dsh-client-ui-settings/client'
+import type { ThemeSettings } from '../theme-settings.ts'
+import { appearanceTokens, validateAppearance, W1_DEFAULT, type W1Appearance } from '../w1-appearance-settings.ts'
+export { appearanceTokens, validateAppearance, W1_DEFAULT, type W1Appearance, type W1Palette } from '../w1-appearance-settings.ts'
+
+/** Current appearance and the latest Host persistence status. */
+export interface W1AppearanceSnapshot { saved: W1Appearance; message: string }
+const KEY = 'w1.appearance.v1'
 
 /**
- * Primary accent, surface and foreground colors for one application mode.
- */
-export interface W1Palette { accent: string; surface: string; ink: string }
-/**
- * Persisted W1 theme selection, mode palettes and local stylesheet.
- */
-export interface W1Appearance { preset: string; light: W1Palette; dark: W1Palette; css: string }
-/**
- * Current saved appearance and the latest local editing status.
- */
-export interface W1AppearanceSnapshot { saved: W1Appearance; message: string }
-/**
- * Default W1 appearance used before a valid local override exists.
- */
-export const W1_DEFAULT: W1Appearance = { preset: 'w1', light: { accent: '#4d6bfe', surface: '#ffffff', ink: '#171717' }, dark: { accent: '#7c8dff', surface: '#1b1b1c', ink: '#eeeeee' }, css: '' }
-const KEY = 'w1.appearance.v1'
-const hex = /^#[\da-f]{6}$/iu
-/**
- * Validate persisted/imported colors and local stylesheet input before applying it.
- * @param value - Stored or imported appearance settings to validate or project.
- * @returns Validated appearance settings with normalized mode palettes.
- */
-export function validateAppearance(value: unknown): W1Appearance {
-  if (typeof value !== 'object' || value === null) throw new Error('外观配置格式不正确')
-  const item = value as Record<string, unknown>
-  if (typeof item.preset !== 'string' || !['w1', ...W1_PRESETS.map(p => p.id), 'custom'].includes(item.preset)) throw new Error('未知主题')
-  if (typeof item.css !== 'string' || item.css.length > 20_000 || /@import|url\s*\(/iu.test(item.css)) throw new Error('CSS 最多 20,000 字，不支持 @import 或外部资源 url()')
-  const palette = (mode: string): W1Palette => {
-    const input = item[mode]
-    if (typeof input !== 'object' || input === null) throw new Error('缺少配色')
-    const colors = input as Record<string, unknown>
-    for (const key of ['accent', 'surface', 'ink']) if (typeof colors[key] !== 'string' || !hex.test(colors[key])) throw new Error('颜色请使用 #RRGGBB 格式')
-    return { accent: String(colors.accent), surface: String(colors.surface), ink: String(colors.ink) }
-  }
-  return { preset: item.preset, light: palette('light'), dark: palette('dark'), css: item.css }
-}
-/**
- * Map three primary colors to W1's existing light/dark token layer.
- * @param value - Stored or imported appearance settings to validate or project.
- * @returns Light and dark overrides for the existing theme tokens.
- */
-export function appearanceTokens(value: W1Appearance): ThemeTokenOverrides {
-  if (value.preset === 'w1') return {}
-  const tokens: ThemeTokenOverrides = {}
-  for (const mode of ['light', 'dark'] as const) {
-    const { accent, surface, ink } = value[mode]
-    const mix = (percent: number) => `color-mix(in srgb, ${ink} ${percent}%, ${surface})`
-    const colors: Record<string, string> = {
-      '--dsw-alias-bg-base': surface, '--dsw-alias-bg-layer-1': surface,
-      '--dsw-alias-bg-layer-2': surface, '--dsw-alias-bg-layer-3': mix(3),
-      '--dsw-alias-bg-module-platform': mix(3), '--dsw-alias-bg-overlay': mix(7),
-      '--dsw-alias-label-primary': ink, '--dsw-alias-label-secondary': mix(66),
-      '--dsw-alias-label-tertiary': mix(48), '--dsw-alias-label-caption': mix(48),
-      '--dsw-alias-border-l2': mix(15), '--dsw-alias-border-l4': mix(15),
-      '--dsw-alias-interactive-bg-hover': mix(6), '--dsw-alias-interactive-bg-active': mix(11),
-      '--dsw-alias-state-business-primary': accent, '--dsw-focus-ring-color': accent,
-      '--dsw-alias-link': accent, '--dsw-alias-state-business-tertiary': `color-mix(in srgb, ${accent} 12%, ${surface})`,
-      '--dsw-alias-markdown-code-block': mix(3), '--dsw-alias-markdown-code-block-banner': mix(5),
-      '--dsw-alias-markdown-inline-code': mix(5), '--dsw-alias-menu-icon': ink, '--dsw-alias-bg-module-accent': `color-mix(in srgb, ${accent} 12%, ${surface})`,
-    }
-    for (const [key, color] of Object.entries(colors)) { tokens[key] ??= { light: '', dark: '' }; tokens[key][mode] = color }
-  }
-  return tokens
-}
-/**
- * Own one immediately applied theme layer and persist valid edits for the plugin lifetime.
- * @param theme - Application theme service that owns the override layer.
- * @param storage - Local settings storage, defaulting to the document storage.
- * @returns Subscription, editing and disposal operations for this appearance layer.
+ * Apply cached/bootstrap colors immediately, then adopt the Host value. Only a
+ * successfully loaded, empty Host field may receive a fenced legacy migration.
+ * Failed reads keep the last valid palette; writes are confirmed by the Host.
+ * @param theme - Owner of the appearance token layer.
+ * @param host - Shared, ordered Host settings form.
+ * @param storage - Optional local migration source and last-good cache.
+ * @returns Editing, subscription and disposal operations.
  */
 export function createW1Appearance(
-  theme: Pick<ThemeRuntime, 'overrideTokens'>, storage?: Pick<Storage, 'getItem' | 'setItem'>,
+  theme: Pick<ThemeRuntime, 'overrideTokens'>, host: ConfigForm<ThemeSettings>,
+  storage?: Pick<Storage, 'getItem' | 'setItem'>,
 ): W1AppearanceController {
-  try { storage ??= globalThis.localStorage } catch { /* Storage may be unavailable in restricted documents. */ }
-  let saved = structuredClone(W1_DEFAULT)
+  try { storage ??= globalThis.localStorage } catch { /* Host persistence remains available. */ }
+  let saved = structuredClone(W1_DEFAULT), legacy: W1Appearance | undefined, message = '正在读取外观设置…'
+  try { const raw = storage?.getItem(KEY); if (raw) legacy = validateAppearance(JSON.parse(raw)) }
+  catch { message = '本地配色无法读取，正在读取正式设置…' }
+  if (legacy) saved = legacy
   try {
-    const raw = storage?.getItem(KEY)
-    if (raw) saved = validateAppearance(JSON.parse(raw))
-  } catch { /* Keep the recoverable default for invalid saved data. */ }
-  let snapshot: W1AppearanceSnapshot = { saved, message: '' }
+    const boot = typeof document === 'undefined' ? undefined : document.body.dataset.w1Appearance
+    if (boot) saved = validateAppearance(JSON.parse(boot))
+  } catch { /* Retain the validated local value while waiting for the Host. */ }
+  let confirmed = saved, snapshot: W1AppearanceSnapshot = { saved, message }
+  let disposed = false, migrationAttempted = false, generation = 0, pending = 0
   const listeners = new Set<() => void>()
   let retract: (() => void) | undefined
   const style = typeof document === 'undefined' ? undefined : document.createElement('style')
   if (style) { style.dataset.w1Appearance = 'custom'; document.head.append(style) }
-  const publish = () => { for (const listener of listeners) listener() }
-  const apply = (value: W1Appearance) => { const old = retract; retract = theme.overrideTokens('w1-appearance', appearanceTokens(value)); old?.(); if (style) style.textContent = value.css }
-  const update = (value: W1Appearance, message = '已自动保存') => {
-    const next = validateAppearance(value)
-    if (!storage) throw new Error('无法保存外观：本地存储不可用')
-    storage.setItem(KEY, JSON.stringify(next))
-    saved = next
-    apply(saved)
-    snapshot = { saved, message }
-    publish()
+  const publish = (message: string) => { snapshot = { saved, message }; for (const listener of listeners) listener() }
+  const apply = (value: W1Appearance) => {
+    const old = retract; retract = theme.overrideTokens('w1-appearance', appearanceTokens(value)); old?.()
+    if (style) { style.textContent = value.css; document.querySelector('[data-w1-appearance="boot"]')?.remove() }
+  }
+  const cache = (value: W1Appearance) => {
+    try { storage?.setItem(KEY, JSON.stringify(value)) } catch { /* The accepted Host value is durable. */ }
+  }
+  const adopt = () => {
+    const state = host.getSnapshot()
+    if (disposed || pending || state.status !== 'ready' || !state.value) return
+    if (state.value.appearance == null) {
+      if (legacy && state.writable && !migrationAttempted) {
+        migrationAttempted = true
+        write(legacy, '已迁移并保存外观', state.revision)
+      } else if (!legacy) publish('')
+      return
+    }
+    migrationAttempted = true
+    try {
+      const next = validateAppearance(state.value.appearance)
+      confirmed = next
+      if (JSON.stringify(next) !== JSON.stringify(saved)) { saved = next; apply(saved) }
+      cache(next); publish('')
+    } catch { publish('正式外观设置无效，保留上次有效配色') }
+  }
+  const write = (value: W1Appearance, success: string, revision?: number) => {
+    const next = validateAppearance(value), state = host.getSnapshot()
+    if (state.status !== 'ready' || !state.writable) throw new Error('外观设置暂时不可写，请等待连接恢复')
+    const current = ++generation
+    pending++; saved = next; apply(saved); publish('正在保存外观…')
+    const operation = revision === undefined ? host.set('appearance', next)
+      : host.mutate([{ op: 'set', path: ['appearance'], value: { ...next, light: { ...next.light }, dark: { ...next.dark } } }], revision)
+    void operation.then((ok) => {
+      pending--
+      if (ok) { confirmed = next; cache(next) }
+      if (disposed || current !== generation) return
+      if (!ok) { saved = confirmed; apply(saved); adopt(); publish('外观未保存，已保留上次有效配色'); return }
+      publish(success)
+    }, () => {
+      pending--
+      if (disposed || current !== generation) return
+      saved = confirmed; apply(saved); publish('外观保存失败，已保留上次有效配色；请在连接恢复后重试')
+    })
   }
   apply(saved)
+  const unsubscribe = host.subscribe(adopt)
+  adopt()
   return {
     getSnapshot: () => snapshot,
-    subscribe: (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener) } },
-    update: (value: W1Appearance) => { update(value) },
-    reset: () => { update(structuredClone(W1_DEFAULT), '已恢复 W1 默认外观') },
-    dispose() { retract?.(); style?.remove(); listeners.clear() },
+    subscribe: (listener) => { listeners.add(listener); return () => { listeners.delete(listener) } },
+    update: (value) => { write(value, '已自动保存') },
+    reset: () => { write(structuredClone(W1_DEFAULT), '已恢复 W1 默认外观') },
+    dispose() { disposed = true; unsubscribe(); retract?.(); style?.remove(); listeners.clear() },
   }
 }
-/**
- * Subscription and editing operations for one immediately applied appearance layer.
- */
+/** Operations for the Host-backed W1 appearance layer. */
 export type W1AppearanceController = {
   readonly getSnapshot: () => W1AppearanceSnapshot
   readonly subscribe: (listener: () => void) => () => void

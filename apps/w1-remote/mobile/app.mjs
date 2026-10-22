@@ -1,8 +1,10 @@
 import { RemoteClient } from './client.mjs';
+import { createTranscript } from './transcript.mjs';
 const $ = id => document.getElementById(id);
 const load = key => { try { return JSON.parse(window.W1Native ? W1Native.load(key) : localStorage.getItem('w1h-' + key)); } catch { return null; } };
 const save = (key, value) => { const text = JSON.stringify(value); if (window.W1Native) W1Native.save(key, text); else localStorage.setItem('w1h-' + key, text); };
-let device = load('device'), catalog, active, page = 'pair', watchId, cursor = 0, messages = [], liveText = '', sendReceipt = load('outbox'), poll;
+let device = load('device'), catalog, active, page = 'pair', watchId, cursor = 0, messages = [], liveText = '', liveReasoning = '', liveProgress = '', sendReceipt = load('outbox'), poll;
+const transcript = createTranscript($('history'), $('live'));
 function toast(message) { $('toast').textContent = message; $('toast').classList.remove('hidden'); clearTimeout(toast.timer); toast.timer = setTimeout(() => $('toast').classList.add('hidden'), 4500); }
 function show(name) { page = name; for (const id of ['pair','list','chat','device']) $(id).classList.toggle('hidden', id !== name); $('back').classList.toggle('hidden', name === 'pair' || name === 'list'); }
 function connection(text, online = false) { $('connection').textContent = text; $('connection').classList.toggle('online', online); $('send').disabled = !online; }
@@ -32,20 +34,37 @@ function renderProjects() {
     $('projects').append(section);
   }
 }
-function openChat(session) { if (active) save('draft-' + active.id, $('draft').value); active=session; $('chatTitle').textContent=session.title; $('draft').value=sendReceipt?.sessionId === session.id ? sendReceipt.text : load('draft-'+session.id) ?? ''; $('sendState').textContent=sendReceipt?.sessionId === session.id ? '上次发送未确认，可重试' : ''; messages=[]; liveText=''; renderMessages(); show('chat'); void watch(); }
+function openChat(session) { if (active) save('draft-' + active.id, $('draft').value); active=session; $('chatTitle').textContent=session.title; $('draft').value=sendReceipt?.sessionId === session.id ? sendReceipt.text : load('draft-'+session.id) ?? ''; $('sendState').textContent=sendReceipt?.sessionId === session.id ? '上次发送未确认，可重试' : ''; messages=[]; liveText=''; liveReasoning=''; liveProgress=''; transcript.reset(); renderMessages(); show('chat'); void watch(); }
 async function watch() { if (!active || !client.connected) return; watchId=crypto.randomUUID(); try { await client.request('watch',{sessionId:active.id},watchId); } catch(e) { toast(e.message); } }
 function applyFrame(frame) {
   const scroll=$('messages'), atBottom=scroll.scrollHeight-scroll.scrollTop-scroll.clientHeight<100;
-  if(frame.type==='snapshot') { messages=frame.messages; cursor=frame.cursor; liveText=frame.live; $('older').classList.toggle('hidden', !frame.hasMore); if(frame.title) $('chatTitle').textContent=frame.title; }
-  if(frame.type==='event') { cursor=frame.cursor; if(frame.message) { messages=messages.filter(m=>m.seq!==frame.message.seq); messages.push(frame.message); if(frame.message.role==='assistant') liveText=''; } }
-  if(frame.type==='live') { if(frame.operation==='start'||frame.operation==='end') liveText=''; else liveText+=frame.text; }
-  renderMessages(); if(atBottom||frame.type==='snapshot') scroll.scrollTop=scroll.scrollHeight;
+  const firstSnapshot = frame.type==='snapshot' && messages.length===0;
+  if(frame.type==='snapshot') { messages=frame.messages; cursor=frame.cursor; liveText=frame.live??''; liveReasoning=frame.reasoning??''; liveProgress=frame.progress??''; $('older').classList.toggle('hidden', !frame.hasMore); if(frame.title) $('chatTitle').textContent=frame.title; }
+  if(frame.type==='event') {
+    cursor=frame.cursor;
+    if(frame.message) {
+      messages=messages.filter(m=>m.seq!==frame.message.seq); messages.push(frame.message);
+      if(['assistant','hidden','status'].includes(frame.message.role)) { liveText=''; liveReasoning=''; liveProgress=''; }
+      if(frame.message.kind==='call') liveProgress='正在执行 '+frame.message.text.split('\n')[0].replace(/^调用 /,'');
+      if(frame.message.kind==='result') liveProgress='工具已返回，继续处理中';
+    }
+  }
+  if(frame.type==='live') {
+    if(frame.operation==='start'||frame.operation==='end') { liveText=''; liveReasoning=''; liveProgress=frame.progress??''; }
+    else {
+      liveText=appendLive(liveText,frame.text??''); liveReasoning=appendLive(liveReasoning,frame.reasoning??'');
+      if(frame.progress) liveProgress=frame.progress;
+    }
+  }
+  renderMessages(); if(atBottom||firstSnapshot) scroll.scrollTop=scroll.scrollHeight;
+}
+function appendLive(current, delta) {
+  const limit=30_000, marker='\n[内容过长，已截断；完整内容请在电脑查看]';
+  if(current.length>limit) return current;
+  const next=current+delta; return next.length>limit ? next.slice(0,limit)+marker : next;
 }
 function renderMessages() {
-  $('history').replaceChildren();
-  const surface=[]; for(const m of [...messages].sort((a,b)=>a.seq-b.seq)) { if(m.surfaceOp?.op==='replace') { for(let i=surface.length-1;i>=0;i--) if(surface[i].seq>=m.surfaceOp.startSeq&&surface[i].seq<=m.surfaceOp.endSeq) surface.splice(i,1); } surface.push(m); }
-  for(const m of surface) { const el=document.createElement('article'); el.className=m.role; const label=document.createElement('label'); label.textContent={user:'你',assistant:'W1',tool:'执行记录',status:''}[m.role]??''; const body=document.createElement('div'); body.textContent=m.text; if(m.role==='tool'){const details=document.createElement('details'),summary=document.createElement('summary'); summary.textContent=m.text.split('\n')[0]; details.append(summary,body);el.append(details);}else el.append(label,body); $('history').append(el); }
-  $('live').classList.toggle('hidden',!liveText); $('live').querySelector('div').textContent=liveText;
+  transcript.render(messages,{text:liveText,reasoning:liveReasoning,progress:liveProgress});
 }
 $('older').onclick=async()=>{ try { const value=await client.request('page',{sessionId:active.id,throughSeq:cursor,beforeSeq:Math.min(...messages.map(m=>m.seq))}); const old=$('messages').scrollHeight; messages=[...value.messages,...messages];renderMessages();$('messages').scrollTop += $('messages').scrollHeight-old;$('older').classList.toggle('hidden',!value.hasMore);}catch(e){toast(e.message);} };
 $('composer').onsubmit=async event=>{

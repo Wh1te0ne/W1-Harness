@@ -5,11 +5,25 @@ $node = if ($env:W1_NODE) { $env:W1_NODE } else { (Get-Command node -CommandType
 $launcher = Join-Path $env:USERPROFILE '.w1-harness-app/W1 Harness.exe'
 if (-not $env:W1_DESKTOP_LAUNCHER -and (Test-Path -LiteralPath $launcher)) { $env:W1_DESKTOP_LAUNCHER = $launcher }
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
+$localLogs = Join-Path $root '.work/local-dev'
+New-Item -ItemType Directory -Path $localLogs -Force | Out-Null
+$launchLog = Join-Path $localLogs ('desktop-' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '-' + $PID + '.log')
+if (-not $PrepareOnly -and $env:W1_STARTUP_PROGRESS -ne '0') {
+  $progressArgs = @('-NoProfile', '-File', ('"' + (Join-Path $PSScriptRoot 'Show-W1Startup.ps1') + '"'),
+    '-LogPath', ('"' + $launchLog + '"'), '-OwnerPid', [string]$PID)
+  Start-Process -FilePath (Join-Path $PSHOME 'pwsh.exe') -ArgumentList $progressArgs -WindowStyle Hidden | Out-Null
+}
+$promotionLock = Join-Path $localLogs 'promotion.lock'
+$promotionDeadline = [DateTime]::UtcNow.AddMinutes(2)
+while (Test-Path -LiteralPath $promotionLock) {
+  $promotionOwner = [int](Get-Content -LiteralPath $promotionLock -Raw)
+  if (-not (Get-Process -Id $promotionOwner -ErrorAction SilentlyContinue)) { throw '上次 W1 更新被中断，请检查 .work/daily-updates 中的交接状态。' }
+  if ([DateTime]::UtcNow -gt $promotionDeadline) { throw 'W1 仍在应用更新，请等待更新结束后再启动。' }
+  Start-Sleep -Milliseconds 250
+}
 $w1App = Join-Path $env:USERPROFILE '.w1-harness-app'
 $env:W1_DESKTOP_EXECUTABLE = & $node (Join-Path $PSScriptRoot 'prepare-windows-shell.mjs') $w1App --check
 if ($LASTEXITCODE -ne 0) { throw 'W1 desktop runtime missing; run Install-W1Launcher.ps1 once.' }
-$localLogs = Join-Path $root '.work/local-dev'
-New-Item -ItemType Directory -Path $localLogs -Force | Out-Null
 $w1Home = Join-Path $env:USERPROFILE '.w1-harness'
 $w1Data = Join-Path $env:APPDATA 'W1 Harness'
 foreach ($name in @('ELECTRON_RUN_AS_NODE','ELECTRON_OVERRIDE_DIST_PATH','DSH_DESKTOP_DSH_DIR','DSH_DESKTOP_PNPM_ENTRY','DSH_DESKTOP_PRIMARY_RUNTIME_DIR','DSH_DESKTOP_MANDATORY_UPDATE_CONFIG')) {
@@ -34,7 +48,6 @@ if ($DebugPortBase -gt 0) {
   $env:DSH_DESKTOP_HOST_INSPECT_PORT = [string]($DebugPortBase+2)
 }
 # Each invocation owns its log, including a second launch that focuses the existing instance.
-$launchLog = Join-Path $localLogs ('desktop-' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '-' + $PID + '.log')
 # A running Desktop already owns the prepared profile. Send Electron's normal
 # second-instance request without rerunning migrations or the development builder.
 if (-not $PrepareOnly -and -not $RefreshProject -and $DebugPortBase -eq 0) {
@@ -52,6 +65,10 @@ if (-not $PrepareOnly -and -not $RefreshProject -and $DebugPortBase -eq 0) {
     if ($LASTEXITCODE -ne 75) { throw "W1 activation failed. See $launchLog" }
     # The owner exited during activation. Continue through the publisher before taking over.
   }
+}
+if (-not $PrepareOnly) {
+  & $node (Join-Path $PSScriptRoot 'resume-promotion.mjs') $root
+  if ($LASTEXITCODE -ne 0) { throw 'W1 待更新交接未完成，请检查 .work/daily-updates 中的状态和备份。' }
 }
 New-Item -ItemType Directory -Path $w1Home -Force | Out-Null
 $projectStore = Join-Path $w1Home 'storages/workspace.json'

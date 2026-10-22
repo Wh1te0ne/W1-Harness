@@ -1,5 +1,7 @@
 import { resolveManualPrice } from './manual-prices.js'
 import { VERIFIED_PROVIDER_PRICES } from './provider-prices.js'
+import { resolveBookPrice, pricingKey } from './price-book.js'
+import { callPrice } from './call-pricing.js'
 
 /**
  * DeepSeek 官方定价模型:价格表、官方文档解析、计费数学。
@@ -11,7 +13,8 @@ import { VERIFIED_PROVIDER_PRICES } from './provider-prices.js'
  *
  * 2026-09-10 控制台公告更新（USD 交叉核验：DEEPSEEK_USD_PRICE_NOTICE_URL）：
  * Flash 谷价 CNY 0.02/1/4、USD 0.003/0.15/0.6；峰价两倍。
- * 09-14 12:00 北京时间起 V4 Pro 转按 Flash 价。rateHistory 保留各自生效前价格。
+ * 旧版本曾将 Pro 改成 Flash 价；2026-10-21 核验当前官网后恢复独立 Pro 价。
+ * 修正从本机启用时刻生效，rateHistory 保留此前的本地计价依据，不推定官方历史变价日。
  * 下列为 2026-08 的历史定价依据，不能用九月新价覆盖这些历史调用：
  *  - 现为纯峰谷两档计价:空闲时段(OFF-PEAK / 空闲时段)价格 = 高峰时段
  *    (PEAK / 高峰时段)价格的一半;
@@ -615,6 +618,33 @@ function septemberPriceTable(currency) {
 export const DEFAULT_PRICE_TABLE = septemberPriceTable('USD')
 export const DEFAULT_PRICE_TABLE_CNY = septemberPriceTable('CNY')
 
+// Current official table verified 2026-10-21. Pro is a separate tariff again;
+// the verification date is not an asserted historical provider change date.
+for (const [current, august] of [[DEFAULT_PRICE_TABLE, AUGUST_PRICE_TABLE], [DEFAULT_PRICE_TABLE_CNY, AUGUST_PRICE_TABLE_CNY]]) {
+  current.models['deepseek-v4-pro'] = structuredClone(august.models['deepseek-v4-pro'])
+  current.models['deepseek-flash'] = structuredClone(current.models['deepseek-v4.1-flash'])
+}
+
+/** Correct only the unchanged bundled Pro tariff from activation onward; preserve historical rates and manual edits. */
+export function correctCurrentDeepSeekPrices(prices, atMs = Date.now()) {
+  const currency = prices?.currency === 'CNY' ? 'CNY' : 'USD'
+  const old = septemberPriceTable(currency).models['deepseek-v4-pro']
+  const current = currency === 'CNY' ? DEFAULT_PRICE_TABLE_CNY : DEFAULT_PRICE_TABLE
+  const entry = prices?.models?.['deepseek-v4-pro']
+  const changed = []
+  if (entry && JSON.stringify(normalizePrice(entry)) === JSON.stringify(normalizePrice(old))) {
+    const { rateHistory = [], ...rates } = entry
+    prices.models['deepseek-v4-pro'] = { ...structuredClone(current.models['deepseek-v4-pro']),
+      rateHistory: [...rateHistory, { ...rates, before: new Date(atMs).toISOString() }] }
+    changed.push('deepseek-v4-pro')
+  }
+  if (prices?.models && !Object.hasOwn(prices.models, 'deepseek-flash')) {
+    prices.models['deepseek-flash'] = structuredClone(current.models['deepseek-flash'])
+    changed.push('deepseek-flash')
+  }
+  return changed
+}
+
 /** 时间区间为半开区间：边界前取历史价，边界及之后取后续档位。 */
 export function priceAt(entry, atMs = Date.now()) {
   if (!entry || !Number.isFinite(atMs) || !Array.isArray(entry.rateHistory)) return entry
@@ -854,7 +884,11 @@ function priceModelHit(modelId, models, provider, mode, prices) {
     else if (Object.hasOwn(MODEL_VENDOR_PREFIXES, vendor)) return null
   }
   // Formatting a request must not create a literal hit that bypasses alias collisions.
-  return matchModelId(target, Object.keys(models), modelId)
+  const matched = matchModelId(target, Object.keys(models), modelId)
+  if (matched !== null || provider !== 'deepseek') return matched
+  // Known channel snapshot names may reference the vendor family, never another model's default.
+  const alias = { deepseekv41flash261017: 'deepseek-v4.1-flash', deepseekv4flashga260731: 'deepseek-v4-flash' }[canonModelId(target)]
+  return alias ? matchModelId(alias, Object.keys(models)) : null
 }
 
 /**
@@ -916,7 +950,7 @@ function providerPriceEntryForNormalized(normalized, modelId, prices, options) {
     const entry = Object.hasOwn(models, targetModel) ? normalizePrice(models[targetModel]) : null
     return { entry, billingMode: 'flat', priced: entry !== null && entry.unpriced !== true }
   }
-  if (targetProvider === '' || targetProvider === 'deepseek' || targetProvider.includes('deepseek')) {
+  if (['', 'deepseek', 'deepseek-official'].includes(targetProvider)) {
     const models = prices?.models ?? {}
     // 仅认自有属性(防原型链键);命中后统一 normalizePrice 补齐两档简写等写法,
     // 避免 {input,output} 直返导致 costOf 取到 undefined → NaN。
@@ -954,6 +988,7 @@ function providerPriceEntryForNormalized(normalized, modelId, prices, options) {
       if (ambiguous) return { entry: null, billingMode: 'flat', priced: false }
       if (bestEntry !== null) return { entry: bestEntry, billingMode: bestMode, priced: bestEntry.unpriced !== true }
     }
+    if (!/^deepseek[-/]/i.test(targetModel)) return { entry: null, billingMode: 'flat', priced: false }
     const raw = priceEntryFor(targetModel, prices)
     const entry = normalizePrice(raw)
     if (entry === null) return { entry: null, billingMode: 'flat', priced: false }
@@ -1077,6 +1112,22 @@ export function isLocalOriginProviderOrModel(provider, modelId) {
  *   'deepseek:__default__' 表示回退 DeepSeek 默认价。
  */
 export function providerPriceEntryFor(provider, modelId, prices, options) {
+  if (prices?.book) {
+    const at = Number.isFinite(options?.atMs) ? options.atMs : Date.now()
+    if (at >= prices.book.activatedAt || prices.book.records.some(r => r.key === pricingKey(provider,modelId) && r.from <= at && (r.to === null || at < r.to)))
+      return options?.tokens ? callPrice(resolveBookPrice(provider, modelId, prices, at),options.tokens,options.billingParameters) : resolveBookPrice(provider, modelId, prices, at)
+    const legacy = prices.book.legacy
+    if (!legacy) return { entry: null, currency: 'CNY', billingMode: 'flat', priced: false }
+    const result = providerPriceEntryFor(provider, modelId, legacy.prices, { ...options, mode: legacy.priceMatch, overrides: legacy.priceOverrides })
+    const factor = result.currency === 'USD' ? legacy.exchangeRate : 1
+    const convert = entry => {
+      if (!entry) return entry
+      return Object.fromEntries(Object.entries(entry).map(([k,v]) => [k,
+        ['cacheMiss','cacheHit','output','cacheWrite','reasoning'].includes(k) && typeof v === 'number' ? v * factor
+          : Array.isArray(v) ? v.map(convert) : v && typeof v === 'object' ? convert(v) : v]))
+    }
+    return { ...result, entry: convert(result.entry), currency: 'CNY', legacyUnverified: true }
+  }
   const manual = resolveManualPrice(provider, modelId, prices)
   if (manual) return manual
   const rawProvider = typeof provider === 'string' ? provider.trim().toLowerCase() : ''
@@ -1193,6 +1244,8 @@ export function tierFor(entry, atMs, peak) {
   const asTier = price => ({ cacheHit: price.cacheHit, cacheMiss: price.cacheMiss, output: price.output,
     ...(price.reasoning === undefined ? {} : { reasoning: price.reasoning }),
     ...(price.cacheWrite === undefined ? {} : { cacheWrite: price.cacheWrite }),
+    ...(price.cacheWrite1h === undefined ? {} : { cacheWrite1h: price.cacheWrite1h }),
+    ...(price.cacheWriteDefault1h === undefined ? {} : { cacheWriteDefault1h: price.cacheWriteDefault1h }),
     ...(price.longContext === undefined ? {} : { longContext: price.longContext }) })
   // Go 的公开参考价格按 UTC 工作日计峰谷，不能套直接 API 的北京假期表。
   if (base.billingMode === 'utc-peak') {
@@ -1236,6 +1289,7 @@ export function costOf(tokens, entry, atMs, peak) {
   const output = Math.max(0, Number(tokens?.output) || 0)
   const cacheRead = Math.max(0, Number(tokens?.cacheRead) || 0)
   const cacheWrite = Math.max(0, Number(tokens?.cacheWrite) || 0)
+  const cacheWrite1h = Number.isFinite(tokens?.cacheWrite1h) && tokens.cacheWrite1h >= 0 && tokens.cacheWrite1h <= cacheWrite ? tokens.cacheWrite1h : null
   const reasoning = Math.max(0, Number(tokens?.reasoning) || 0)
   // 宿主的 input/cacheRead/cacheWrite 是互斥桶；输入长度包含缓存，输出不参与阈值。
   // 此处必须传单次调用，日/会话聚合无法还原每次请求的上下文档位。
@@ -1244,7 +1298,8 @@ export function costOf(tokens, entry, atMs, peak) {
   const cost = (input * tier.cacheMiss
     + output * tier.output
     + cacheRead * tier.cacheHit
-    + cacheWrite * (tier.cacheWrite ?? tier.cacheHit)
+    + (cacheWrite-(cacheWrite1h??(tier.cacheWriteDefault1h?cacheWrite:0))) * (tier.cacheWrite ?? tier.cacheHit)
+    + (cacheWrite1h??(tier.cacheWriteDefault1h?cacheWrite:0)) * (tier.cacheWrite1h ?? tier.cacheWrite ?? tier.cacheHit)
     + reasoning * reasoningPrice) / 1_000_000
   // 终值防护:档位字段缺失/非法导致的 NaN/Infinity 与负值一律按 0 入账。
   return Number.isFinite(cost) && cost > 0 ? cost : 0

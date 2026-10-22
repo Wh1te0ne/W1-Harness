@@ -207,6 +207,7 @@ export function apply(ctx: Context): void {
         chatNode: key => chat.getSnapshot().nodes.source(key),
         chatNodeBottom: key => chat.getSnapshot().nodes.bottomSource(key),
         chatNodeProcess: key => chat.getSnapshot().nodes.processSource(key),
+        chatTurnAssistants: key => key === '' ? undefined : chat.getSnapshot().nodes.turnDataSource(Number(key), 'assistant-step'),
         chatGroup: key => conversation.snapshot.getSnapshot().views.grouped('chat')?.groupSource(key as GroupKey),
       },
     }

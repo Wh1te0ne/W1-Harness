@@ -4,12 +4,22 @@ import { createScope, scopeOf } from '@deepseek-ai/dsh-api-session-controller/cl
 import type { ToolCallId } from '@deepseek-ai/dsh-llm'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import { ApprovalPanel } from '../src/client/ApprovalPanel.tsx'
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
+import { ApprovalPanel, ApprovalTail } from '../src/client/ApprovalPanel.tsx'
 import type { ApprovalComposerProps, ApprovalInjected } from '../src/client/contract/slots.ts'
 import { PendingApproval } from '../src/client/contract/slots.ts'
+import { createSnapshotStore } from '@deepseek-ai/dsh-client-store'
+import { bindSnapshotSelector } from '@deepseek-ai/dsh-client-test-runtime'
+import type { SessionStatusSnapshot } from '@deepseek-ai/dsh-client-ui-session/client'
 import { apply, inject } from '../src/client/index.ts'
 import { apply as nodeApply } from '../src/index.ts'
+
+const originalScroll = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollIntoView')
+beforeAll(() => { Object.defineProperty(Element.prototype, 'scrollIntoView', { configurable: true, value: vi.fn() }) })
+afterAll(() => {
+  if (originalScroll) Object.defineProperty(Element.prototype, 'scrollIntoView', originalScroll)
+  else Reflect.deleteProperty(Element.prototype, 'scrollIntoView')
+})
 
 type ApprovalListener = (
   this: Context,
@@ -35,7 +45,7 @@ interface PluginBench {
   releasePending(): Promise<void>
   registration(): {
     options: {
-      select(props: { pendingInteraction: PendingApproval | undefined }): PendingApproval | null
+      name: string
       inject(): ApprovalInjected
     }
     component: unknown
@@ -47,7 +57,7 @@ async function setupPlugin(): Promise<PluginBench> {
   let listener: ApprovalListener | undefined
   let registration: {
     options: {
-      select(props: { pendingInteraction: PendingApproval | undefined }): PendingApproval | null
+      name: string
       inject(): ApprovalInjected
     }
     component: unknown
@@ -210,7 +220,7 @@ describe('approval Remote Event consumer', () => {
       .resolves.toBe('unavailable')
     expect(next).toHaveBeenCalledOnce()
     expect(bench.pending.getSnapshot()).toEqual([])
-    expect(bench.register).toHaveBeenCalledTimes(2)
+    expect(bench.register).toHaveBeenCalledTimes(1)
   })
 
   it('publishes one scoped takeover, returns the answer, and keeps stable registrations', async () => {
@@ -229,11 +239,10 @@ describe('approval Remote Event consumer', () => {
     const pending = bench.pending.getSnapshot()[0]!
     const { options, component } = bench.registration()
 
-    expect(component).toBe(ApprovalPanel)
+    expect(component).toBe(ApprovalTail)
     expect(pending.displayReason).toEqual({ en: 'Display reason', zh: '展示原因' })
     expect(options.inject().resolveReason(pending.displayReason!)).toBe('Display reason')
-    expect(options.select({ pendingInteraction: undefined })).toBeNull()
-    expect(options.select({ pendingInteraction: pending })).toBe(pending)
+    expect(options.name).toBe('conversation.pending')
     expect(pending).toMatchObject({
       kind: 'approval',
       sessionId: id('s1'),
@@ -247,7 +256,7 @@ describe('approval Remote Event consumer', () => {
     await expect(result).resolves.toBe('allowed-once')
     expect(next).not.toHaveBeenCalled()
     expect(bench.pending.getSnapshot()).toEqual([])
-    expect(bench.register).toHaveBeenCalledTimes(2)
+    expect(bench.register).toHaveBeenCalledTimes(1)
     expect(bench.disposeSlot).not.toHaveBeenCalled()
     await scope.fiber.dispose()
   })
@@ -307,7 +316,7 @@ describe('approval Remote Event consumer', () => {
   it('removes stable registrations with the plugin lifetime', async () => {
     const bench = await setupPlugin()
     await bench.ctx.fiber.dispose()
-    expect(bench.disposeSlot).toHaveBeenCalledTimes(2)
+    expect(bench.disposeSlot).toHaveBeenCalledTimes(1)
     expect(bench.disposeLocale).toHaveBeenCalledOnce()
   })
 })
@@ -332,6 +341,25 @@ function panelProps(
 }
 
 describe('ApprovalPanel', () => {
+  it('reveals the current session card without moving focus or consuming composer Enter', () => {
+    const pending = new PendingApproval(id('s1'), { toolName: 'pwsh', callId: 'collapsed-call' as ToolCallId })
+    const source = createSnapshotStore<SessionStatusSnapshot>(new Map())
+    const useSessionStatus = bindSnapshotSelector(source)
+    const { matched: _matched, ...props } = panelProps(pending)
+    render(<><ApprovalTail {...props} sessionId={id('s1')} useSessionStatus={useSessionStatus} />
+      <textarea aria-label="Draft" defaultValue="keep my draft" /></>)
+    const input = screen.getByRole('textbox')
+    input.focus()
+    act(() => { source.set(new Map([[id('other'), { running: true, pendingInteraction: pending, completionUnread: false }]])) })
+    expect(screen.queryByRole('button', { name: 'Allow once' })).toBeNull()
+    act(() => { source.set(new Map([[id('s1'), { running: true, pendingInteraction: pending, completionUnread: false }]])) })
+    expect(screen.getByRole('button', { name: 'Allow once' })).toBeTruthy()
+    expect(document.activeElement).toBe(input)
+    expect((input as HTMLTextAreaElement).value).toBe('keep my draft')
+    fireEvent.keyDown(input, { key: 'Enter' })
+    expect(pending.answerable).toBe(true)
+    expect(screen.queryByRole('button', { name: 'reviewHere' })).toBeNull()
+  })
   it('renders fallback copy without detail and returns rejection', async () => {
     const pending = new PendingApproval(id('s1'), { toolName: 'bash' })
     const props = panelProps(pending)
@@ -357,11 +385,16 @@ describe('ApprovalPanel', () => {
     })
     const renderSlot = vi.fn(() => <code>pnpm test</code>)
     render(<ApprovalPanel {...panelProps(pending, renderSlot)} />)
-    expect(screen.queryByRole('button', { name: 'Allow once' })).toBeNull()
-    fireEvent.click(screen.getByRole('button', { name: 'reviewHere' }))
+    expect(screen.getByRole('button', { name: 'Allow once' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'reviewHere' })).toBeNull()
 
     expect(screen.getByText('Run this exact command')).toBeTruthy()
     expect(screen.getByText('pnpm test')).toBeTruthy()
+    const summary = screen.getByText('detail.show')
+    expect(summary.closest('details')?.open).toBe(false)
+    summary.focus()
+    expect(fireEvent.keyDown(summary, { key: 'Enter' })).toBe(true)
+    expect(pending.answerable).toBe(true)
     expect(renderSlot).toHaveBeenCalledWith('conversation.approval.detail', {
       callId: 'call-1',
     })
@@ -420,8 +453,8 @@ describe('ApprovalPanel', () => {
     const pending = new PendingApproval(id('s1'), { toolName: 'bash', callId: 'call-1' as ToolCallId })
     const renderSlot = () => <input aria-label="Approval input" />
     render(<ApprovalPanel {...panelProps(pending, renderSlot)} />)
-    expect(screen.queryByRole('button', { name: 'Allow once' })).toBeNull()
-    fireEvent.click(screen.getByRole('button', { name: 'reviewHere' }))
+    expect(screen.getByRole('button', { name: 'Allow once' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'reviewHere' })).toBeNull()
     const group = screen.getByRole('group', { name: 'Approval details' })
     fireEvent.keyDown(group, { key: 'Enter', code: 'Enter' })
     expect(pending.answerable).toBe(true)

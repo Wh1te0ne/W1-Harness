@@ -28,6 +28,9 @@ The optional `chromeRequest` callback adds the separate `w1_chrome` tool and its
 Describe the task, for example: “Check whether the name field on this page works.” Naming the browser tool is optional: guidance asks the Agent to use it proactively when rendering, interaction, or visual checks are needed, subject to your restrictions. Pause/Allow controls affect that tab. Cancelling a turn stops subsequent input; input already delivered is not rolled back. Read the current page before retrying a cancelled or timed-out operation.
 
 <a id="understand-the-implementation"></a>
+
+Research uses search and text retrieval first. Browser fallback requires evidence that rendering, interaction or an authorized login is needed, following [tool selection](../tool-selection/README.md). Automated work reuses a conversation-owned background tab and respects a closed sidebar; repeated network failures or policy refusals do not justify more tabs.
+
 ## Understand the implementation
 
 <details>

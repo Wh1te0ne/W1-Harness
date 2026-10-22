@@ -661,11 +661,13 @@ export interface Config {
 ## `@deepseek-ai/dsh-client-ui-theme`
 
 - `refs`: `Volatile` (`@deepseek-ai/cordis`)
-- `source`: [`packages/client/ui-theme/src/index.ts:20`](../packages/client/ui-theme/src/index.ts)
+- `source`: [`packages/client/ui-theme/src/index.ts:21`](../packages/client/ui-theme/src/index.ts)
 
 ```ts config-catalog
 /** Runtime preferences projected to the browser. */
 export interface Config {
+  /** Durable W1 palette and local CSS; null until a selection is migrated or saved. */
+  appearance: Volatile<W1Appearance | null | undefined>
   /** Browser palette preference. */
   preference: Volatile<ThemePreference>
   /** Browser font size in pixels. */
@@ -682,8 +684,34 @@ export interface Config {
   terminalFontFamily: Volatile<string>
 }
 
+/**
+ * Persisted W1 theme selection, mode palettes and local stylesheet.
+ */
+export interface W1Appearance {
+  /** Selected built-in preset ID, or custom for edited palettes. */
+  preset: string
+  /** Colors used when the application is in light mode. */
+  light: W1Palette
+  /** Colors used when the application is in dark mode. */
+  dark: W1Palette
+  /** Local stylesheet, limited to 20,000 characters without imports or resource URLs. */
+  css: string
+}
+
 /** Theme preference persisted by the product Appearance row. */
 export type ThemePreference = typeof THEME_PREFERENCES[number]
+
+/**
+ * Primary accent, surface and foreground colors for one application mode.
+ */
+export interface W1Palette {
+  /** Primary accent color in #RRGGBB notation. */
+  accent: string
+  /** Base background color in #RRGGBB notation. */
+  surface: string
+  /** Primary foreground color in #RRGGBB notation. */
+  ink: string
+}
 ```
 <!-- END GENERATED config-catalog:@deepseek-ai/dsh-client-ui-theme -->
 
@@ -1781,7 +1809,7 @@ export interface Config extends ProtocolConfig {
 
 - `inject`: `llm`
 - `refs`: `Api` (`@earendil-works/pi-ai`) · `CacheRetention` (`@earendil-works/pi-ai`) · `Model` (`@earendil-works/pi-ai`) · `ModelThinkingLevel` (`@earendil-works/pi-ai`) · `OpenAICompletionsCompat` (`@earendil-works/pi-ai`) · [`RetryPolicyConfig`](../packages/llm/llm/src/index.ts) · `ThinkingBudgets` (`@earendil-works/pi-ai`) · `Transport` (`@earendil-works/pi-ai`) · `Volatile` (`@deepseek-ai/cordis`)
-- `source`: [`packages/llm/llm-pi-ai/src/config.ts:222`](../packages/llm/llm-pi-ai/src/config.ts)
+- `source`: [`packages/llm/llm-pi-ai/src/config.ts:227`](../packages/llm/llm-pi-ai/src/config.ts)
 
 ```ts config-catalog
 /** Plugin configuration: the provider routes this instance owns. */
@@ -1858,6 +1886,11 @@ export interface PiAiProviderProfile {
   headers?: Record<string, string>
   /** Provider-neutral pi-ai reasoning level. */
   reasoning?: ModelThinkingLevel
+  /**
+   * Responses reasoning fields accepted by this route. `effort-only` omits
+   * OpenAI summaries and encrypted-reasoning requests. Other protocols are unaffected.
+   */
+  responsesReasoningFormat?: 'openai' | 'effort-only'
   /** Token budgets used by reasoning providers that support them. */
   thinkingBudgets?: ThinkingBudgets
   /** Prompt-cache retention preference. */
@@ -4557,11 +4590,17 @@ export interface Config {
 ## `@deepseek-ai/dsh-web-fetch-http`
 
 - `inject`: `web`
+- `refs`: `Volatile` (`@deepseek-ai/cordis`)
 - `source`: [`packages/web/web-fetch-http/src/index.ts:32`](../packages/web/web-fetch-http/src/index.ts)
 
 ```ts config-catalog
 /** Plugin config: the provider's transport and size limits plus its `User-Agent` (all defaulted). */
 export interface Config {
+  /**
+   * Require public destination IPs on direct connections. Disable to use the system network's
+   * DNS and routing; private destinations then remain reachable.
+   */
+  requirePublicIp: Volatile<boolean>
   /** Maximum response body size in bytes. */
   maxResponseBytes?: number
   /** Maximum decoded body length in characters. */

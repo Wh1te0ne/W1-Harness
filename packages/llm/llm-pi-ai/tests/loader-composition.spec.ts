@@ -8,7 +8,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
 import Loader, { type ModuleLoaderV2 } from '@deepseek-ai/cordis-plugin-loader'
 import Include from '@deepseek-ai/cordis-plugin-include'
-import LlmRuntime, { createMessage, createUserMessage, userAgent } from '@deepseek-ai/dsh-llm'
+import LlmRuntime, { createMessage, createUserMessage, ReasoningEffortId, userAgent } from '@deepseek-ai/dsh-llm'
 import AuthorizationService from '@deepseek-ai/dsh-authorization'
 import LocalCredentialProvider from '@deepseek-ai/dsh-credentials-local'
 import { profileComposition } from '../../../settings/settings/tests/profile-composition.ts'
@@ -87,6 +87,36 @@ async function loadComposition(): Promise<{ ctx: Context; settingsPath: string }
 }
 
 describe('llm-pi-ai real dormant composition', () => {
+  it('loads strict Responses reasoning settings from a profile patch', async () => {
+    const server = await mockServer([{ status: 401, body: '{"error":{"message":"request captured"}}' }])
+    const { ctx, settingsPath } = await loadComposition()
+    await writeFile(settingsPath, [
+      '- id: llm-pi-ai',
+      '  config:',
+      '    providers:',
+      '      ark:',
+      '        apiKeyEnv: PI_COMPOSITION_KEY',
+      '        api: openai-responses',
+      `        baseURL: ${server.url}`,
+      '        responsesReasoningFormat: effort-only',
+      '        models:',
+      '          - id: deepseek-test',
+      '            reasoningEfforts: { low: low, high: high, max: max }',
+      '',
+    ].join('\n'))
+    await vi.waitFor(() => {
+      expect(ctx.llm.listProviders().map(provider => provider.id)).toEqual(['ark'])
+    }, { timeout: 5000 })
+    const info = await ctx.llm.resolveModelInfo('ark', 'deepseek-test')
+    expect(info.reasoning?.efforts.map(effort => effort.id)).toEqual(['low', 'high', 'max'])
+    await assemble(ctx, {
+      provider: 'ark', model: 'deepseek-test', reasoningEffort: ReasoningEffortId('max'), messages: [],
+    })
+    expect(server.requests[0]).toMatchObject({ reasoning: { effort: 'max' } })
+    expect(server.requests[0]).not.toHaveProperty('reasoning.summary')
+    expect(server.requests[0]).not.toHaveProperty('include')
+  })
+
   it('boots with zero routes and registers one the moment settings supply a profile', async () => {
     vi.stubEnv('PI_COMPOSITION_KEY', '')
     const server = await mockServer([{ events: textEvents }])

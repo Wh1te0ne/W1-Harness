@@ -1,4 +1,6 @@
 import { withoutOfficialBalance } from './w1-policy.js'
+import { migrateLedgerCny } from './pricing-migration.js'
+import { createPriceBook, validPriceBook, changePriceBook } from './price-book.js'
 import { validManualPrices, resolveManualPrice } from './manual-prices.js'
 /**
  * 账本存储:每日聚合、会话聚合、配置持久化($DSH_HOME/storages/usage-manager/ledger.json)。
@@ -296,7 +298,7 @@ export function localDayKey(ms) {
 }
 
 export function zeroDay(date) {
-  return { date, input: 0, output: 0, cacheRead: 0, cacheWrite: 0, reasoning: 0, calls: 0, cost: 0, apiCost: 0, byProviderModel: {}, sessions: [] }
+  return { date, input: 0, output: 0, cacheRead: 0, cacheWrite: 0, reasoning: 0, calls: 0, cost: 0, apiCost: 0, cacheWrite1h: 0, estimatedCalls: 0, stalePriceCalls: 0, unpricedCalls: 0, byProviderModel: {}, sessions: [] }
 }
 
 /**
@@ -663,7 +665,7 @@ function sanitizeNum(value) {
 /** 归一化一条用量聚合记录(day/session/byProviderModel 条目):桶字段补齐为有限非负数。 */
 function sanitizeBuckets(target) {
   if (target === null || typeof target !== 'object') return null
-  for (const key of ['input', 'output', 'cacheRead', 'cacheWrite', 'reasoning', 'calls', 'cost']) {
+  for (const key of ['input', 'output', 'cacheRead', 'cacheWrite', 'reasoning', 'calls', 'cost', 'unpricedCalls', 'cacheWrite1h', 'estimatedCalls', 'stalePriceCalls']) {
     target[key] = sanitizeNum(target[key])
   }
   // API 渠道金额(issue #64):缺失/非法回落为 cost(旧数据全部按 API 口径)。
@@ -1025,6 +1027,10 @@ export function stripSecretPatch(patch) {
  * @param rawPatch - 客户端提交的补丁(JSON)。
  */
 export function applyConfigPatch(current, rawPatch) {
+  if (current.prices?.book && rawPatch && (
+    ['currency','exchangeRate','pricingCurrency','priceMatch','priceOverrides','priceMatchDismissed'].some(k => Object.hasOwn(rawPatch,k) && JSON.stringify(rawPatch[k]) !== JSON.stringify(current[k]))
+    || rawPatch.prices && JSON.stringify(rawPatch.prices) !== JSON.stringify(current.prices)))
+    return {config:current,errors:['价格与汇率请在模型价格页修改；旧目录不能覆盖历史价格版本']}
   const locale = patchLocale(current, rawPatch)
   if (rawPatch === null || typeof rawPatch !== 'object' || Array.isArray(rawPatch)) {
     return { config: current, errors: [vmsg(locale, 'patchObject')] }
@@ -1461,6 +1467,11 @@ export function sanitizeConfig(raw) {
     base.prices = { ...base.prices, ...structuredClone(DEFAULT_PRICE_TABLE_CNY), currency: 'CNY' }
   }
   const out = mergeDeep(base, cfg)
+  if (cfg.prices?.book) {
+    if (!validPriceBook(cfg.prices.book)) throw new Error('价格版本记录无效，拒绝丢弃历史')
+    out.prices.book = structuredClone(cfg.prices.book)
+    out.currency = 'CNY'; out.symbol = '¥'; out.exchangeRate = 1; out.pricingCurrency = 'CNY'
+  }
   out.prices.manual = validManualPrices(cfg.prices?.manual ?? {}) ? structuredClone(cfg.prices?.manual ?? {}) : {}
   // 第三方模型列表也遵循完整替换语义；重启不能复活取消挂载的模型，
   // 也不能把默认缓存折扣/长档混进用户手写价。新增目录由一次性迁移补齐。
@@ -2000,7 +2011,17 @@ export class Ledger {
   static open() {
     const root = join(resolveDshHome(), 'storages', 'cost-meter-custom')
     const path = join(root, 'ledger.json')
-    return withLedgerLock(path, () => Ledger.load(path))
+    return withLedgerLock(path, () => {
+      migrateLedgerCny(path)
+      const ledger = Ledger.load(path)
+      if (!ledger.config.prices.book) {
+        ledger.config.prices.book = createPriceBook(ledger.config)
+        ledger.config.currency = 'CNY'; ledger.config.symbol = '¥'; ledger.config.exchangeRate = 1
+        ledger.config.pricingCurrency = 'CNY'; ledger.config.priceMatch = 'exact'; ledger.config.priceOverrides = {}
+        ledger.scheduleWrite()
+      }
+      return ledger
+    })
   }
 
   static load(path) {
@@ -2086,12 +2107,15 @@ export class Ledger {
    * @param sessionId - 会话 id(可能缺失,例如无会话的辅助调用)。
    * @param atMs - 计费时刻(epoch ms)。
    */
-  account(tokens, modelId, sessionId, atMs, provider) {
+  account(tokens, modelId, sessionId, atMs, provider, metadata = {}) {
     if (this.closed) return
-    const resolved = providerPriceEntryFor(provider, modelId, this.config.prices, {
+    this.refresh()
+    let resolved = providerPriceEntryFor(provider, modelId, this.config.prices, {
+      atMs, tokens, billingParameters:tokens?.billingParameters,
       mode: this.config.priceMatch === 'exact' ? 'exact' : 'auto',
       overrides: this.config.priceOverrides,
     })
+    if(metadata.usageMissing)resolved={...resolved,priced:false,estimated:true}
     const entry = resolved.entry ?? { cacheHit: 0, cacheMiss: 0, output: 0 }
     const peak = {
       enabled: ['deepseek-peak', 'utc-peak'].includes(resolved.billingMode) && this.config.peakEnabled === true,
@@ -2120,18 +2144,24 @@ export class Ledger {
       output: num(tokens?.output),
       cacheRead: num(tokens?.cacheRead),
       cacheWrite: num(tokens?.cacheWrite),
+      cacheWrite1h: Math.min(num(tokens?.cacheWrite1h),num(tokens?.cacheWrite)),
       reasoning: num(tokens?.reasoning),
     }
     const planId = cls === 'plan' ? (planProviderIdOf(provider)
       ?? (isRoutedThirdPartyCall(provider, modelId, this.config.prices) ? 'go' : null)) : null
     const call = {
+      ...(this.config.prices.book?.accounting?{id:metadata.id??tokens?.billingCallId??randomUUID()}:{}),
       date: localDayKey(atMs), sessionId, atMs, recordedAt: Date.now(), planId,
+      startedAtMs:metadata.startedAtMs??atMs,kind:metadata.kind??'model',outcome:metadata.outcome??'completed',
+      tokens:{...buckets,cacheWrite1h:tokens?.cacheWrite1h,billingParameters:tokens?.billingParameters},
       providerKey: `${typeof provider === 'string' && provider.length > 0 ? provider : 'deepseek'}:${String(modelId ?? 'default')}`,
-      values: { ...buckets, calls: 1, cost, apiCost },
+      values: { ...buckets, calls: 1, cost, apiCost, unpricedCalls: resolved.priced ? 0 : 1,estimatedCalls:resolved.estimated?1:0,stalePriceCalls:resolved.stale?1:0 },
+      pricing: {priceVersion:resolved.priceVersion??null,currency:'CNY',rateCurrency:resolved.rateCurrency??resolved.currency,exchangeRate:resolved.exchangeRate??null,exchangeRateDate:resolved.exchangeRateDate??null,tier:resolved.tier??null,source:resolved.source??'none',entry:resolved.entry,priced:resolved.priced,estimated:!!resolved.estimated,stale:!!resolved.stale},
     }
-    applyAccount(this, call)
+    if(applyAccount(this, call)===false)return
     this.pendingAccounts.push(call)
     this.scheduleWrite()
+    if(call.id)this.flush()
   }
 
   /** 清理超出保留天数的记录。 */
@@ -2187,6 +2217,21 @@ export class Ledger {
     }
   }
 
+  updatePricing(action, now = Date.now()) {
+    this.flush()
+    if (this.pendingWrite) throw new Error('账本尚未保存，请稍后重试')
+    return withLedgerLock(this.path, () => {
+      const disk = this.readDiskSnapshot() ?? this.snapshot()
+      disk.config.prices.book = changePriceBook(disk.config.prices.book, action, now)
+      // The active manual table is now the versioned book, not the legacy fallback table.
+      disk.config.prices.manual = {}
+      writeLedger(this.path, disk)
+      this.config = sanitizeConfig(disk.config)
+      this.adoptSnapshot(disk); this.writeBase = this.snapshot()
+      return disk.config.prices.book
+    })
+  }
+
   adoptSnapshot(merged) {
     this.config = sanitizeConfig(mergeRuntimeConfig(this.writeBase.config, this.config, merged.config))
     for (const key of ['days', 'archivedDays', 'balanceRef', 'migrations', 'planSamples', 'planHourBuckets', 'openrouterPriceHashes', 'historyReset']) this[key] = merged[key]
@@ -2223,9 +2268,11 @@ export class Ledger {
         this.writeBase = this.snapshot()
         this.pendingAccounts = []
         this.pendingWrite = false
+        this.lastWriteError = null
         this.diskRevision = null
       })
     } catch (error) {
+      this.lastWriteError = '消费记录暂未落盘，正在重试；请勿立即强制退出。'
       console.warn(`[dsh-usage-manager] 账本写入失败,稍后重试: ${String(error?.message ?? error)}`)
       if (!this.closed) this.scheduleWrite()
     }
@@ -2248,6 +2295,10 @@ export class Ledger {
       total.cacheRead += day.cacheRead ?? 0
       total.cacheWrite += day.cacheWrite ?? 0
       total.reasoning += day.reasoning ?? 0
+      total.cacheWrite1h = (total.cacheWrite1h ?? 0) + (day.cacheWrite1h ?? 0)
+      total.estimatedCalls = (total.estimatedCalls ?? 0) + (day.estimatedCalls ?? 0)
+      total.stalePriceCalls = (total.stalePriceCalls ?? 0) + (day.stalePriceCalls ?? 0)
+      total.unpricedCalls = (total.unpricedCalls ?? 0) + (day.unpricedCalls ?? 0)
       total.calls += day.calls ?? 0
       total.cost += day.cost ?? 0
       total.apiCost = (total.apiCost ?? 0) + (day.apiCost ?? day.cost ?? 0)
@@ -2259,6 +2310,10 @@ export class Ledger {
           reasoning: current.reasoning + (value.reasoning ?? 0),
           calls: current.calls + (value.calls ?? 0), cost: current.cost + (value.cost ?? 0),
           apiCost: (current.apiCost ?? 0) + (value.apiCost ?? value.cost ?? 0),
+          cacheWrite1h: (current.cacheWrite1h ?? 0) + (value.cacheWrite1h ?? 0),
+          estimatedCalls: (current.estimatedCalls ?? 0) + (value.estimatedCalls ?? 0),
+          stalePriceCalls: (current.stalePriceCalls ?? 0) + (value.stalePriceCalls ?? 0),
+          unpricedCalls: (current.unpricedCalls ?? 0) + (value.unpricedCalls ?? 0),
         }
       }
     }
@@ -2282,6 +2337,10 @@ export class Ledger {
       total.cacheRead += day.cacheRead ?? 0
       total.cacheWrite += day.cacheWrite ?? 0
       total.reasoning += day.reasoning ?? 0
+      total.cacheWrite1h = (total.cacheWrite1h ?? 0) + (day.cacheWrite1h ?? 0)
+      total.estimatedCalls = (total.estimatedCalls ?? 0) + (day.estimatedCalls ?? 0)
+      total.stalePriceCalls = (total.stalePriceCalls ?? 0) + (day.stalePriceCalls ?? 0)
+      total.unpricedCalls = (total.unpricedCalls ?? 0) + (day.unpricedCalls ?? 0)
       total.calls += day.calls ?? 0
       total.cost += day.cost ?? 0
       total.apiCost = (total.apiCost ?? 0) + (day.apiCost ?? day.cost ?? 0)
@@ -2293,6 +2352,10 @@ export class Ledger {
           reasoning: current.reasoning + (value.reasoning ?? 0),
           calls: current.calls + (value.calls ?? 0), cost: current.cost + (value.cost ?? 0),
           apiCost: (current.apiCost ?? 0) + (value.apiCost ?? value.cost ?? 0),
+          cacheWrite1h: (current.cacheWrite1h ?? 0) + (value.cacheWrite1h ?? 0),
+          estimatedCalls: (current.estimatedCalls ?? 0) + (value.estimatedCalls ?? 0),
+          stalePriceCalls: (current.stalePriceCalls ?? 0) + (value.stalePriceCalls ?? 0),
+          unpricedCalls: (current.unpricedCalls ?? 0) + (value.unpricedCalls ?? 0),
         }
       }
     }
@@ -2338,6 +2401,10 @@ export class Ledger {
       calls: day.calls ?? 0,
       cost: day.cost ?? 0,
       apiCost: day.apiCost ?? day.cost ?? 0,
+      cacheWrite1h: day.cacheWrite1h ?? 0,
+      estimatedCalls: day.estimatedCalls ?? 0,
+      stalePriceCalls: day.stalePriceCalls ?? 0,
+      unpricedCalls: day.unpricedCalls ?? 0,
       byProviderModel: day.byProviderModel ?? {},
       sessions,
     }

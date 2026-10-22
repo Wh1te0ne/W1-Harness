@@ -20,8 +20,8 @@ const sessionSchema = z.object({
   calls: num,
   cost: num,
   // API 渠道金额(issue #64):真金白银部分;缺席 = 旧快照按 cost 全额 API。
-  apiCost: num.optional(),
-  byProviderModel: z.record(z.string(), z.object({ input: num, output: num, cacheRead: num, cacheWrite: num, reasoning: num.optional(), calls: num, cost: num, apiCost: num.optional() })).optional(),
+  apiCost: num.optional(), cacheWrite1h: num.optional(), estimatedCalls: num.optional(), stalePriceCalls: num.optional(), unpricedCalls: num.optional(),
+  byProviderModel: z.record(z.string(), z.object({ input: num, output: num, cacheRead: num, cacheWrite: num, reasoning: num.optional(), calls: num, cost: num, apiCost: num.optional(), cacheWrite1h: num.optional(), estimatedCalls: num.optional(), stalePriceCalls: num.optional(), unpricedCalls: num.optional() })).optional(),
 })
 
 const daySchema = z.object({
@@ -33,8 +33,8 @@ const daySchema = z.object({
   reasoning: num.optional(),
   calls: num,
   cost: num,
-  apiCost: num.optional(),
-  byProviderModel: z.record(z.string(), z.object({ input: num, output: num, cacheRead: num, cacheWrite: num, reasoning: num.optional(), calls: num, cost: num, apiCost: num.optional() })).optional(),
+  apiCost: num.optional(), cacheWrite1h: num.optional(), estimatedCalls: num.optional(), stalePriceCalls: num.optional(), unpricedCalls: num.optional(),
+  byProviderModel: z.record(z.string(), z.object({ input: num, output: num, cacheRead: num, cacheWrite: num, reasoning: num.optional(), calls: num, cost: num, apiCost: num.optional(), cacheWrite1h: num.optional(), estimatedCalls: num.optional(), stalePriceCalls: num.optional(), unpricedCalls: num.optional() })).optional(),
   sessions: z.array(sessionSchema),
 })
 
@@ -59,11 +59,11 @@ export const sessionCostSchema = z.object({
   subagentCount: num,
   found: z.boolean(),
 })
-const turnCostRowSchema = z.object({ provider: z.string(), model: z.string(), bucket: z.string(), tokens: num, rate: num, cost: num, priced: z.boolean(), plan: z.boolean() })
+const turnCostRowSchema = z.object({ provider: z.string(), model: z.string(), bucket: z.string(), tokens: num, rate: num, cost: num, apiCost:num.optional(), priced: z.boolean(), plan: z.boolean() })
 export const turnCostSchema = z.object({
   found: z.boolean(), cost: num, apiCost: num,
   rows: z.array(turnCostRowSchema),
-  calls: z.array(z.object({ kind: z.string(), provider: z.string(), model: z.string(), atMs: num, cost: num, apiCost: num, plan: z.boolean(), priced: z.boolean(), longContext: z.boolean(), rows: z.array(turnCostRowSchema) })),
+  calls: z.array(z.object({calls:num.default(1),receiptId:z.string().nullable().optional(),outcome:z.string().nullable().optional(),kind: z.string(), provider: z.string(), model: z.string(), atMs: num, cost: num, apiCost: num, plan: z.boolean(), priced: z.boolean(), longContext: z.boolean(), rows: z.array(turnCostRowSchema) })),
 })
 
 export const statisticsQuerySchema = z.object({
@@ -73,7 +73,7 @@ export const statisticsQuerySchema = z.object({
   turnOffset: z.number().int().min(0).max(1e7).optional(),
   sort: z.enum(['cost', 'tokens', 'calls']).optional(),
 })
-const statisticsBuckets = z.object(Object.fromEntries(['input', 'output', 'cacheRead', 'cacheWrite', 'reasoning', 'calls', 'cost', 'apiCost'].map(key => [key, num])))
+const statisticsBuckets = z.object(Object.fromEntries(['input', 'output', 'cacheRead', 'cacheWrite', 'reasoning', 'calls', 'cost', 'apiCost', 'unpricedCalls', 'cacheWrite1h', 'estimatedCalls', 'stalePriceCalls'].map(key => [key, ['unpricedCalls','cacheWrite1h','estimatedCalls','stalePriceCalls'].includes(key) ? num.default(0) : num])))
 export const billingStatisticsSchema = z.object({
   from: z.string(), to: z.string(), retainedFrom: z.string(), retainedTo: z.string(), totals: statisticsBuckets,
   days: z.array(statisticsBuckets.extend({ date: z.string() })),
@@ -84,7 +84,7 @@ export const billingStatisticsSchema = z.object({
   sessionCount: num, offset: num, unassignedCost: num, unmodeledCost: num,
   mainSessionCount: num.optional(), childCount: num.optional(), archived: statisticsBuckets.optional(), unassigned: statisticsBuckets.optional(),
 })
-export const sessionBillingSchema = turnCostSchema.extend({ totalCalls: num, offset: num, recorded: statisticsBuckets,
+export const sessionBillingSchema = turnCostSchema.extend({ totalCalls: num, representedCalls:num.optional(), offset: num, recorded: statisticsBuckets,
   calls: z.array(turnCostSchema.shape.calls.element.extend({ sessionId: z.string().default(''), turn: num.nullable(), step: num.nullable(), logSeq: num.nullable().default(null) })),
   agents: z.array(statisticsBuckets.extend({ id: z.string(), title: z.string() })).default([]),
   kinds: z.array(statisticsBuckets.extend({ kind: z.string(), unpriced: z.boolean() })),
@@ -239,6 +239,7 @@ const configSchema = z.object({
   priceOverrides: z.record(z.string(), z.string()).optional(),
   priceTableDisplay: z.record(z.string(), z.boolean()).optional(),
   prices: z.object({
+    book: z.unknown().optional(),
     manual: z.record(z.string(), z.object({ currency: z.enum(['USD', 'CNY']), input: num.nonnegative(), cachedInput: num.nonnegative(), output: num.nonnegative(), cacheWrite: num.nonnegative().optional(),
       cacheWrite1h: num.nonnegative().optional(), cacheWriteTtl: z.enum(['5m', '1h']).optional(),
       longContext: z.object({ aboveInputTokens: num.int().positive(), input: num.nonnegative(), cachedInput: num.nonnegative(), output: num.nonnegative(), cacheWrite: num.nonnegative().optional(), cacheWrite1h: num.nonnegative().optional() }).optional(),
@@ -631,6 +632,7 @@ export const TYPERT = {
       result: _state$codec,
     },
     { id: 'dsh-usage-manager#usageManager/getLocalState', service: 'usageManager', namespace: 'usageManager', method: 'getLocalState', invocation: { kind: 'direct' }, parameters: [], result: _state$codec },
+    { id: 'dsh-usage-manager#usageManager/pricingAction', service: 'usageManager', namespace: 'usageManager', method: 'pricingAction', invocation: { kind: 'direct' }, parameters: [{name:'action',wire:'action',source:'json',codec:_patch$codec}], result:_state$codec },
     {
       id: 'dsh-usage-manager#usageManager/updateConfig',
       service: 'usageManager',

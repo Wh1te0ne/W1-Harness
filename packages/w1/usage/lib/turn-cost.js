@@ -1,3 +1,4 @@
+import {billingSamples} from './billing-receipts.js'
 import { statSync } from 'node:fs'
 import { join } from 'node:path'
 import { resolveDshHome } from './vendor/home-paths.js'
@@ -10,7 +11,7 @@ import { localDayKey } from './store.js'
 import { sessionCostIds } from './session-tree.js'
 
 const cache = new Map()
-const fields = { input: 'cacheMiss', output: 'output', cacheRead: 'cacheHit', cacheWrite: 'cacheWrite', reasoning: 'reasoning' }
+const fields = { input: 'cacheMiss', output: 'output', cacheRead: 'cacheHit', cacheWrite: 'cacheWrite', cacheWrite1h:'cacheWrite1h', reasoning: 'reasoning' }
 const emptyTurn = () => ({ found: false, cost: 0, apiCost: 0, rows: [], calls: [] })
 export function turnCostFromRecords(records, config, startSeq, endSeq, native = []) {
   const start = records.find(row => row.seq === startSeq && row.type === 'turn/start')
@@ -30,11 +31,17 @@ export function costFromSamples(samples, config) {
     let tier = tierFor(sample.resolved.entry, sample.atMs, sample.peak)
     const longContext = !!tier.longContext && sample.buckets.input + sample.buckets.cacheRead + sample.buckets.cacheWrite > tier.longContext.aboveInputTokens
     if (longContext) tier = tier.longContext
-    const call = { sessionId: sample.sessionId ?? '', kind: sample.kind, turn: sample.turn ?? null, step: sample.step ?? null, provider: sample.provider, model: sample.model, atMs: sample.atMs, cost: sample.cost, apiCost: sample.apiCost, plan: sample.plan, priced: sample.resolved.priced, longContext, rows: [] }
-    for (const [bucket, priceKey] of Object.entries(fields)) {
-      const tokens = sample.buckets[bucket]
+    const call = { calls:sample.calls??1,receiptId:sample.receiptId??null,outcome:sample.outcome??null, sessionId: sample.sessionId ?? '', kind: sample.kind, turn: sample.turn ?? null, step: sample.step ?? null, provider: sample.provider, model: sample.model, atMs: sample.atMs, cost: sample.cost, apiCost: sample.apiCost, plan: sample.plan, priced: sample.resolved.priced, longContext, rows: [] }
+    if(sample.legacy){
+      const tokens=sample.buckets.input+sample.buckets.cacheRead+sample.buckets.cacheWrite+sample.buckets.output
+      const row={provider:sample.provider,model:sample.model,bucket:'legacy',tokens,rate:0,cost:sample.cost,apiCost:sample.apiCost,priced:sample.resolved.priced,plan:sample.plan}
+      call.rows.push(row);const key=JSON.stringify([sample.provider,sample.model,'legacy']);const part=parts.get(key)??{...row,tokens:0,cost:0,apiCost:0};part.tokens+=tokens;part.cost+=row.cost;part.apiCost+=row.apiCost;parts.set(key,part)
+    }
+    for (const [bucket, priceKey] of (sample.legacy?[]:Object.entries(fields))) {
+      const hour=Number.isFinite(sample.buckets.cacheWrite1h)&&sample.buckets.cacheWrite1h>=0&&sample.buckets.cacheWrite1h<=sample.buckets.cacheWrite?sample.buckets.cacheWrite1h:tier.cacheWriteDefault1h?sample.buckets.cacheWrite:0
+      const tokens = bucket==='cacheWrite'?Math.max(0,sample.buckets.cacheWrite-hour):bucket==='cacheWrite1h'?hour:sample.buckets[bucket]
       if (!tokens) continue
-      const rate = sample.resolved.priced ? usdFromCost(tier[priceKey] ?? (bucket === 'cacheWrite' ? tier.cacheHit : 0), sample.resolved.currency, config.exchangeRate) : 0
+      const rate = sample.resolved.priced ? usdFromCost(tier[priceKey] ?? (bucket === 'cacheWrite1h'?tier.cacheWrite:bucket === 'cacheWrite' ? tier.cacheHit : 0), sample.resolved.currency, config.exchangeRate) : 0
       const plan = sample.plan
       call.rows.push({ provider: sample.provider, model: sample.model, bucket, tokens, rate, cost: tokens * rate / 1e6, priced: sample.resolved.priced, plan })
       const key = JSON.stringify([sample.provider, sample.model, bucket, rate, plan, sample.resolved.priced])
@@ -46,12 +53,14 @@ export function costFromSamples(samples, config) {
     calls.push(call)
   }
   calls.sort((a, b) => a.atMs - b.atMs)
-  return { found: samples.length > 0, cost: samples.reduce((n, row) => n + row.cost, 0), apiCost: samples.reduce((n, row) => n + row.apiCost, 0), rows: [...parts.values()], calls }
+  return { representedCalls:samples.reduce((n,s)=>n+(s.calls??1),0),found: samples.length > 0, cost: samples.reduce((n, row) => n + row.cost, 0), apiCost: samples.reduce((n, row) => n + row.apiCost, 0), rows: [...parts.values()], calls }
 }
 
 export async function getTurnCost(ledger, ctx, sessionId, startSeq, endSeq) {
   if (typeof sessionId !== 'string' || !sessionId || sessionId.length > 512 || ![startSeq, endSeq].every(n => Number.isSafeInteger(n) && n >= 0) || endSeq < startSeq) throw new Error('invalid turn identity')
+  ledger.refresh()
   const records = await sessionUsageRecords(ctx, sessionId)
+  if(ledger.config.prices.book?.accounting){const start=records.find(r=>r.seq===startSeq&&r.type==='turn/start');if(!start)return emptyTurn();return costFromSamples(billingSamples(ledger,sessionId,records).filter(s=>!s.legacy&&s.turn===start.data?.turn),ledger.config)}
   return turnCostFromRecords(records, ledger.config, startSeq, endSeq, await nativeSearchRecordsFor(ledger.path, sessionId))
 }
 
@@ -96,7 +105,7 @@ export async function getSessionBilling(ledger, ctx, raw) {
   for (const sessionId of ids) {
     const records = await sessionUsageRecords(ctx, sessionId)
     const native = await nativeSearchRecordsFor(ledger.path, sessionId)
-    const { samples } = replaySessionRecords([...records, ...native], ledger.config, null, true)
+    const samples = ledger.config.prices.book?.accounting ? billingSamples(ledger,sessionId,records) : replaySessionRecords([...records, ...native], ledger.config, null, true).samples
     for (const sample of samples) if (!sample.seed && sample.date >= query.from && sample.date <= query.to && matchesStats(sample.providerKey, query)) selected.push({ ...sample, sessionId })
     if (!query.provider && !query.model) for (const row of records) {
       if (row.type !== 'turn/start' || !Number.isSafeInteger(row.data?.turn) || row.data.turn < 0 || !Number.isFinite(row.time)) continue
@@ -108,7 +117,7 @@ export async function getSessionBilling(ledger, ctx, raw) {
   // Rank against the full filtered history, before transporting a call page.
   // Seven individual calls plus one remainder keep the chart and payload bounded.
   const callShares = detail.calls.map((call, index) => ({ index, cost: call.cost, apiCost: call.apiCost,
-    tokens: call.rows.reduce((sum, row) => sum + (row.bucket === 'reasoning' ? 0 : row.tokens), 0), calls: 1, other: false,
+    tokens: call.rows.reduce((sum, row) => sum + (row.bucket === 'reasoning' ? 0 : row.tokens), 0), calls: call.calls??1, other: false,
     unpriced: !call.priced && (query.basis === 'total' || (query.basis === 'plan' ? call.plan : !call.plan)) }))
   const callValue = row => query.basis === 'total' ? row.cost : query.basis === 'plan' ? Math.max(0, row.cost - row.apiCost) : row.apiCost
   callShares.sort((a, b) => callValue(b) - callValue(a) || a.index - b.index)
@@ -127,8 +136,11 @@ export async function getSessionBilling(ledger, ctx, raw) {
     for (const [map, key, identity] of [[kinds, sample.kind, { kind: sample.kind }], [turns, JSON.stringify([sample.sessionId, sample.turn]), { sessionId: sample.sessionId, turn: sample.turn }],
       [steps, JSON.stringify([sample.sessionId, sample.turn, sample.step]), { sessionId: sample.sessionId, turn: sample.turn ?? null, step: sample.step ?? null, other: false }]]) {
       const row = map.get(key) ?? { ...identity, ...emptyStats(), unpriced: false }
-      for (const bucket of Object.keys(fields)) row[bucket] += sample.buckets[bucket]
-      row.calls++; row.cost += sample.cost; row.apiCost += sample.apiCost
+      for (const bucket of Object.keys(fields)) row[bucket] += sample.buckets[bucket]??0
+      row.calls+=sample.calls??1; row.cost += sample.cost; row.apiCost += sample.apiCost
+      row.unpricedCalls += sample.resolved.priced ? 0 : 1
+      row.estimatedCalls += sample.resolved.estimated ? 1 : 0
+      row.stalePriceCalls += sample.resolved.stale ? 1 : 0
       row.unpriced ||= !sample.resolved.priced
       map.set(key, row)
     }

@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import { setImmediate } from 'node:timers/promises'
 import { resolveDshHome } from './vendor/home-paths.js'
 import { listSessionLogs, iterateSessionRecords, replaySessionRecords } from './backfill.js'
+import {billingSamples} from './billing-receipts.js'
 import { sessionUsageRecords, costFromSamples } from './turn-cost.js'
 import { sessionCostIds } from './session-tree.js'
 import { nativeSearchRecordsFor } from './native-search-history.js'
@@ -69,7 +70,7 @@ export async function getSessionTrajectory(ledger, ctx, query) {
   let cost = 0, apiCost = 0
   for (const id of ids) {
     const [tools, records, native] = await Promise.all([stepTools(ctx, id), sessionUsageRecords(ctx, id), nativeSearchRecordsFor(ledger.path, id)])
-    const samples = replaySessionRecords([...records, ...native], ledger.config, null, true).samples.filter(row => !row.seed)
+    const samples = ledger.config.prices.book?.accounting ? billingSamples(ledger,id,records) : replaySessionRecords([...records, ...native], ledger.config, null, true).samples.filter(row => !row.seed)
     const grouped = new Map()
     for (const sample of samples) {
       // Unknown step identities cannot safely be merged with neighbouring steps.
@@ -81,7 +82,7 @@ export async function getSessionTrajectory(ledger, ctx, query) {
       const detail = costFromSamples(samples, ledger.config), first = detail.calls[0]
       const names = first.kind === 'model' && first.step != null ? tools.get(keyOf(first.turn, first.step)) ?? [] : []
       const row = { key: id + ':' + key, sessionId: id, turn: first.turn, step: first.step, kind: first.kind, tools: names, atMs: first.atMs,
-        cost: detail.cost, apiCost: detail.apiCost, calls: detail.calls.length, unpriced: detail.calls.some(call => !call.priced && (basis === 'total' || (basis === 'plan' ? call.plan : !call.plan))), rows: detail.rows }
+        cost: detail.cost, apiCost: detail.apiCost, calls: detail.representedCalls, unpriced: detail.calls.some(call => !call.priced && (basis === 'total' || (basis === 'plan' ? call.plan : !call.plan))), rows: detail.rows }
       steps.push(row); cost += row.cost; apiCost += row.apiCost
       // A multi-tool step is a single group; never multiply its model cost by tool count.
       const groupKey = JSON.stringify([row.kind, names]), group = groups.get(groupKey) ?? { key: groupKey, kind: row.kind, tools: names, steps: 0, cost: 0, apiCost: 0, unpriced: false }

@@ -1,6 +1,6 @@
 {
   "name": "@deepseek-ai/dsh-w1-chrome-use",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "private": true,
   "description": "W1 Chrome extension and conversation-bound loopback bridge",
   "type": "module",
