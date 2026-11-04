@@ -23,7 +23,7 @@ import type { createChatStore } from '../stores.ts'
 import type { ChatPresentationPolicy } from '../presentation-policy.ts'
 import type { FlowMotionRows } from '../chat/flow-motion.ts'
 import type { ToolCallId } from './store.ts'
-import type { ChatConversationViewNode, ChatNode, ChatNodeKind } from './chat-nodes.ts'
+import type { AssistantChatData, ChatConversationViewNode, ChatNode, ChatNodeKind } from './chat-nodes.ts'
 import type {
   ChatNodeProcessSource, ChatNodeSource, ChatSnapshot, ChatTurnProcessPresentation,
 } from './snapshot.ts'
@@ -307,6 +307,8 @@ export interface ChatViewInjected {
     chatNodeBottom: (key: string) => ObservableSnapshot<boolean>
     /** Resolve the stable Turn-process source for one Chat Node key. */
     chatNodeProcess: (key: string) => ChatNodeProcessSource
+    /** Observe only assistant output in one Turn; an empty key has no running Turn. */
+    chatTurnAssistants: (key: string) => ObservableSnapshot<readonly AssistantChatData[]> | undefined
     /** Resolve one optional group without subscribing the root View to its data. */
     chatGroup: (key: string) => ObservableSnapshot<GroupSnapshot<ConversationGroupData<'chat'>> | undefined> | undefined
   }

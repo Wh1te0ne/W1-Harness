@@ -9,6 +9,13 @@ const row = (version: string) => ({ tag_name: `v${version}`, draft: false, prere
   html_url: `https://github.com/Wh1te0ne/W1-Harness/releases/tag/v${version}`, body: '# A W1 release',
   assets: [{ name: `${w1UpdateChannel(version)}.yml` }] })
 
+it('moves existing alpha installations to numbered releases and keeps later updates on the numbered channel', () => {
+  expect(selectW1ProductRelease([row('0.2.0'), row('0.1.0-alpha.4')], '0.1.0-alpha.4')?.version).toBe('0.2.0')
+  expect(w1UpdateChannel('0.2.0')).toBe('latest')
+  expect(selectW1ProductRelease([row('0.2.1'), row('0.3.0-alpha.1')], '0.2.0')?.version).toBe('0.2.1')
+  expect(selectW1ProductRelease([row('0.1.0-alpha.4')], '0.2.0')).toBeUndefined()
+})
+
 it('keeps W1 channels independent of DSH tags and filters source-only releases', () => {
   expect(selectW1ProductRelease([{ ...row('0.2.0'), tag_name: 'dsh-v0.2.0' },
     { ...row('0.3.0'), assets: [] }, row('0.1.1-alpha.1'), row('0.1.0')], '0.1.0-alpha.4')?.version).toBe('0.1.1-alpha.1')

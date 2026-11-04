@@ -14,4 +14,6 @@ export interface TurnProcessViewEntry {
 /** Per-Session state shared only by the Chat view and details surface. */
 export interface ChatStoreState {
   turnProcesses: TurnProcessViewEntry[]
+  /** Manual process-group disclosure, retained for this Session's view lifetime. */
+  processGroups: Record<string, boolean>
 }

@@ -274,17 +274,11 @@
   margin-left: auto;
 }
 
-.sessionRow:hover .time,
-.sessionRow.menuOpen .time {
-  display: none;
-}
+
 
 /* Hover swaps the trailing cell to the action buttons, which already carry
    the pin/archive glyphs — hide the static markers so they do not double. */
-.sessionRow:hover .pinIndicator,
-.sessionRow.menuOpen .pinIndicator {
-  display: none;
-}
+
 
 /* The unclipped hover state drops the ellipsis, which would otherwise cover
    the characters the marquee reached. Guarded because a touch tap
@@ -419,3 +413,15 @@
     transition: none;
   }
 }
+
+.sessionRow.activityRow { position: relative; height: auto; min-height: 0; box-sizing: border-box; align-items: flex-start; padding-block: 5px; }
+.activityText { flex: 1; min-width: 0; padding-left: 4px; }
+.activityHeading { display: flex; gap: 6px; align-items: baseline; min-width: 0; line-height: 20px; }
+.activityTitle { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.activityProject { min-width: 0; max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--dsw-alias-label-tertiary); font-size: 11px; }
+.activityPreview { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; color: var(--dsw-alias-label-secondary); font-size: 12px; line-height: 18px; margin-top: 2px; }
+.activityRow .rowActions { position: absolute; right: 8px; top: 7px; gap: 8px; background: var(--dsw-alias-bg-layer-2); border-radius: var(--dsw-radius-sm); }
+
+
+
+.activityRow:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary); outline-offset: -2px; }

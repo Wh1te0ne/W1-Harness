@@ -26,6 +26,8 @@ Running status comes from Host list baselines or status events. Subagent catalog
 
 The package injects the Client `remoteAccess` service and publishes Session access Hooks over its `source()`: the root `useSessionAccess(sessionId, action)` answers on one Session resource, and the Session-scope `useAccess(action)` answers on the bound Session's resource; the `global` resource's answer is a different Hook, `useRemoteAccess(action)`, so neither shadows the other. The SessionMaybe-scope `useAccess(action)` returns `undefined` while no Session is bound, which callers treat as not allowed; a decision on the `global` resource reads `useRemoteAccess` instead. Snapshot semantics belong to [`dsh-api-remote-access`](../../api/remote-access/README.md#client-face).
 
+Completion reminder identities persist in browser storage per Host home, separately from live interaction requests. Opening the session or explicitly acknowledging its completion clears the reminder. Storage failures retain the in-memory behavior; no transcript text is stored in this reminder record.
+
 <a id="model-experience"></a>
 ## Model Experience
 

@@ -31,6 +31,8 @@ The Desktop Host mounts the plugin automatically alongside the existing prompt a
 | Information lookup or ordinary page text | Search or fetch; use the browser when rendering or interaction is necessary |
 | Supported service or file operation | Prefer the relevant dedicated tool; use Shell for builds, tests, processes, or uncovered operations |
 
+Classify failed text retrieval before using a browser. Network/TLS/timeout failures, rate limits and policy refusals do not prove a rendering requirement. Guidance permits bounded transient retries, stops repeated failures across sources, and forbids changing network settings or switching channels to bypass a refusal. A JavaScript shell, required interaction or authorized login can justify browser fallback; reuse a conversation-owned background tab and stop if the same blocker remains. This is model guidance, not a new executor retry loop or permission grant.
+
 <a id="understand-the-implementation"></a>
 ## Understand the implementation
 

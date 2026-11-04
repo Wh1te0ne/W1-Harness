@@ -49,6 +49,12 @@ Auto 在每个受支持调用的 body 执行前审查一次，包括每个已开
 
 最终拒绝使用普通工具卡片。折叠行标识 Auto review；展开输出说明 body 未执行，并显示可选理由。[Web 权限包](../../client/ui-permission-presets/README.zh.md)拥有选择器交互，[工具 UI](../../client/ui-tool/README.zh.md)拥有理由展示。
 
+审查请求携带发起会话 ID 和 `auto-review` 用途，用于费用归属。私有审查提示与回复仍不进入模型可见的会话历史。
+
+每个用户消息封装也携带完整的固定审查规则与明确的审查任务，同时保留系统规则。这样即使中间服务削弱系统角色传递，请求本身仍完整；不会把内嵌会话事实提升为指令，也不会接受畸形决定。保留两份规则的提供方可能将重复部分计入额外输入用量。
+
+W1 的 Web 组合将此用途映射到独立 HTTP 传输。审查仍经过 LLM 瀑布和用量计费，但避开全局 fetch 上的会话改写包装；当配置端点本身是压缩代理时，部署标头保持透明转发。审查策略、严格输出解析和失败拒绝保持不变，实现不依赖模型名称或供应商身份。
+
 -----
 
 <a id="understand-the-implementation"></a>
@@ -84,7 +90,7 @@ Reviewer 从当前 Session surface 与待执行调用重建五个分区：固定
 
 #### 模型看到什么
 
-Reviewer 使用最新 `request/header.config` 的 provider 与模型，并沿用 shipped adapter 默认 reasoning。固定 `REVIEW_POLICY` 替代恰好一个动作的人工审批：allow 后立即以 Full access 执行。其余四个分区只包含上文列出的保留事实。响应为一个严格 JSON text 对象，包含 `risk` 与 `decision`；deny 可附字符串 `reason`。Reasoning blocks 可以位于这唯一 text block 之前。只有 `low + allow`、`medium + allow/deny` 和 `high + deny` 合法。
+Reviewer 使用最新 `request/header.config` 的 provider 与模型，并沿用 shipped adapter 默认 reasoning。请求不指定 `temperature`，采样使用提供方默认值，以兼容拒绝自定义温度的模型。固定 `REVIEW_POLICY` 替代恰好一个动作的人工审批：allow 后立即以 Full access 执行。其余四个分区只包含上文列出的保留事实。响应为一个严格 JSON text 对象，包含 `risk` 与 `decision`；deny 可附字符串 `reason`。Reasoning blocks 可以位于这唯一 text block 之前。只有 `low + allow`、`medium + allow/deny` 和 `high + deny` 合法。
 
 #### Token 影响
 

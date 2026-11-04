@@ -7,10 +7,12 @@
  */
 
 import { Context } from '@deepseek-ai/cordis'
+import z from '@deepseek-ai/schemastery'
 import { Remote, RemoteError, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
 import { deepFreeze } from '@deepseek-ai/dsh-util-values'
 import type {
   GenerateOptions,
+  LlmRequestTransport,
   RequestMessage,
   LlmConfigurableProvider,
   LlmDiscoveredModel,
@@ -347,11 +349,25 @@ export interface DirectoryRegistrationHandle {
   replace(entries: readonly LlmConfigurableProvider[]): void
 }
 
+/** Deployment-owned transport metadata for explicitly classified model requests. */
+export interface Config {
+  /** Transport policy applied only to the exact purpose key; unclassified calls receive no policy. */
+  requestTransportByPurpose?: Readonly<Record<string, LlmRequestTransport>>
+}
+
+export const Config: z<Config> = z.object({
+  requestTransportByPurpose: z.dict(z.object({
+    isolated: z.boolean().default(false),
+    headers: z.dict(z.string()).default({}),
+  })).default({}),
+})
+
 /**
  * The abstract `llm` service: an adapter registry plus a streaming model-call
  * API, interceptable via the `llm/stream` waterfall.
  */
 export class LlmRuntime extends TypertRemoteService {
+  static Config = Config
   private adapters = new Map<string, AdapterRegistration>()
   private directory = new Map<string, LlmConfigurableProvider>()
   private discoveries = new Map<
@@ -359,7 +375,7 @@ export class LlmRuntime extends TypertRemoteService {
     (request: LlmModelDiscoveryRequest, signal?: AbortSignal) => Promise<readonly LlmDiscoveredModel[]>
   >()
 
-  constructor(ctx: Context) {
+  constructor(ctx: Context, public config: Config = {}) {
     super(ctx, 'llm')
   }
 
@@ -1171,11 +1187,18 @@ export class LlmRuntime extends TypertRemoteService {
     options: GenerateOptions,
     prepared?: PreparedDispatch,
   ): AsyncIterable<StreamChunk> {
+    const transport = options.purpose === undefined ? undefined : this.config.requestTransportByPurpose?.[options.purpose]
+    const request = transport === undefined ? options : Object.freeze({
+      ...options, transport: Object.freeze({
+        ...options.transport, ...transport,
+        headers: Object.freeze({ ...options.transport?.headers, ...transport.headers }),
+      }),
+    })
     return this.ctx.waterfall(
       this,
       'llm/stream',
-      options,
-      () => this.adapterStream(options, prepared),
+      request,
+      () => this.adapterStream(request, prepared),
     )
   }
 }

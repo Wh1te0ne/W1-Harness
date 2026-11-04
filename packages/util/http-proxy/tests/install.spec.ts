@@ -8,6 +8,7 @@ import {
   installProxyFromEnvironment,
   proxyEnvironmentForChild,
   proxyRouteFor,
+  isolatedFetch,
 } from '../src/index.ts'
 import { PROXY_ENV_NAMES } from '../src/policy.ts'
 
@@ -24,6 +25,18 @@ let originUrl: string
  * host never resolves — the client connects to the proxy, which answers the absolute-form request.
  */
 const proxyTarget = 'http://origin.test/probe'
+
+it('isolated fetch retains the installed network proxy and accepts a Node Request with cancellation', async () => {
+  const { dispose } = await install(proxyAll())
+  try {
+    const response = await isolatedFetch(new Request(proxyTarget, { method: 'POST', body: 'synthetic' }))
+    expect(await response.text()).toBe('VIA-PROXY')
+    expect(proxied).toContain(`POST ${proxyTarget}`)
+    const controller = new AbortController()
+    controller.abort()
+    await expect(isolatedFetch(originUrl, { signal: controller.signal })).rejects.toThrow()
+  } finally { await dispose() }
+})
 
 function listen(server: Server): Promise<AddressInfo> {
   return new Promise((resolve) => {

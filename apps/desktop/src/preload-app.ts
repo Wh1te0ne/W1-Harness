@@ -12,6 +12,17 @@ import { createDesktopBrowserBridge } from './preload-browser.ts'
 function createProductApi(): DshDesktopProductApi {
   return {
     protocolVersion: 1,
+    sessions: {
+      create: id => ipcRenderer.invoke(DESKTOP_IPC.sessionLinkCreate, id) as Promise<string>,
+      resolve: link => ipcRenderer.invoke(DESKTOP_IPC.sessionLinkResolve, link) as Promise<string>,
+      pending: () => ipcRenderer.invoke(DESKTOP_IPC.sessionLinkPending) as ReturnType<DshDesktopProductApi['sessions']['pending']>,
+      acknowledge: id => ipcRenderer.invoke(DESKTOP_IPC.sessionLinkAck, id) as Promise<void>,
+      onOpen(listener) {
+        const handle = (): void => { listener() }
+        ipcRenderer.on(DESKTOP_IPC.sessionLinkOpen, handle)
+        return () => { ipcRenderer.off(DESKTOP_IPC.sessionLinkOpen, handle) }
+      },
+    },
     remote: { manage: (action, value) => ipcRenderer.invoke(DESKTOP_IPC.remoteManage, action, value) as Promise<unknown> },
     notifications: {
       show: request => ipcRenderer.invoke(DESKTOP_IPC.notificationShow, request) as Promise<DesktopNotificationResult>,

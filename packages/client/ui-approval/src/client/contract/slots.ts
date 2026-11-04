@@ -185,9 +185,9 @@ export interface ApprovalInjected {
   resolveReason(reason: NonNullable<ApprovalPresentationRequest['displayReason']>): string
 }
 
-/** Full props of the approval composer takeover. */
+/** Full props of one approval card below the transcript. */
 export type ApprovalComposerProps =
-  PropsRuntime<'conversation.composer'>
+  PropsRuntime<'conversation.pending'>
   & PropsRenderSlots<'conversation.approval.detail'>
   & { matched: PendingApproval }
   & PropsLocale<'approval'>

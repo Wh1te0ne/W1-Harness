@@ -7,6 +7,8 @@ kind: "package-reference"
 
 [English](README.md) | 中文
 
+适配器遵守 `GenerateOptions.transport`，支持辅助 HTTP 请求隔离与部署标头。认证和 Harness 归因优先于单次调用标头。已验证 OpenAI Chat Completions、Responses 和 Anthropic Messages；其他目录协议取决于 SDK 是否支持自定义 fetch 传输。隔离调用仍捕获计费信息。
+
 ## 概述
 
 `@deepseek-ai/dsh-llm-pi-ai` 通过一份配置把模型请求路由到多个 pi-ai 提供方、OpenAI 兼容网关或自托管服务器。已安装的 pi-ai 提供方会提供端点、协议和模型目录默认值；自定义路由可以直接声明这些值，无需修改代码。profile 与凭据按请求解析，因此设置变更会在下一个请求生效，无需重启。受支持的提供方可以使用已存储的 OAuth 或交互式密钥登录，并通过跨进程锁刷新凭据。本包可以在没有路由时启动，并在用户设置添加路由后将其激活。
@@ -101,6 +103,8 @@ profile 的 `models` 列表会替换而非扩展路由的已安装目录；每�
 ### 带推理（reasoning）与协议兼容运行
 
 `reasoningEfforts` 声明模型可选择的 thinking 等级：每个键都是选择器提供的等级，其值是分派时在协议中发送的拼写，因此 `max: ultra` 可以为拥有自有词汇的网关重命名等级。省略该字段时保留已安装目录条目的能力；`false` 声明非推理模型。对于 pi-ai 无法识别的端点，`compat` 开关重塑请求——哪个角色携带系统提示词、哪个字段限制输出、thinking 等级如何传递——可逐路由、逐模型配置。条目与已安装目录都没有尺寸的模型，会采用路由的 `defaultContextWindow` 与 `defaultMaxTokens` 回退值。
+
+火山方舟等严格校验的 Responses 网关可在路由上设置 `responsesReasoningFormat: effort-only`，保留 `reasoning.effort`，省略 OpenAI 的 `reasoning.summary` 和 `reasoning.encrypted_content` include 请求。省略该设置时保留 OpenAI 行为；其他协议不受影响。`reasoningEfforts` 只声明模型接受的档位，例如 `{ low: low, high: high, max: max }`。选择 Default 时沿用路由／服务端默认值，不代表最低思考强度。
 
 确切模型元数据将 `reasoning.efforts` 按可选强度从低到高排列。配置函数可从该列表中选择，再由 `prepareCall()` 校验具体强度。适配器只接收解析后的控制项。选择 `off` 不保证禁用推理：以省略推理字段表达该值的协议会沿用网关默认行为。所选等级下产生的推理 token 都计入该请求的输出上限。
 

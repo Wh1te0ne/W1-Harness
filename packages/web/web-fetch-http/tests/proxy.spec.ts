@@ -72,6 +72,16 @@ async function installProxy(): Promise<() => Promise<void>> {
 }
 
 describe('fetching through a proxy', () => {
+  it('system mode honors the installed proxy and its loopback bypass without public-address resolution', async () => {
+    const resolve = vi.spyOn(publicHttpNetwork, 'resolve')
+    disposeProxy = await installProxy()
+    const provider = new HttpFetchProvider(limits, undefined, false)
+    expect((await provider.fetch({ url: proxyTarget })).body.content).toBe('via-proxy')
+    expect((await provider.fetch({ url: originUrl })).body.content).toBe('direct')
+    expect(proxied).toEqual([proxyTarget])
+    expect(resolve).not.toHaveBeenCalled()
+  })
+
   it('tunnels the request and never resolves a public address for it', async () => {
     const resolve = vi.spyOn(publicHttpNetwork, 'resolve')
     disposeProxy = await installProxy()

@@ -48,6 +48,10 @@ export interface SessionListMetadata {
   readonly blank: boolean
   /** Latest human-authored prompt time in the folded prefix. */
   readonly lastPromptAt: number | null
+  /** Latest user-visible message or turn completion, independent of sidebar manual order. */
+  readonly activityAt?: number | undefined
+  /** Plain-text excerpt of the latest assistant reply; prompts and reasoning are excluded. */
+  readonly preview?: string | undefined
 }
 
 /**

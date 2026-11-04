@@ -258,6 +258,8 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
     }
     /** Registered Conversation target Views, rendered one at a time. */
     'conversation.view': { kind: 'list'; scope: 'session'; owner: ConvViewOwnerProps }
+    /** Pending interactions after the transcript, outside folded tools and the composer chain. */
+    'conversation.pending': { kind: 'list'; scope: 'session'; owner: Record<never, never> }
     /** Selector-routed replacements for the current Session's resident composer. */
     'conversation.composer': { kind: 'chain'; scope: 'session'; owner: ComposerChainProps }
     /** Workspace picker shown by the blank-session Hero. */
@@ -307,6 +309,7 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
       props: ConversationContentInputProps
       children: {
         'conversation.session': { kind: 'single'; scope: 'session' }
+        'conversation.pending': { kind: 'list'; scope: 'session' }
         'conversation.composer': { kind: 'chain'; scope: 'session' }
         'conversation.composer.bar': { kind: 'single'; scope: 'session-maybe' }
         'conversation.input.dock': { kind: 'list'; scope: 'session' }

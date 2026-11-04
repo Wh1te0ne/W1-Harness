@@ -23,6 +23,7 @@ import * as referencePlugin from '@deepseek-ai/dsh-session-reference'
 import * as spillPlugin from '@deepseek-ai/dsh-spill-local'
 import { sessionDir } from '@deepseek-ai/dsh-spill-local'
 import * as sourcePlugin from './fixtures/source-session.ts'
+import { encodeSessionLink } from '../src/link.ts'
 
 let context: Context | undefined
 let root: string | undefined
@@ -35,12 +36,13 @@ afterEach(async () => {
 })
 
 describe('session-reference real Loader composition', () => {
-  it('logs a bounded preview and reads the full immutable spill owned by the target', async () => {
+  it.each(['mention', 'link'] as const)('logs a bounded preview and reads the full immutable spill owned by the target: %s', async (mode) => {
     root = await mkdtemp(join(tmpdir(), 'reference-loader-'))
     const spillRoot = join(root, 'spills')
     const fixture = await readFile(new URL('./fixtures/cordis.yml', import.meta.url), 'utf8')
     const configPath = join(root, 'cordis.yml')
-    await writeFile(configPath, fixture.replace('{{spillRoot}}', spillRoot.replaceAll('\\', '/')))
+    await writeFile(configPath, fixture.replace('{{spillRoot}}', spillRoot.replaceAll('\\', '/'))
+      .replace('maxReferenceBytes: 360', 'maxReferenceBytes: 360\n    deepLinkScheme: w1-harness-test'))
     const ctx = context = new Context()
     ctx.baseUrl = pathToFileURL(root).href + '/'
     await ctx.plugin(Loader)
@@ -71,9 +73,9 @@ describe('session-reference real Loader composition', () => {
     const target = ctx.sessions.create(SessionId('reference-target'))
     const agent = { id: target.id, ctx, session: target } as Agent
     const direct = createUserMessage({
-      content: [{ type: 'text', text: 'Use ' + referencePlugin.formatSessionReferenceMention({
+      content: [{ type: 'text', text: 'Use ' + (mode === 'link' ? encodeSessionLink('reference-source', 'w1-harness-test') : referencePlugin.formatSessionReferenceMention({
         sessionId: SessionId('reference-source'), label: 'Research',
-      }) }],
+      })) }],
       source: { kind: 'user' },
     })
     const decision = await agentEvents(ctx, agent).waterfall('agent/pre-step', {

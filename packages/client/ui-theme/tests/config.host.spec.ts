@@ -1,6 +1,9 @@
 import { Context } from '@deepseek-ai/cordis'
 import { describe, expect, it } from 'vitest'
 import type { IndexInjection } from '@deepseek-ai/dsh-host-webserver'
+import { readFileSync } from 'node:fs'
+import { configurationFixture } from '../../../settings/settings/tests/configuration-fixture.ts'
+import { W1_DEFAULT } from '../src/w1-appearance-settings.ts'
 import * as HostPlugin from '../src/index.ts'
 import { liveConfig, omitsGeneratedPage } from '../../../settings/settings/tests/live-config.ts'
 import { plainConfig } from '../../../settings/settings/src/schema.ts'
@@ -27,9 +30,9 @@ describe('ui-theme host', () => {
     const ctx = new Context()
     const configuration = await liveConfig(ctx, { Config, apply })
     const { fiber } = configuration
-    expect(plainConfig(configuration.fiber.config)).toEqual({ preference: DEFAULT_PREFERENCE, fontSize: 14, codeFontSize: 11, terminalFontSize: 13, textFontFamily: '', codeFontFamily: '', terminalFontFamily: '' })
+    expect(plainConfig(configuration.fiber.config)).toEqual({ appearance: undefined, preference: DEFAULT_PREFERENCE, fontSize: 14, codeFontSize: 11, terminalFontSize: 13, textFontFamily: '', codeFontFamily: '', terminalFontFamily: '' })
     await configuration.update({ preference: 'dark', fontSize: 10, codeFontSize: 16, codeFontFamily: '"Iosevka"' })
-    expect(plainConfig(configuration.fiber.config)).toEqual({ preference: 'dark', fontSize: 10, codeFontSize: 16, terminalFontSize: 13, textFontFamily: '', codeFontFamily: '"Iosevka"', terminalFontFamily: '' })
+    expect(plainConfig(configuration.fiber.config)).toEqual({ appearance: undefined, preference: 'dark', fontSize: 10, codeFontSize: 16, terminalFontSize: 13, textFontFamily: '', codeFontFamily: '"Iosevka"', terminalFontFamily: '' })
     await configuration.update({ fontSize: 22 })
     expect(plainConfig(configuration.fiber.config)).toMatchObject({ preference: 'dark', fontSize: 22 })
     await expect(configuration.update({ preference: 'sepia' })).rejects.toThrow()
@@ -76,3 +79,21 @@ describe('ui-theme host', () => {
 })
 
 it('keeps its own instance off the generated Settings pages', () => omitsGeneratedPage(ctx => ctx.plugin(HostPlugin)))
+
+it('persists palette and CSS through the real Loader/profile settings provider across restarts', async () => {
+  const { ctx, profile, start } = await configurationFixture({
+    schema: Config, apply: (ctx, config) => { apply(ctx, config as HostPlugin.Config) }, hmr: false,
+  })
+  const appearance = { ...W1_DEFAULT, preset: 'custom', light: { ...W1_DEFAULT.light, accent: '#123456' }, css: 'body { --custom-test: 1 }' }
+  await ctx.settings.update('first', { appearance })
+  expect(ctx.settings.describe().find(row => row.ns === 'first')?.value).toMatchObject({ appearance })
+  expect(readFileSync(profile.patchPath, 'utf8')).toContain('--custom-test')
+  await expect(ctx.settings.update('first', { appearance: { ...appearance, css: '@import "x"' } })).rejects.toThrow()
+  await ctx.fiber.dispose()
+  const restored = await start()
+  expect(restored.settings.describe().find(row => row.ns === 'first')?.value).toMatchObject({ appearance })
+  await restored.settings.update('first', { fontSize: 17 })
+  await restored.fiber.dispose()
+  const updated = await start()
+  expect(updated.settings.describe().find(row => row.ns === 'first')?.value).toMatchObject({ appearance, fontSize: 17 })
+})

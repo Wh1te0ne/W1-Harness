@@ -59,7 +59,7 @@
   ],
   "scripts": {
     "build": "node scripts/build.mjs",
-    "test": "node --test test/w1-policy.test.mjs test/w1-navigation.test.mjs"
+    "test": "node --test test/*.test.mjs"
   },
   "devDependencies": {
     "esbuild": "0.28.2"

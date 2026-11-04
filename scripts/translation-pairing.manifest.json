@@ -27,6 +27,8 @@
     "docs/版本与发布.md",
     "docs/发布操作.md",
     "CHANGELOG.md",
-    "SECURITY.md"
+    "SECURITY.md",
+    "docs/模型接口与思考强度排查.md",
+    "docs/启动性能排查.md"
   ]
 }

@@ -11,6 +11,8 @@ English | [中文](README.zh.md)
 
 A model must supply sufficient evidence before completing a persisted goal. W1 reviews the proposed completion with one tool-free auxiliary model call and shows incomplete or unavailable reviews beside the goal. Ordinary conversation does not trigger reviews.
 
+The auxiliary request carries the originating session ID and the `goal-review` purpose, so usage accounting includes it in the conversation total.
+
 ## Table of Contents
 
 - [Use this package](#use-this-package)

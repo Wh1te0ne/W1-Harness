@@ -38,6 +38,7 @@ Plain `fetch()` is proxied, and so is any SDK that reaches `globalThis.fetch` â€
 | An SDK that takes a proxy URL of its own | `proxyRouteFor(url)`, and pass `route.proxy` |
 | A spawn whose environment you build yourself | apply `proxyEnvironmentForChild()` to it (`undefined` means remove) |
 | A harness that must reach its own fixture server | apply `clearedProxyEnv()` to the spawn |
+| A one-shot HTTP call that must avoid global fetch rewriting | `isolatedFetch(input, init)`; retains the installed dispatcher and proxy policy |
 
 `proxyRouteFor` answers with the transport that answer assumed, not just the answer: its proxied arm carries the dispatcher already routing by this policy. A caller that read the policy and then built its own transport could have an unmount land between the two and send the request somewhere its branch never cleared.
 

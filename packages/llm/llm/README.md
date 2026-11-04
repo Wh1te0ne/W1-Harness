@@ -27,7 +27,9 @@ Use `@deepseek-ai/dsh-llm` to stream model calls through configured provider ada
 
 `listModels` describes models offered by catalog-driven interfaces. Core resolution and streaming can still accept unlisted ids. The GUI requires catalog membership for selection and submission; adapters intended for GUI use must implement `listModels` and advertise their available models. The base implementation returns an empty list and therefore offers no GUI models.
 
-Any composition that calls a model provider — an agent loop, a session-title generator, a compaction summarizer — streams its requests through this service. Mount it together with at least one provider adapter; the service itself has no configuration and no provider wire code.
+Any composition that calls a model provider — an agent loop, a session-title generator, a compaction summarizer — streams its requests through this service. Mount it together with at least one provider adapter. The service contains no provider wire code.
+
+`requestTransportByPurpose` optionally maps exact request purposes to `{ isolated, headers }` transport policies. Unclassified calls receive no policy. `isolated: true` asks HTTP adapters to use the host transport outside mutable global-fetch wrappers, retaining the installed network proxy policy. Headers are deployment metadata, not model input; adapters preserve their own authentication and attribution. The policy never changes prompts, output budgets, session IDs, billing or review decisions. The `llm/stream` waterfall still observes every request. Configure only one-shot utilities that must not enter a conversation-rewriting interceptor; ordinary conversation, side-chat and compaction keep their normal route unless explicitly configured.
 
 ### When to choose it
 

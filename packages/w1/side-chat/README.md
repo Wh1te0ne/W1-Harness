@@ -25,6 +25,8 @@ Open a Side chat tab to freeze the main session's admitted message context. The 
 
 Tabs retain their conversation when hidden or switched. The Client confirms closure of a tab with history. Confirming, losing its connection, reloading the page or exiting W1 discards its temporary conversation. Side chats are question-only: no tools, file editing, automatic main-chat merge or persistent history. Provider errors are visible; sending never retries automatically.
 
+Side-chat calls declare their billing purpose; the shared usage service persists reported consumption independently of whether the tab remains open.
+
 ## Implementation
 
 `SideChatService` owns detached in-memory Session logs. Exact requests and settled responses are recorded there; the logs never join the Session store or parent log. A Remote stream retains each tab and closes its log on cancellation. Separate request signals cancel only that tab's response. All methods authorize the parent session resource; opening a cold session reads it without activating its Agent.

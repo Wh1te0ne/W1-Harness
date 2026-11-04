@@ -120,7 +120,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  max-width: 60px;
+  max-width: 92px;
   opacity: 1;
   overflow: hidden;
   visibility: visible;
@@ -253,6 +253,7 @@
    circles matching the shell's rail rhythm. Both use the rail's shared base
    left anchor so the outer shell can translate the whole region uniformly. */
 .rail .sectionHeader {
+  height: auto;
   gap: 0;
   padding-left: 0;
   margin-bottom: 12px;
@@ -260,6 +261,7 @@
 }
 
 .rail .headerActions {
+  flex-direction: column;
   max-width: none;
 }
 
@@ -619,3 +621,5 @@
     transition: none;
   }
 }
+
+.iconButton.activityActive { color: var(--dsw-alias-state-business-primary); background: var(--dsw-alias-interactive-bg-hover); }

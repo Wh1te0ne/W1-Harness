@@ -90,6 +90,19 @@ async function drain(stream: AsyncIterable<unknown>): Promise<void> {
   for await (const _chunk of stream) { /* drain */ }
 }
 
+it('isolates auxiliary Messages calls, keeps identity and blocks transport-header auth overrides', async () => {
+  const server = await mockServer([{ events: textEvents }])
+  const adapter = adapterOf({ baseURL: server.url })
+  const interceptor = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('unexpected conversation interception'))
+  try {
+    await drain(adapter.stream({ provider: 'any', model: 'deepseek-chat', messages: [], sessionId: SessionId('review-session'), purpose: 'auto-review', transport: { isolated: true, headers: { 'x-utility': '1', 'X-Api-Key': 'wrong', Authorization: 'wrong', 'User-Agent': 'wrong', 'X-Deepseek-Harness-Session-Id': 'wrong' } } }))
+    expect(interceptor).not.toHaveBeenCalled()
+    expect(server.headers[0]).toMatchObject({ 'x-api-key': 'k', 'x-utility': '1', 'x-deepseek-harness-session-id': 'review-session', 'user-agent': userAgent() })
+    expect(JSON.stringify(server.headers[0])).not.toContain('wrong')
+    expect(JSON.stringify(server.requests[0])).not.toMatch(/x-utility|isolated|auto-review/)
+  } finally { interceptor.mockRestore() }
+})
+
 const imageRef: ImageAttachmentRef = {
   attachmentId: AttachmentId(`sha256:${'a'.repeat(64)}`),
   mediaType: 'image/png',

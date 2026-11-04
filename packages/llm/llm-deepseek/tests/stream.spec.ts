@@ -14,7 +14,10 @@ describe('Messages stream', () => {
 
   it('emits first-seen blocks, raw tool JSON and cumulative disjoint usage before finish', async () => {
     const values = [
-      { ...start, message: { usage: { input_tokens: 12, output_tokens: 1, cache_read_input_tokens: 30, cache_creation_input_tokens: 7 } } },
+      { ...start, message: { usage: {
+        input_tokens: 12, output_tokens: 1, cache_read_input_tokens: 30, cache_creation_input_tokens: 7,
+        cache_creation: { ephemeral_1h_input_tokens: 4 },
+      } } },
       { type: 'content_block_start', index: 4, content_block: { type: 'thinking', thinking: 'first', signature: '' } },
       { type: 'content_block_delta', index: 4, delta: { type: 'thinking_delta', thinking: ' thought' } },
       { type: 'content_block_delta', index: 4, delta: { type: 'signature_delta', signature: 'sig' } },
@@ -29,7 +32,7 @@ describe('Messages stream', () => {
     ]
     const result = await assemble(translate(events(values), MODEL))
     expect(result.message.content).toEqual([{ type: 'reasoning', text: 'first thought' }, { type: 'tool-call', id: 'call_1', name: 'read', arguments: '{"path": "a"}' }])
-    expect(result.output.at(-2)).toEqual({ type: 'usage', usage: { inputTokens: 12, outputTokens: 5, cacheReadTokens: 30, cacheWriteTokens: 7, totalTokens: 54 } })
+    expect(result.output.at(-2)).toEqual({ type: 'usage', usage: { inputTokens: 12, outputTokens: 5, cacheReadTokens: 30, cacheWriteTokens: 7, cacheWrite1hTokens: 4, totalTokens: 54 } })
     expect(result.output.at(-1)).toMatchObject({ type: 'finish', reason: { kind: 'tool-calls' }, replayState: { blocks: [{ type: 'reasoning', signature: 'signature' }, { type: 'tool-call' }] } })
     expect(result.output.filter(chunk => chunk.type === 'block-start').map(chunk => chunk.index)).toEqual([0, 1])
   })

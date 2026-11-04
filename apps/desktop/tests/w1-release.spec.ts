@@ -8,9 +8,9 @@ it('packages the W1 product identity and repository independently of DSH package
   expect(config.extraMetadata.version).toBe(product.version)
   expect(config.extraMetadata.w1hVersion).toBe(product.version)
   expect(config.extraMetadata.w1hUpstreamTag).toBe(product.upstreamTag)
-  expect(config.extraMetadata.w1hUpdateChannel).toBe('alpha')
+  expect(config.extraMetadata.w1hUpdateChannel).toBe('latest')
   expect(config.publish).toEqual([{ provider: 'github', owner: 'Wh1te0ne', repo: 'W1-Harness',
-    channel: 'alpha', releaseType: 'prerelease' }])
+    channel: 'latest', releaseType: 'release' }])
   expect(config.win.forceCodeSigning).toBe(false)
   expect(config.protocols).toEqual([{ name: product.name, schemes: [product.protocol] }])
 }, 30_000)

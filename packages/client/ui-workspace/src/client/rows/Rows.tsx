@@ -541,13 +541,15 @@ export function SearchResultItem({ result, currentId, onOpen, onUnarchive, t }: 
  * its leading decoration, and its hover-card section.
  * @param props.onReveal - scroll this row into view after search navigation, then acknowledge it.
  * @param props.drag - optional row-drag target wiring; blank rows cannot start a drag.
+ * @param props.activity - optional project context and plain-text reply excerpt for the activity view.
  * @param props.t - the browser root's locale seat.
  * @returns the session row.
  */
 export function SessionNodeItem({
-  node, currentId, now, onOpen, onRenameRequest, renderSlot, onReveal, drag, t,
+  node, currentId, now, onOpen, onRenameRequest, renderSlot, onReveal, drag, activity, t,
 }: {
   node: SessionNode
+  activity?: { project: string; preview: string }
   currentId: string | undefined
   now: number
   onOpen: (id: SessionNode['id']) => void
@@ -575,8 +577,12 @@ export function SessionNodeItem({
   // their drop targets to fellow pinned rows.
   const draggable = drag !== undefined && !row.blank && !row.archived
   const [menuOpen, setMenuOpen] = useState(false)
+  const menuPoint = useRef({ x: 0, y: 0 })
   // The menu's open state, bound into the row entries' `useMenuOpenState` hook.
-  const menuOpenState = useMemo((): MenuOpenState => [menuOpen, setMenuOpen], [menuOpen])
+  const menuOpenState = useMemo((): MenuOpenState => [menuOpen, (value) => {
+    setMenuOpen(value)
+    if (!value) rowRef.current?.focus({ preventScroll: true })
+  }], [menuOpen])
   const rowRef = useRef<HTMLDivElement>(null)
   const titleRef = useRef<HTMLSpanElement>(null)
   const marquee = useTitleMarquee(titleRef)
@@ -590,8 +596,24 @@ export function SessionNodeItem({
     <div
       ref={rowRef}
       data-row-key={`session:${node.id}`}
+      tabIndex={0}
+      onContextMenu={row.blank ? undefined : (event) => {
+        event.preventDefault(); event.stopPropagation()
+        menuPoint.current = { x: event.clientX, y: event.clientY }
+        event.currentTarget.focus(); setMenuOpen(true)
+      }}
+      onKeyDown={(event) => {
+        if (event.target !== event.currentTarget) return
+        if (!row.blank && (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10'))) {
+          event.preventDefault()
+          const rect = event.currentTarget.getBoundingClientRect()
+          menuPoint.current = { x: rect.left + 24, y: rect.bottom }; setMenuOpen(true)
+        } else if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault(); onOpen(node.id)
+        }
+      }}
       className={clsx(
-        css.sessionRow, selected && css.selected, menuOpen && css.menuOpen,
+        css.sessionRow, activity !== undefined && css.activityRow, selected && css.selected, menuOpen && css.menuOpen,
         row.archived && css.archived,
         drag?.marker === 'before' && css.dropBefore, drag?.marker === 'after' && css.dropAfter,
       )}
@@ -636,20 +658,32 @@ export function SessionNodeItem({
           ? <SessionStatusDots statuses={statuses} />
           : renderSlot('sidebar.session.row.leading', { sessionId: node.id }))}
       </span>
-      <span
-        ref={titleRef}
-        className={css.title}
-        onDoubleClick={row.blank
-          ? undefined
-          : (e) => { e.stopPropagation(); onRenameRequest(node.id, row.title) }}
-      >
-        {title}
-      </span>
+      {activity === undefined ? (
+        <span
+          ref={titleRef}
+          className={css.title}
+          onDoubleClick={row.blank
+            ? undefined
+            : (e) => { e.stopPropagation(); onRenameRequest(node.id, row.title) }}
+        >
+          {title}
+        </span>
+      ) : (
+        <span className={css.activityText}>
+          <span className={css.activityHeading}>
+            <span className={css.activityTitle} onDoubleClick={(e) => {
+              e.stopPropagation(); onRenameRequest(node.id, row.title)
+            }}>{title}</span>
+            {activity.project && <span className={css.activityProject}>{activity.project}</span>}
+          </span>
+          <span className={css.activityPreview}>{activity.preview}</span>
+        </span>
+      )}
       {/* A blank New Session row is a provisional placeholder: nothing has
           happened in it yet, so a "now" timestamp and the row verbs
           (rename/fork/archive) would all act on content that does not
           exist — both trailing cells stay off until the first prompt. */}
-      {!row.blank && (
+      {!row.blank && activity === undefined && (
         <span
           className={css.time}
           aria-hidden={primaryStatus.trailingLabel === undefined ? undefined : true}
@@ -667,19 +701,11 @@ export function SessionNodeItem({
         <span className={css.rowActions} onClick={(e) => { e.stopPropagation() }}>
           <Menu
             open={menuOpen}
-            onClose={() => { setMenuOpen(false) }}
+            onClose={() => { setMenuOpen(false); rowRef.current?.focus({ preventScroll: true }) }}
             portal
-            closeOnPointerLeave
-            anchor={(
-              <button
-                type="button"
-                className={css.iconButton}
-                aria-label={t('actions.session.aria', { name: title })}
-                onClick={() => { setMenuOpen(v => !v) }}
-              >
-                <IconEllipsisOutlineRegular />
-              </button>
-            )}
+            autoFocus
+            getAnchorRect={() => new DOMRect(menuPoint.current.x, menuPoint.current.y, 0, 0)}
+            anchor={<span />}
           >
             {renderSlot(
               'sidebar.workspaces.session.menu.item',
@@ -687,7 +713,7 @@ export function SessionNodeItem({
               { hookContext: menuOpenState },
             )}
           </Menu>
-          {renderSlot('sidebar.workspaces.session.row.action', { sessionId: node.id, displayTitle: row.title })}
+
         </span>
       )}
     </div>

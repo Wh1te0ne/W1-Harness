@@ -57,7 +57,7 @@ export async function generateText(
   }
   session.append('w1/reply-request', { turn, stage, route, system, messages, maxTokens: limits.maxOutputTokens, config: call.config })
   const assembler = new BlockAssembler()
-  for await (const chunk of call.stream({ ...call.config, system, messages, sessionId: session.id, signal: timer.signal })) {
+  for await (const chunk of call.stream({ ...call.config, system, messages, sessionId: session.id, purpose: stage === 'select' ? 'reply-selection' : 'reply-suggestion', signal: timer.signal })) {
     timer.signal.throwIfAborted()
     assembler.push(chunk)
   }

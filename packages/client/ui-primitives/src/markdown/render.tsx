@@ -55,6 +55,8 @@ function sanitizeUrl(url: string): string {
     switch (new URL(url).protocol) {
       case 'http:':
       case 'https:':
+      case 'w1-harness:':
+      case 'w1-harness-test:':
       case 'mailto:':
         return url
       default:

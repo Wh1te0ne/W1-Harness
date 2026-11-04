@@ -21,3 +21,5 @@ export {
   proxyRouteFor,
   type ProxyRoute,
 } from './install.ts'
+
+export { isolatedFetch } from './isolated-fetch.ts'

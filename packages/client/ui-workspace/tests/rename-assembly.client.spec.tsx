@@ -120,15 +120,15 @@ describe('session rename through the assembled browser', () => {
     const view = runtime.renderRoot()
 
     const row = (await view.findByText('Persisted title')).closest('[role="treeitem"]')!
-    const trigger = within(row as HTMLElement).getByLabelText('会话“Persisted title”的操作')
-    fireEvent.click(trigger)
+    const trigger = row as HTMLElement
+    fireEvent.contextMenu(trigger)
     expect(view.getAllByRole('menuitem').map(item => item.textContent)).toEqual([
-      '置顶会话', '重命名', '分叉会话', '归档会话', '复制 Session ID', 'Export action', 'Last action',
+      '置顶会话', '重命名', '分叉会话', '归档会话', '复制›', 'Export action', 'Last action',
     ])
     expect(view.getAllByRole('separator')).toHaveLength(1)
     const last = view.getByRole('menuitem', { name: 'Last action' })
     const exportRow = view.getByRole('menuitem', { name: 'Export action' })
-    trigger.focus()
+    view.getAllByRole('menuitem')[0]!.focus()
     fireEvent.keyDown(trigger, { key: 'End' })
     expect(document.activeElement).toBe(last)
     fireEvent.keyDown(last, { key: 'ArrowUp' })
@@ -147,11 +147,12 @@ describe('session rename through the assembled browser', () => {
       if (clipboard === undefined) Reflect.deleteProperty(navigator, 'clipboard')
       else Object.defineProperty(navigator, 'clipboard', clipboard)
     })
-    fireEvent.click(trigger)
+    fireEvent.contextMenu(trigger)
+    fireEvent.click(view.getByRole('menuitem', { name: '复制', exact: true }))
     fireEvent.click(view.getByRole('menuitem', { name: '复制 Session ID' }))
     expect(view.queryByRole('menu')).toBeNull()
     expect(writeText).toHaveBeenCalledExactlyOnceWith(SID)
-    await view.findByText('Session ID 已复制')
+    await view.findByText('已复制')
     await runtime.dispose()
   })
 
@@ -173,7 +174,7 @@ describe('session rename through the assembled browser', () => {
 
     // The current session's group auto-expands; open the row's action menu.
     const row = (await view.findByText('旧标题')).closest('[role="treeitem"]')!
-    fireEvent.click(within(row as HTMLElement).getByLabelText('会话“旧标题”的操作'))
+    fireEvent.contextMenu(row)
     fireEvent.click(view.getByRole('menuitem', { name: '重命名', hidden: true }))
     // The rename row dismissed the menu; the dialog lives in the overlay list.
     expect(view.queryByRole('menu')).toBeNull()
@@ -215,7 +216,7 @@ describe('session rename through the assembled browser', () => {
     await runtime.flush()
 
     const row = (await view.findByText('旧标题')).closest('[role="treeitem"]')!
-    fireEvent.click(within(row as HTMLElement).getByLabelText('会话“旧标题”的操作'))
+    fireEvent.contextMenu(row)
     fireEvent.click(view.getByRole('menuitem', { name: '重命名', hidden: true }))
     const input = await view.findByLabelText('会话名称')
     fireEvent.change(input, { target: { value: '新名' } })

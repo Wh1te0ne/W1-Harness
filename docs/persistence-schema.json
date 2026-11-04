@@ -3526,7 +3526,7 @@
       "kind": "event",
       "event": "assistant/attempt",
       "surface": false,
-      "digest": "15d5dfdd822aa35e115afd74a8982825a493880457774e6850bc1520b50875e4",
+      "digest": "13dcd25bff657bfad3066d6bb1e1d92cead5a7ed369d9b1bd5a373ab9532d69c",
       "schema": {
         "root": 0,
         "nodes": [
@@ -3555,7 +3555,7 @@
               },
               {
                 "name": "type",
-                "type": 73,
+                "type": 76,
                 "optional": false
               }
             ],
@@ -3595,8 +3595,8 @@
             "types": [
               5,
               10,
-              69,
-              71
+              72,
+              74
             ]
           },
           {
@@ -3671,7 +3671,7 @@
               },
               {
                 "name": "type",
-                "type": 68,
+                "type": 71,
                 "optional": false
               }
             ],
@@ -4323,7 +4323,22 @@
             "kind": "object",
             "properties": [
               {
+                "name": "billingCallId",
+                "type": 7,
+                "optional": true
+              },
+              {
+                "name": "billingParameters",
+                "type": 68,
+                "optional": true
+              },
+              {
                 "name": "cacheReadTokens",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "cacheWrite1hTokens",
                 "type": 2,
                 "optional": true
               },
@@ -4356,6 +4371,28 @@
             "indices": []
           },
           {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "outputConfigEffort",
+                "type": 69,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "union",
+            "types": [
+              7,
+              70
+            ]
+          },
+          {
+            "kind": "primitive",
+            "type": "null"
+          },
+          {
             "kind": "literal",
             "value": "chunk"
           },
@@ -4384,7 +4421,7 @@
               },
               {
                 "name": "type",
-                "type": 70,
+                "type": 73,
                 "optional": false
               }
             ],
@@ -4419,7 +4456,7 @@
               },
               {
                 "name": "type",
-                "type": 72,
+                "type": 75,
                 "optional": false
               }
             ],
@@ -4441,7 +4478,7 @@
       "kind": "event",
       "event": "assistant/message",
       "surface": true,
-      "digest": "1033093edd0db80ff410e00830b523405e00bb0c7684948e531ff65095799625",
+      "digest": "c17343a29600386e5ef7f22452a0b72766540c4cc70858270d4f4021159c3e28",
       "schema": {
         "root": 0,
         "nodes": [
@@ -4465,7 +4502,7 @@
               },
               {
                 "name": "surfaceOp",
-                "type": 78,
+                "type": 81,
                 "optional": false
               },
               {
@@ -4475,7 +4512,7 @@
               },
               {
                 "name": "type",
-                "type": 82,
+                "type": 85,
                 "optional": false
               }
             ],
@@ -4885,8 +4922,8 @@
             "types": [
               37,
               41,
-              74,
-              76
+              77,
+              79
             ]
           },
           {
@@ -4957,7 +4994,7 @@
               },
               {
                 "name": "type",
-                "type": 73,
+                "type": 76,
                 "optional": false
               }
             ],
@@ -5322,7 +5359,22 @@
             "kind": "object",
             "properties": [
               {
+                "name": "billingCallId",
+                "type": 7,
+                "optional": true
+              },
+              {
+                "name": "billingParameters",
+                "type": 73,
+                "optional": true
+              },
+              {
                 "name": "cacheReadTokens",
+                "type": 11,
+                "optional": true
+              },
+              {
+                "name": "cacheWrite1hTokens",
                 "type": 11,
                 "optional": true
               },
@@ -5355,6 +5407,28 @@
             "indices": []
           },
           {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "outputConfigEffort",
+                "type": 74,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "union",
+            "types": [
+              7,
+              75
+            ]
+          },
+          {
+            "kind": "primitive",
+            "type": "null"
+          },
+          {
             "kind": "literal",
             "value": "chunk"
           },
@@ -5383,7 +5457,7 @@
               },
               {
                 "name": "type",
-                "type": 75,
+                "type": 78,
                 "optional": false
               }
             ],
@@ -5418,7 +5492,7 @@
               },
               {
                 "name": "type",
-                "type": 77,
+                "type": 80,
                 "optional": false
               }
             ],
@@ -5431,8 +5505,8 @@
           {
             "kind": "union",
             "types": [
-              79,
-              81
+              82,
+              84
             ]
           },
           {
@@ -5445,7 +5519,7 @@
               },
               {
                 "name": "op",
-                "type": 80,
+                "type": 83,
                 "optional": false
               },
               {
@@ -5959,7 +6033,7 @@
       "kind": "event",
       "event": "compaction/summary",
       "surface": false,
-      "digest": "e2f9a41e0989f54ed8cee80f8db2bcf9d60a5c810dc9d45b83fa050b9dce7602",
+      "digest": "4dbe023b5da7ff846244458c981fa94e70631d18cdde3db2360cd55e905e914f",
       "schema": {
         "root": 0,
         "nodes": [
@@ -5988,7 +6062,7 @@
               },
               {
                 "name": "type",
-                "type": 35,
+                "type": 38,
                 "optional": false
               }
             ],
@@ -5998,7 +6072,7 @@
             "kind": "union",
             "types": [
               2,
-              34
+              37
             ]
           },
           {
@@ -6386,7 +6460,22 @@
             "kind": "object",
             "properties": [
               {
+                "name": "billingCallId",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "billingParameters",
+                "type": 34,
+                "optional": true
+              },
+              {
                 "name": "cacheReadTokens",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "cacheWrite1hTokens",
                 "type": 5,
                 "optional": true
               },
@@ -6417,6 +6506,28 @@
               }
             ],
             "indices": []
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "outputConfigEffort",
+                "type": 35,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "union",
+            "types": [
+              3,
+              36
+            ]
+          },
+          {
+            "kind": "primitive",
+            "type": "null"
           },
           {
             "kind": "object",
@@ -31925,7 +32036,7 @@
       "kind": "event",
       "event": "w1/side-response",
       "surface": false,
-      "digest": "c23d1944966ecba8e817f8859c88fe160c6d21a8dd063e70ca3c8206a0deb085",
+      "digest": "5b5660f873ce1ec1c508992256415e6c2f560061fff25879a3b3e24a08ada98b",
       "schema": {
         "root": 0,
         "nodes": [
@@ -31939,22 +32050,22 @@
               },
               {
                 "name": "ignorable",
-                "type": 8,
+                "type": 11,
                 "optional": true
               },
               {
                 "name": "seq",
-                "type": 7,
+                "type": 10,
                 "optional": false
               },
               {
                 "name": "time",
-                "type": 7,
+                "type": 10,
                 "optional": false
               },
               {
                 "name": "type",
-                "type": 9,
+                "type": 12,
                 "optional": false
               }
             ],
@@ -32004,37 +32115,74 @@
             "kind": "object",
             "properties": [
               {
-                "name": "cacheReadTokens",
+                "name": "billingCallId",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "billingParameters",
                 "type": 7,
+                "optional": true
+              },
+              {
+                "name": "cacheReadTokens",
+                "type": 10,
+                "optional": true
+              },
+              {
+                "name": "cacheWrite1hTokens",
+                "type": 10,
                 "optional": true
               },
               {
                 "name": "cacheWriteTokens",
-                "type": 7,
+                "type": 10,
                 "optional": true
               },
               {
                 "name": "inputTokens",
-                "type": 7,
+                "type": 10,
                 "optional": false
               },
               {
                 "name": "outputTokens",
-                "type": 7,
+                "type": 10,
                 "optional": false
               },
               {
                 "name": "reasoningTokens",
-                "type": 7,
+                "type": 10,
                 "optional": true
               },
               {
                 "name": "totalTokens",
-                "type": 7,
+                "type": 10,
                 "optional": true
               }
             ],
             "indices": []
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "outputConfigEffort",
+                "type": 8,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "union",
+            "types": [
+              5,
+              9
+            ]
+          },
+          {
+            "kind": "primitive",
+            "type": "null"
           },
           {
             "kind": "primitive",
@@ -32564,7 +32712,7 @@
         "packages/llm/llm/src/types.ts#ReplayEnvelope"
       ],
       "sources": [
-        "packages/llm/llm/src/types.ts:448"
+        "packages/llm/llm/src/types.ts:454"
       ]
     },
     {
@@ -32671,9 +32819,11 @@
       "sources": []
     },
     {
-      "digest": "1033093edd0db80ff410e00830b523405e00bb0c7684948e531ff65095799625",
+      "digest": "1056d090e3f3dd5b68f55b11be3df90ae28ffffb7c0b937745c4896ea0b32509",
       "names": [],
-      "sources": []
+      "sources": [
+        "packages/core/session/src/types.ts:356"
+      ]
     },
     {
       "digest": "10b375281216e38ecc6979d0ef1829c2b116dfbd801d11cdda3dd10b865b327a",
@@ -32715,6 +32865,15 @@
       ]
     },
     {
+      "digest": "12133130412684eac269a3ba8f0743b3f531c747ee5b43e520f66f7b4ba7ff7f",
+      "names": [
+        "packages/llm/llm/src/types.ts#TokenUsage"
+      ],
+      "sources": [
+        "packages/llm/llm/src/types.ts:175"
+      ]
+    },
+    {
       "digest": "124aa62078ca3311353b39cc3bf6c75da281338be6bbf672f8b361d828cddca3",
       "names": [],
       "sources": []
@@ -32739,12 +32898,22 @@
       ]
     },
     {
+      "digest": "13082ab5364408165b76e474b37dda71957aa2c099c1582b12c1b3a70b3be167",
+      "names": [],
+      "sources": []
+    },
+    {
       "digest": "1379f0b72275994d20f1ddca2d60a96ab16ec80397ca9f1af21bdc67ba5c269c",
       "names": [],
       "sources": []
     },
     {
       "digest": "13d3d180f977bf78081d487ffa0ecb75857349bcab29a5a3fb48189fca2a6176",
+      "names": [],
+      "sources": []
+    },
+    {
+      "digest": "13dcd25bff657bfad3066d6bb1e1d92cead5a7ed369d9b1bd5a373ab9532d69c",
       "names": [],
       "sources": []
     },
@@ -32777,11 +32946,6 @@
     },
     {
       "digest": "1571525adc95a24e5d25b5a6440df401cd7cdd881b745178e85f5a333435cd1b",
-      "names": [],
-      "sources": []
-    },
-    {
-      "digest": "15d5dfdd822aa35e115afd74a8982825a493880457774e6850bc1520b50875e4",
       "names": [],
       "sources": []
     },
@@ -32885,13 +33049,6 @@
       "digest": "1c5a58f4599bd4a9711712551ffe2442a5e5fcd0758bafe630cc4ead850bdaa7",
       "names": [],
       "sources": []
-    },
-    {
-      "digest": "1ccb56061942f5ccb0d30c9e4f2883b9d115ff906560029de637b61d3cde896d",
-      "names": [],
-      "sources": [
-        "packages/core/session/src/types.ts:342"
-      ]
     },
     {
       "digest": "1cde1bedde79c5e8a56aee9c05c8e0a579cf5bc611deb85b93fa331a16ca978f",
@@ -33126,7 +33283,7 @@
       "digest": "2abb711460e6238d851c30f3e4bdd87a2aa1887ee70575b3d3b7b25610673095",
       "names": [],
       "sources": [
-        "packages/llm/llm/src/types.ts:473"
+        "packages/llm/llm/src/types.ts:479"
       ]
     },
     {
@@ -33259,15 +33416,6 @@
       "sources": []
     },
     {
-      "digest": "33341aac09312300de5a178e6cc6f6544a4876f7f710cfea55eda473c8d329ef",
-      "names": [
-        "packages/llm/llm/src/assistant-stream.ts#AssistantStreamRecord"
-      ],
-      "sources": [
-        "packages/llm/llm/src/assistant-stream.ts:20"
-      ]
-    },
-    {
       "digest": "335e242de1fcc17b6ca920fc420d71bec2d76e53e37955c00948b65ab77f05c5",
       "names": [
         "packages/core/session/src/types.ts#SurfaceOp"
@@ -33317,6 +33465,13 @@
       "digest": "378f90f9f6022a0991928a1eaf7991094ea1920fe89a9248358a1da106e1a970",
       "names": [],
       "sources": []
+    },
+    {
+      "digest": "3799e17a2702c95f691ec7cebf202307020accb92764be548847a6aff50b6a09",
+      "names": [],
+      "sources": [
+        "packages/llm/llm/src/assistant-stream.ts:44"
+      ]
     },
     {
       "digest": "37cbc9cf06d494cfe5c67f078af1605eacb8e4c2c853e9e26455b73de0ee7ccf",
@@ -33398,7 +33553,7 @@
       "digest": "3bec87f9e6ab3da03346f49923d3c51621debc0159df68605e543c3b2a026f90",
       "names": [],
       "sources": [
-        "packages/llm/llm/src/types.ts:471"
+        "packages/llm/llm/src/types.ts:477"
       ]
     },
     {
@@ -33515,6 +33670,13 @@
       "sources": []
     },
     {
+      "digest": "457946a8321ff9540a5381ddfe13870d49470fa7f8fb0faec970b68de33275a0",
+      "names": [],
+      "sources": [
+        "packages/llm/llm/src/types.ts:191"
+      ]
+    },
+    {
       "digest": "45f2a07ea94573123b6ae14db787a40062dec3834f36d8be92c523d40ba28448",
       "names": [],
       "sources": [
@@ -33532,22 +33694,6 @@
       "digest": "47e5d84f1a93450a78c7f3954b43990d0f629af7c034a56313e5deb63e772c1b",
       "names": [],
       "sources": []
-    },
-    {
-      "digest": "47e9095591ae36e7c39ee62553097772f2bfa16304536a72dbbc3f691f605180",
-      "names": [
-        "packages/llm/llm/src/types.ts#StreamChunk"
-      ],
-      "sources": [
-        "packages/llm/llm/src/types.ts:470"
-      ]
-    },
-    {
-      "digest": "487b65c37bfedb8b72088c4107a0a90a6249701f6b26745f6d98f9b8a22b07c7",
-      "names": [],
-      "sources": [
-        "packages/llm/llm/src/assistant-stream.ts:44"
-      ]
     },
     {
       "digest": "48e5c9861f16ac07e78cb7b5ae9dabdf7bb85c58baed5a51b4ad275050ea58e3",
@@ -33691,6 +33837,11 @@
       ]
     },
     {
+      "digest": "4dbe023b5da7ff846244458c981fa94e70631d18cdde3db2360cd55e905e914f",
+      "names": [],
+      "sources": []
+    },
+    {
       "digest": "4e011753f8263f436efaabfbb3b4db53a98fc55342c5ded2daf7208b217be159",
       "names": [],
       "sources": []
@@ -33816,14 +33967,12 @@
       ]
     },
     {
-      "digest": "54f9276a1617d7c12594722c89cfe864bcbe4517e9a6f9c98bab14f199a135e0",
+      "digest": "557e148d30b79ee48645850832b30c717d7c3b64641deb5d6133b8b4e91ee0b8",
       "names": [],
-      "sources": [
-        "packages/core/session/src/types.ts:356"
-      ]
+      "sources": []
     },
     {
-      "digest": "557e148d30b79ee48645850832b30c717d7c3b64641deb5d6133b8b4e91ee0b8",
+      "digest": "56229b49833328dfb0c8939ec9f796c930f158b93db2e678e105177718a12fbe",
       "names": [],
       "sources": []
     },
@@ -33841,11 +33990,6 @@
     },
     {
       "digest": "570e85022434613394418ad33e77e9f1f7a05699b33d0b62eae0677a638c3833",
-      "names": [],
-      "sources": []
-    },
-    {
-      "digest": "576a2de8355eb09850963ff5953420b172e274d9283666eb7d889097db120796",
       "names": [],
       "sources": []
     },
@@ -33900,6 +34044,11 @@
     },
     {
       "digest": "5b232a9b9bfcc0fc6794dab7865bcf203a65785c5de5aa647a51228bff628413",
+      "names": [],
+      "sources": []
+    },
+    {
+      "digest": "5b5660f873ce1ec1c508992256415e6c2f560061fff25879a3b3e24a08ada98b",
       "names": [],
       "sources": []
     },
@@ -34098,7 +34247,7 @@
         "packages/llm/llm/src/types.ts#ToolSchema"
       ],
       "sources": [
-        "packages/llm/llm/src/types.ts:491"
+        "packages/llm/llm/src/types.ts:497"
       ]
     },
     {
@@ -34385,11 +34534,25 @@
       "sources": []
     },
     {
+      "digest": "78e066e08bcc75bd800e0119c0ff6f3586b96443aef38bf99fce6143b2175fe0",
+      "names": [
+        "packages/llm/llm/src/types.ts#StreamChunk"
+      ],
+      "sources": [
+        "packages/llm/llm/src/types.ts:476"
+      ]
+    },
+    {
       "digest": "79650cfa10aa3c52440328d85e8a25f0ffadc8d7efd784e3c0819d8bb74a1985",
       "names": [],
       "sources": [
         "packages/core/session/src/types.ts:213"
       ]
+    },
+    {
+      "digest": "799231ac91869a6695666505343003905638e1b4d11349bff953d4dbfe3191ba",
+      "names": [],
+      "sources": []
     },
     {
       "digest": "79a4c87f8bfb4d6d05cd9952b99210d6a7db3b478c4a01d94b4c50602308c056",
@@ -34605,11 +34768,6 @@
       ]
     },
     {
-      "digest": "84bbfdce7d2eab5b0c53e72ff7406db856c8bfd621b965b72fd86598ba493bf7",
-      "names": [],
-      "sources": []
-    },
-    {
       "digest": "854db3efdfb0cd39d30953b28703e519c121f1115cebfffc40369fe86c406dd1",
       "names": [],
       "sources": []
@@ -34671,7 +34829,7 @@
       "digest": "88a610b831be6d92612a464be5c7d0b88ec24d97bd299837bf74bf7672183c9a",
       "names": [],
       "sources": [
-        "packages/llm/llm/src/types.ts:474"
+        "packages/llm/llm/src/types.ts:480"
       ]
     },
     {
@@ -34839,7 +34997,7 @@
       "digest": "95080295115fbd83544520ba247b68a03790131f6a2eac323d388758cb542f65",
       "names": [],
       "sources": [
-        "packages/llm/llm/src/types.ts:472"
+        "packages/llm/llm/src/types.ts:478"
       ]
     },
     {
@@ -34885,11 +35043,6 @@
     },
     {
       "digest": "99135d8a3937977955eaac5f8f04f930dcd1562f8450a54a51cde9b921dd59a6",
-      "names": [],
-      "sources": []
-    },
-    {
-      "digest": "9947aa5938fe19a895298da412917acbf9ffb5093a73ab8baa257e6ae9e63a07",
       "names": [],
       "sources": []
     },
@@ -35054,7 +35207,7 @@
       "digest": "a2b49331716ba0a7078b026d145306a70eae64b7313c3e6204bd931e75ec3bb1",
       "names": [],
       "sources": [
-        "packages/llm/llm/src/types.ts:477"
+        "packages/llm/llm/src/types.ts:483"
       ]
     },
     {
@@ -35163,11 +35316,6 @@
     },
     {
       "digest": "a99d9fafb54db24edccd8ee7467011608e2f611819360f871c5dab2d23f9f64b",
-      "names": [],
-      "sources": []
-    },
-    {
-      "digest": "a99ec0993c62c058e50af9f68922202a3b54f5e259bc2abf1915a73381d2316d",
       "names": [],
       "sources": []
     },
@@ -35615,6 +35763,11 @@
       ]
     },
     {
+      "digest": "c17343a29600386e5ef7f22452a0b72766540c4cc70858270d4f4021159c3e28",
+      "names": [],
+      "sources": []
+    },
+    {
       "digest": "c1f0f17b6493b85db6453bb30e01b208d703731b25bc1e68e5d4fc72eea9cdea",
       "names": [
         "packages/llm/llm/src/types.ts#ToolCallBlock"
@@ -35634,11 +35787,6 @@
       "sources": []
     },
     {
-      "digest": "c23d1944966ecba8e817f8859c88fe160c6d21a8dd063e70ca3c8206a0deb085",
-      "names": [],
-      "sources": []
-    },
-    {
       "digest": "c2deb7c9183735d4e0fffddf5c623f4e34daa1c8e96b111982e957dfcbbcf896",
       "names": [
         "packages/workflow/workflow/src/types.ts#WorkflowAgentOutcome"
@@ -35651,6 +35799,13 @@
       "digest": "c2f49004d9ae38a964e80850c87bc6849d6a872091a1d43e99eedf00c641e2a3",
       "names": [],
       "sources": []
+    },
+    {
+      "digest": "c30b7b606ce565cf3ccfc84471d528dc31e557b6687c17e0b26ab92a61fb44fb",
+      "names": [],
+      "sources": [
+        "packages/llm/llm/src/types.ts:482"
+      ]
     },
     {
       "digest": "c3334cc407e102f986f86b3f66b59157f7e6bf6fd566f20a2c8fef8f79d53039",
@@ -35741,13 +35896,6 @@
       "sources": []
     },
     {
-      "digest": "cc680d11c0b6b314577d5d07826ff1e86506881c3452fd232b5130511185c6da",
-      "names": [],
-      "sources": [
-        "packages/w1/side-chat/src/types.ts:16"
-      ]
-    },
-    {
       "digest": "cd186c309e2bef305705e1d324139240f5e681f4f6a957d6a25b0225f65560df",
       "names": [],
       "sources": []
@@ -35820,7 +35968,7 @@
       "digest": "d4b739491689cc6bb13d07ffac1a32239875abda364c0d5edd8f74faf5e9c00d",
       "names": [],
       "sources": [
-        "packages/llm/llm/src/types.ts:475"
+        "packages/llm/llm/src/types.ts:481"
       ]
     },
     {
@@ -36010,11 +36158,6 @@
       "sources": []
     },
     {
-      "digest": "e2f9a41e0989f54ed8cee80f8db2bcf9d60a5c810dc9d45b83fa050b9dce7602",
-      "names": [],
-      "sources": []
-    },
-    {
       "digest": "e3056e0dda3a379e895386e368c3ce42131460ea65e410e1d091cca98a347305",
       "names": [
         "packages/jobs/jobs/src/types.ts#JobRegisteredData"
@@ -36158,6 +36301,15 @@
       ]
     },
     {
+      "digest": "eb37320c2dd9f5eba928abf515da10f8f03dd2d3ee356f772cbb2f3ebf211441",
+      "names": [
+        "packages/llm/llm/src/assistant-stream.ts#AssistantStreamRecord"
+      ],
+      "sources": [
+        "packages/llm/llm/src/assistant-stream.ts:20"
+      ]
+    },
+    {
       "digest": "eb5847db20e49717cb9dcca66695793c366b39a7309bb67bf95cc8f2082e7485",
       "names": [],
       "sources": []
@@ -36264,13 +36416,6 @@
       ]
     },
     {
-      "digest": "f1a96afe7503ac1817de769cd0ba13d9b80111c7034c50106b3344ecc14cc515",
-      "names": [],
-      "sources": [
-        "packages/llm/llm/src/types.ts:476"
-      ]
-    },
-    {
       "digest": "f1b83c1800e4049f3b16e620ce647960926ec810e384121b69c318fbf5af4b7e",
       "names": [],
       "sources": []
@@ -36300,7 +36445,7 @@
         "packages/llm/llm/src/types.ts#SystemPromptUpdate"
       ],
       "sources": [
-        "packages/llm/llm/src/types.ts:414"
+        "packages/llm/llm/src/types.ts:420"
       ]
     },
     {
@@ -36410,6 +36555,11 @@
       ]
     },
     {
+      "digest": "fa1e74dfe18cac51c073fa5c1c4f3b6838d158bf733952393b4df2482c23b871",
+      "names": [],
+      "sources": []
+    },
+    {
       "digest": "fa87537f4a9c1e25602990a8bf686b383e9e00352ec8946e16ae24ba7c1625be",
       "names": [
         "packages/llm/llm/src/message.ts#AssistantMessage"
@@ -36472,6 +36622,13 @@
       "sources": []
     },
     {
+      "digest": "fce50bf60271f22b55925cda562be164430fd0e17e56da79eee85edea1c30877",
+      "names": [],
+      "sources": [
+        "packages/w1/side-chat/src/types.ts:16"
+      ]
+    },
+    {
       "digest": "fcf427290c6213c2a7feb57492d832ce324f5b9737a759f424dab69e6bd101a0",
       "names": [],
       "sources": []
@@ -36487,7 +36644,19 @@
       "sources": []
     },
     {
+      "digest": "fd6999ccaf062f5df5ac0e8efccb7d245c9be4e79e2cb7d3b1d37ab0f320b473",
+      "names": [],
+      "sources": [
+        "packages/core/session/src/types.ts:342"
+      ]
+    },
+    {
       "digest": "fe1a7acdeed4d0f5ab483396eaa5b3dc97263b7c10eb4da2f0028cb01728bfc9",
+      "names": [],
+      "sources": []
+    },
+    {
+      "digest": "fe498bb9c8bb3708f41a652d6d6b784cad79b8b21f6b2e50bab799f89bb0fbb6",
       "names": [],
       "sources": []
     },
@@ -36495,15 +36664,6 @@
       "digest": "fe792a6cd430494503837e21e79f91677704ccdd9e870c679aabd7d43ed47ddd",
       "names": [],
       "sources": []
-    },
-    {
-      "digest": "fec5442b9ee4122e10514d81d5a43648003fe8bfb7ee2ba50c0cdbdd383ed394",
-      "names": [
-        "packages/llm/llm/src/types.ts#TokenUsage"
-      ],
-      "sources": [
-        "packages/llm/llm/src/types.ts:175"
-      ]
     },
     {
       "digest": "fee1caf8ab6a65c1bc981f5a1730164490f22a2a89ffa3d0b76f1f432c44c8b5",

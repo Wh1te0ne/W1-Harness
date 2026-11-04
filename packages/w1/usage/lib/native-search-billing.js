@@ -357,7 +357,7 @@ export function installNativeSearchBilling(ctx, ledger) {
   const monitor = createNativeSearchBilling({
     account(event, session) {
       const usage = event.usage
-      ledger.account({ input: usage.inputTokens, output: usage.outputTokens, cacheRead: usage.cacheReadTokens, cacheWrite: usage.cacheWriteTokens, reasoning: usage.reasoningTokens }, event.model, session?.id, event.startedAtMs, event.provider)
+      ledger.account({ input: usage.inputTokens, output: usage.outputTokens, cacheRead: usage.cacheReadTokens, cacheWrite: usage.cacheWriteTokens, reasoning: usage.reasoningTokens }, event.model, session?.id, event.startedAtMs, event.provider, {id:'search:'+event.requestId,kind:'search',startedAtMs:event.startedAtMs})
     },
     // Never infer an append contract from function source. Host logs remain read-only;
     // the plugin journal retains exact usage for imports and currency repricing.

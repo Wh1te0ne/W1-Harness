@@ -1,5 +1,5 @@
 /**
- * Safe HTTP(S) retrieval for `ctx.web`: validates and pins public IP destinations, follows
+ * Bounded HTTP(S) retrieval for `ctx.web`: optionally validates and pins public IP destinations, follows
  * only same-origin redirects, enforces time and size limits, classifies and decodes text,
  * and leaves presentation to `@deepseek-ai/dsh-tool-web`. Requests carry no browser cookies
  * or ambient credentials.
@@ -35,17 +35,19 @@ export type HttpFetchResolver = (hostname: string, signal: AbortSignal) => Promi
 /** Stable id this provider registers under. */
 export const LOCAL_FETCH_PROVIDER_ID = 'http'
 
-/** The anonymous public HTTP(S) fetch provider. */
+/** The anonymous HTTP(S) fetch provider with configurable destination-address validation. */
 export class HttpFetchProvider implements WebFetchProvider {
   readonly id = LOCAL_FETCH_PROVIDER_ID
 
   /**
    * @param limits - resolved transport and response limits.
    * @param resolveAddresses - resolver that rejects non-public destinations before returning.
+   * @param requirePublicIp - direct-address policy, read once per fetch; defaults to strict for non-desktop consumers.
    */
   constructor(
     private readonly limits: HttpFetchLimits,
     private readonly resolveAddresses: HttpFetchResolver = publicHttpNetwork.resolve,
+    private readonly requirePublicIp: boolean | (() => boolean) = true,
   ) {}
 
   /** No credentials to check — an anonymous public fetcher is always usable. */
@@ -59,16 +61,17 @@ export class HttpFetchProvider implements WebFetchProvider {
     // One signal stops both the request and body read. The deadline's TimeoutReason later
     // distinguishes this provider's timeout from caller or outer-deadline cancellation.
     using d = deadline(signal, this.limits.timeoutMs, 'WEB_FETCH_TIMEOUT')
-    return await this.followAndRead(request.url, d.signal)
+    const requirePublicIp = typeof this.requirePublicIp === 'function' ? this.requirePublicIp() : this.requirePublicIp
+    return await this.followAndRead(request.url, d.signal, requirePublicIp)
   }
 
   /** Follow same-origin redirects up to the hop cap, then read the final response. */
-  private async followAndRead(initialUrl: string, signal: AbortSignal): Promise<WebFetchResult> {
+  private async followAndRead(initialUrl: string, signal: AbortSignal, requirePublicIp: boolean): Promise<WebFetchResult> {
     let currentUrl = validateFetchUrl(initialUrl)
     let redirectsFollowed = 0
 
     for (;;) {
-      const request = await this.requestOnce(currentUrl, signal)
+      const request = await this.requestOnce(currentUrl, signal, requirePublicIp)
       const { response } = request
       try {
         if (isRedirectStatus(response.status)) {
@@ -114,12 +117,15 @@ export class HttpFetchProvider implements WebFetchProvider {
     }
   }
 
-  private async requestOnce(url: URL, signal: AbortSignal) {
+  private async requestOnce(url: URL, signal: AbortSignal, requirePublicIp: boolean) {
     const headers = {
       'user-agent': this.limits.userAgent,
       'accept': 'text/html,application/xhtml+xml,text/*;q=0.9,application/json;q=0.8',
     }
     try {
+      // The system mode delegates DNS/routing to the configured network, including transparent
+      // proxies. It does not classify or special-case particular address ranges.
+      if (!requirePublicIp) return await publicHttpNetwork.requestSystem(url, headers, signal)
       // A proxied hop skips public-address resolution and pinning: the proxy performs the origin's
       // DNS, so there is no local address to validate, and pinning one would connect directly and
       // bypass the proxy. A hop the policy bypasses — every loopback and every `NO_PROXY` entry —

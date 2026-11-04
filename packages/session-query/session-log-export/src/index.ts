@@ -1,5 +1,6 @@
 /** Session-log download command and Host-owned streaming route. */
 
+import { sessionMarkdown } from './markdown.ts'
 import type { Context } from '@deepseek-ai/cordis'
 import type { CommandDefinitionId } from '@deepseek-ai/dsh-commands/brand'
 import Schema from '@deepseek-ai/schemastery'
@@ -84,6 +85,25 @@ export function apply(ctx: Context, config: Config = {}): void {
       ? REQUESTED
       : { kind: 'error', text: 'The Web /export command does not accept a path.' }),
   }), 'session-log-download: command')
+  connectionOf(ctx).fetch.register({
+    path: '/api/session.markdown', methods: ['GET'], requestBody: 'buffered',
+    fetch: async (request) => {
+      const id = new URL(request.url).searchParams.get('sessionId')
+      if (!id) return new Response('Missing sessionId', { status: 400 })
+      const query = ctx.get('sessionQuery')
+      if (query === undefined) return new Response('Conversation query unavailable', { status: 503 })
+      try {
+        const snapshot = await query.readSession(brandString<SessionId>(id))
+        request.signal.throwIfAborted()
+        return new Response(sessionMarkdown(snapshot), { headers: {
+          'content-type': 'text/markdown; charset=utf-8', 'cache-control': 'no-store',
+        } })
+      } catch (error) {
+        request.signal.throwIfAborted()
+        return new Response(error instanceof Error ? 'Conversation could not be read' : 'Export failed', { status: 404 })
+      }
+    },
+  })
   connectionOf(ctx).fetch.register({
     path: SESSION_LOG_EXPORT_PATH,
     methods: ['GET', 'HEAD'],

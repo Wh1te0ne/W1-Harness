@@ -7,6 +7,8 @@ kind: "package-reference"
 
 English | [中文](README.zh.md)
 
+The Messages transport honors `GenerateOptions.transport`: isolated calls retain the host network proxy policy while avoiding global fetch wrappers. Deployment headers cannot replace authentication, attribution or the originating session identity.
+
 ## Summary
 
 Provide the shared DeepSeek Messages transport, request configuration, and model capabilities. Compose [API-key](../llm-deepseek-api-key/README.md) or [account](../llm-deepseek-account/README.md) plugins for authentication, model discovery, and provider registration. Valid settings changes affect subsequent calls while in-flight calls retain their configuration. This package can run beside the [pi-ai adapter](../llm-pi-ai/README.md).

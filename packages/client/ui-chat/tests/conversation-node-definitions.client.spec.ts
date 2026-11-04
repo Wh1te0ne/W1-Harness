@@ -31,6 +31,7 @@ import { turnErrorDefinition } from '../src/client/conversation-nodes/turn-error
 import { turnMaxTokensDefinition } from '../src/client/conversation-nodes/turn-max-tokens.ts'
 import { turnTailDefinition } from '../src/client/conversation-nodes/turn-tail.ts'
 import { turnProcessDefinition } from '../src/client/conversation-nodes/turn-process.ts'
+import { liveOutput } from '../src/client/chat/live-output.ts'
 import type {
   AssistantChatData, ManualCompactionChatData, RetryChatData, ToolChatData, TurnTailChatData,
 } from '../src/client/contract/chat-nodes.ts'
@@ -314,6 +315,36 @@ describe('built-in conversation node Definitions', () => {
     expect(current.order).toHaveLength(1)
     expect(current.nodes.get(current.order[0] ?? '')?.kind).toBe('command')
     expect(chatViewDefinition.isActive?.(current)).toBe(false)
+  })
+
+  it('publishes live output for its own turn on content and usage changes', () => {
+    const value = assembler([
+      at(1, 'turn/start', { turn: 1 }),
+      at(2, 'step/start', { turn: 1, step: 1 }),
+      at(3, 'assistant/live-chunk', { turn: 1, step: 1, chunk: { type: 'text-delta', index: 0, text: 'hello' } }),
+    ])
+    const source = snapshot(value).nodes.turnDataSource(1, 'assistant-step')
+    const other = snapshot(value).nodes.turnDataSource(2, 'assistant-step')
+    let changed = 0
+    let otherChanged = 0
+    const stop = source.subscribe(() => { changed++ })
+    const stopOther = other.subscribe(() => { otherChanged++ })
+    const before = liveOutput(source.getSnapshot()).tokens
+    value.append(at(4, 'assistant/live-chunk', {
+      turn: 1, step: 1, chunk: { type: 'text-delta', index: 0, text: ' more streamed text' },
+    }))
+    value.flush()
+    expect(changed).toBe(1)
+    expect(otherChanged).toBe(0)
+    expect(liveOutput(source.getSnapshot()).tokens).toBeGreaterThan(before)
+    value.append(at(5, 'assistant/live-chunk', {
+      turn: 1, step: 1, chunk: { type: 'usage', usage: { inputTokens: 1000, outputTokens: 12 } },
+    }))
+    value.flush()
+    expect(changed).toBe(2)
+    expect(liveOutput(source.getSnapshot())).toEqual({ tokens: 12, estimated: false })
+    stop()
+    stopOther()
   })
 
   it('keeps the Turn rail projection current when a chunk updates one node in place', () => {
@@ -800,6 +831,24 @@ describe('built-in conversation node Definitions', () => {
     expect(current.order.map(key => current.nodes.get(key)?.kind)).toEqual([
       'steering', 'turn-process', 'assistant-step', 'assistant-step', 'turn-tail',
     ])
+  })
+
+  it('keeps a persisted question outside process folds after history reconstruction', () => {
+    const history = [
+      at(1, 'turn/start', { turn: 1 }),
+      at(2, 'step/start', { turn: 1, step: 1 }),
+      at(3, 'tool/call', {
+        turn: 1, step: 1, callId: 'question-1', name: 'ask_user_question',
+        arguments: '{"questions":[{"id":"route","question":"Which route?"}]}',
+      }),
+      at(4, 'tool/result', {
+        turn: 1, step: 1, message: toolResult('question-1', '{"answers":[{"id":"route","selected":["A"]}]}'),
+      }, { surfaceOp: 'append' }),
+      at(5, 'step/end', { turn: 1, step: 1 }),
+      at(6, 'turn/end', { turn: 1, reason: { kind: 'completed' } }),
+    ]
+    const restored = snapshot(assembler(history))
+    expect(node(restored, 'tool-call')?.groupTree).toBe('turn')
   })
 
   it('keeps a first human message after process evidence at its event position', () => {

@@ -2,6 +2,16 @@ import { describe, expect, it } from 'vitest'
 import { createChatStore, storedTurnProcessEntry, turnProcessOpen } from '../src/client/stores.ts'
 
 describe('createChatStore', () => {
+  it('retains process choices independently for each Session store', () => {
+    const handle = createChatStore()
+    const first = handle.create('first')
+    const second = handle.create('second')
+    first.actions.setProcessGroupOpen('group:1', true)
+    expect(first.store.getSnapshot().processGroups['group:1']).toBe(true)
+    expect(second.store.getSnapshot().processGroups['group:1']).toBeUndefined()
+    first.actions.setProcessGroupOpen('group:1', false)
+    expect(first.store.getSnapshot().processGroups['group:1']).toBe(false)
+  })
   it('stores manual expansion and collapse for the current answer generation', () => {
     const store = createChatStore().create()
     store.actions.setTurnProcessOpen(2, 3, true)

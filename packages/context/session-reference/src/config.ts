@@ -9,6 +9,8 @@ export const DEFAULT_MAX_REFERENCE_BYTES = 65_536
 
 /** Session-reference service configuration. */
 export interface Config {
+  /** Optional W1 deep-link environment; omitted outside W1. */
+  deepLinkScheme?: 'w1-harness' | 'w1-harness-test'
   /** Maximum distinct source sessions referenced by one message, from one to three. */
   maxReferences?: number
   /** Default host candidate-list limit. */

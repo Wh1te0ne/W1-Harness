@@ -62,6 +62,10 @@ export interface MenuItemButtonProps {
    * directly before it draws no second line, and the list's first row draws none.
    */
   separatorBefore?: boolean
+  /** Optional child actions; these share the parent menu keyboard navigation. */
+  submenu?: readonly MenuItem[]
+  /** Activation of one child action. */
+  onSubmenuSelect?: (id: string) => void
   /** Row activation (click, Enter, or Tab on the focused row). */
   onSelect: () => void
 }
@@ -82,10 +86,35 @@ export interface MenuItemButtonProps {
  * @returns one menu-item row.
  */
 export function MenuItemButton({
-  children, shortcut, icon, disabled = false, danger = false, separatorBefore = false, onSelect,
+  children, shortcut, icon, disabled = false, danger = false, separatorBefore = false, onSelect, submenu, onSubmenuSelect,
 }: MenuItemButtonProps) {
+  const [expanded, setExpanded] = useState(false)
+  const wrap = useRef<HTMLDivElement>(null)
+  const [left, setLeft] = useState(false)
+  const [offset, setOffset] = useState(0)
+  useLayoutEffect(() => {
+    if (!expanded) return
+    const parent = wrap.current?.getBoundingClientRect()
+    const child = wrap.current?.querySelector<HTMLElement>('[role="menu"]')
+    if (!parent || !child) return
+    setLeft(parent.right + child.offsetWidth + 12 > window.innerWidth)
+    setOffset(Math.min(0, window.innerHeight - 12 - parent.top - child.offsetHeight))
+  }, [expanded])
   return (
-    <div className={css.itemWrap}>
+    <div ref={wrap} className={css.itemWrap}
+      onMouseEnter={submenu ? () => { setExpanded(true) } : undefined}
+      onMouseLeave={submenu ? () => { setExpanded(false) } : undefined}
+      onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setExpanded(false) }}
+      onKeyDown={(event) => {
+        if (!submenu) return
+        if (event.key === 'ArrowRight') {
+          event.preventDefault(); event.stopPropagation(); setExpanded(true)
+          requestAnimationFrame(() => { wrap.current?.querySelector<HTMLButtonElement>('[role="menu"] button:not(:disabled)')?.focus() })
+        } else if (expanded && (event.key === 'ArrowLeft' || event.key === 'Escape')) {
+          event.preventDefault(); event.stopPropagation(); setExpanded(false)
+          wrap.current?.querySelector<HTMLButtonElement>(':scope > button')?.focus()
+        }
+      }}>
       {separatorBefore && <div className={css.separator} role="separator" />}
       <button
         type="button"
@@ -93,12 +122,20 @@ export function MenuItemButton({
         className={clsx(css.item, danger && css.danger)}
         disabled={disabled}
         aria-keyshortcuts={shortcut?.aria}
-        onClick={onSelect}
+        aria-haspopup={submenu ? 'menu' : undefined}
+        aria-expanded={submenu ? expanded : undefined}
+        onClick={() => { if (submenu) setExpanded(true); else onSelect() }}
       >
         {icon !== undefined && <span className={css.itemIcon}>{icon}</span>}
         <span className={css.itemLabel}>{children}</span>
         {shortcut !== undefined && <span aria-hidden="true" className={css.shortcut}><ShortcutKeys keys={shortcut.keys} className={css.shortcutKeys} /></span>}
+        {submenu && <span aria-hidden="true">›</span>}
       </button>
+      {submenu && expanded && <MenuSurface className={clsx(css.submenu, css.componentSubmenu, left && css.submenuLeft)} role="menu"
+        style={{ top: offset }}>
+        {submenu.map(item => <MenuItemButton key={item.id} disabled={item.disabled ?? false}
+          onSelect={() => { onSubmenuSelect?.(item.id); setExpanded(false) }}>{item.label}</MenuItemButton>)}
+      </MenuSurface>}
     </div>
   )
 }

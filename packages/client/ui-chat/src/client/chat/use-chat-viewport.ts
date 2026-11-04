@@ -26,6 +26,8 @@ interface ViewportEvents {
   interact: () => void
   /** Any reading gesture, before paging ownership is consulted. */
   intent?: () => void
+  /** An upward wheel gesture at the outer history boundary, excluding nested scrollports. */
+  historyStart?: () => void
 }
 
 interface ViewportElements {
@@ -773,9 +775,25 @@ export class ChatViewport {
       if (event.type === 'keydown' && (!(event instanceof KeyboardEvent) || !SCROLL_KEYS.has(event.key))) return
     }
     this.events?.intent?.()
+    if (this.isHistoryStartWheel(event)) {
+      this.events?.historyStart?.()
+      return
+    }
     if (this.paging === null) return
     this.stopPreserving()
     this.events?.interact()
+  }
+
+  private isHistoryStartWheel(event: Event): boolean {
+    const elements = this.elements
+    if (elements === null || !(event instanceof WheelEvent) || event.ctrlKey
+      || event.deltaY >= 0 || Math.abs(event.deltaX) >= Math.abs(event.deltaY)
+      || elements.scroller.scrollTop > 1 || !(event.target instanceof Element)
+      || event.target.closest('[data-composer-seat]') !== null) return false
+    for (let node: Element | null = event.target; node !== null && node !== elements.scroller; node = node.parentElement) {
+      if (node.scrollHeight > node.clientHeight + 1 && /auto|scroll/.test(getComputedStyle(node).overflowY)) return false
+    }
+    return true
   }
 }
 

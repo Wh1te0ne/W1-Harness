@@ -88,18 +88,20 @@ interface RenderedSource {
 export class SessionReferenceResolver extends TypertRemoteService {
   static inject = ['sessionQuery']
   static Config: z<Config> = z.object({
+    deepLinkScheme: z.union(['w1-harness', 'w1-harness-test']),
     maxReferences: z.number().step(1).min(1).max(MAX_REFERENCES).default(MAX_REFERENCES),
     candidateLimit: z.number().step(1).min(1).default(DEFAULT_CANDIDATE_LIMIT),
     maxReferenceBytes: z.number().step(1).min(1),
     referenceContextFraction: z.number().min(0).max(1).default(DEFAULT_REFERENCE_CONTEXT_FRACTION),
   })
 
-  private readonly config: Required<Omit<Config, 'maxReferenceBytes'>> & { maxReferenceBytes: number | undefined }
+  private readonly config: Required<Omit<Config, 'maxReferenceBytes' | 'deepLinkScheme'>> & { maxReferenceBytes: number | undefined; deepLinkScheme: Config['deepLinkScheme'] }
   private readonly assembledRoutes = new WeakMap<Agent, { provider: string | undefined; model: string | undefined }>()
 
   constructor(ctx: Context, config: Config = {}) {
     super(ctx, 'sessionReferenceResolver')
     this.config = {
+      deepLinkScheme: config.deepLinkScheme,
       maxReferences: config.maxReferences ?? MAX_REFERENCES,
       candidateLimit: config.candidateLimit ?? DEFAULT_CANDIDATE_LIMIT,
       maxReferenceBytes: config.maxReferenceBytes,
@@ -163,7 +165,7 @@ export class SessionReferenceResolver extends TypertRemoteService {
       const references: SessionReferenceInput[] = []
       const content = message.content.map((block): ContentBlock => {
         if (block.type !== 'text') return block
-        const parsed = parseSessionReferenceText(block.text)
+        const parsed = parseSessionReferenceText(block.text, this.config.deepLinkScheme)
         references.push(...parsed.references)
         return { type: 'text', text: parsed.text }
       })

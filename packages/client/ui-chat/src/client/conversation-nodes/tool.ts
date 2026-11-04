@@ -348,7 +348,11 @@ export const toolDefinition: ConversationNodeDefinition<ToolState> = {
     const data = current?.data.root === projected ? current.data : { root: projected } satisfies ToolChatData
     if (current?.data === data && current.anchorSeq === anchor
       && current.visibility === visibility && current.location === location) return current
-    return chatNode(context, 'tool-call', anchor, data, { visibility, location })
+    return chatNode(context, 'tool-call', anchor, data, {
+      visibility, location,
+      // User decisions belong to the transcript, outside both levels of process folding.
+      ...projected.name === 'ask_user_question' ? { groupTree: 'turn' as const } : {},
+    })
   },
 }
 

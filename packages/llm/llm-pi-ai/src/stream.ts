@@ -28,6 +28,9 @@ export function mapUsage(usage: PiUsage): TokenUsage {
     totalTokens: usage.totalTokens,
     ...usage.cacheRead > 0 ? { cacheReadTokens: usage.cacheRead } : {},
     ...usage.cacheWrite > 0 ? { cacheWriteTokens: usage.cacheWrite } : {},
+    ...usage.cacheWrite1h !== undefined && Number.isSafeInteger(usage.cacheWrite1h)
+      && usage.cacheWrite1h >= 0 && usage.cacheWrite1h <= usage.cacheWrite
+      ? { cacheWrite1hTokens: usage.cacheWrite1h } : {},
   }
 }
 

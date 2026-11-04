@@ -74,11 +74,12 @@ export function apply(ctx: Context): void {
   const onCreateRequested = desktop?.onCreateRequested
   if (onCreateRequested !== undefined) ctx.effect(() => onCreateRequested((request) => {
     ctx.sidebarRight.openTabIn(request.sessionId as SessionId, 'browser', {
-      params: { url: request.url, automationRequestId: request.requestId }, revealIfOpened: false,
+      params: { url: request.url, automationRequestId: request.requestId }, revealIfOpened: false, background: true,
     })
   }), 'ui-sidebar-browser.automation-open')
   ctx.effect(() => ctx.locale.register(namespace, { zh, en }), 'ui-sidebar-browser.copy')
-  ctx.effect(() => ctx.sidebarRightTabs.register({ ...browserDefinition(t), keepMounted: desktop !== undefined }), 'ui-sidebar-browser.type')
+  ctx.effect(() => ctx.sidebarRightTabs.register({ ...browserDefinition(t), keepMounted: desktop !== undefined,
+    mountHidden: desktop !== undefined }), 'ui-sidebar-browser.type')
   const installFrames = (scope: Context, factory: (sessionId: SessionId) => BrowserPageFactory): void => {
     const controllers = new Map<SessionId, BrowserInjected>()
     scope.effect(() => async () => {

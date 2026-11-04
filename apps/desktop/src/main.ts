@@ -1,8 +1,9 @@
 import { markW1Startup } from './w1-startup.ts'
 import type { ProductEventMap, ProductEvent } from '@deepseek-ai/dsh-client-product-analytics/types'
 import { configureW1Identity, configureW1Taskbar, configureW1StartMenu, isW1Development, relaunchW1 } from './w1-identity.ts'
-import { watchW1SystemIcons } from './w1-system-icons.ts'
+import { applyW1SystemIcons, w1SystemIconPath } from './w1-system-icons.ts'
 import { W1UpstreamUpdates } from './w1-upstream.ts'
+import { W1SessionLinks } from './w1-session-links.ts'
 import { W1Notifications } from './w1-notifications.ts'
 import { manageW1Remote } from './w1-remote-settings.ts'
 import { showW1Upstream } from './w1-upstream-ui.ts'
@@ -72,8 +73,18 @@ markW1Startup('main-loaded')
 const w1Product = configureW1Identity(app)
 const w1Packaged = !isW1Development(app)
 const w1Testing = process.env.W1_TEST_MODE === '1'
+/** Windows icon assets ship beside the packaged executable and inside the development application directory. */
+const w1IconResources = (): string => w1Packaged ? process.resourcesPath : join(app.getAppPath(), 'resources')
 
 let focusPrimaryWindow = (): void => {}
+let notifySessionLink = (): void => {}
+const sessionLinks = new W1SessionLinks(w1Testing ? 'w1-harness-test' : 'w1-harness', () => {
+  focusPrimaryWindow(); notifySessionLink()
+})
+app.on('open-url', (event, url) => {
+  event.preventDefault()
+  if (!sessionLinks.accept(url) && (url === `${sessionLinks.scheme}://open` || url === `${sessionLinks.scheme}://open/`)) focusPrimaryWindow()
+})
 let stopForRecovery = async (): Promise<void> => {}
 let shuttingDown = false
 /**
@@ -237,8 +248,7 @@ function createWindow(preload: string, show = false, primary = false): BrowserWi
   })
   configureW1Taskbar(app, window, w1Product)
   if (process.platform === 'win32') {
-    const icon = join(isW1Development(app) ? join(app.getAppPath(), 'resources') : process.resourcesPath,
-      nativeTheme.shouldUseDarkColors ? 'w1-app-dark.ico' : 'w1-app-light.ico')
+    const icon = w1SystemIconPath(w1IconResources())
     window.setIcon(icon)
     window.setAppDetails({ appIconPath: icon, appIconIndex: 0 })
   }
@@ -770,6 +780,28 @@ async function main(): Promise<void> {
     assertProductSender(event)
     return presentDesktopUpdate((sourceUpdates ?? updates).state)
   })
+  notifySessionLink = () => {
+    if (mainWindow !== undefined && !mainWindow.isDestroyed()) mainWindow.webContents.send(DESKTOP_IPC.sessionLinkOpen)
+  }
+  ipcMain.handle(DESKTOP_IPC.sessionLinkCreate, (event, id: unknown) => {
+    assertProductSender(event)
+    if (typeof id !== 'string' || !id || id.length > 4096) throw new Error('Invalid conversation ID')
+    return sessionLinks.create(id)
+  })
+  ipcMain.handle(DESKTOP_IPC.sessionLinkPending, (event) => {
+    assertProductSender(event)
+    return { id: sessionLinks.peek(), scheme: sessionLinks.scheme }
+  })
+  ipcMain.handle(DESKTOP_IPC.sessionLinkResolve, (event, link: unknown) => {
+    assertProductSender(event)
+    if (typeof link !== 'string' || link.length > 16384) throw new Error('Invalid conversation link')
+    return sessionLinks.resolve(link)
+  })
+  ipcMain.handle(DESKTOP_IPC.sessionLinkAck, (event, id: unknown) => {
+    assertProductSender(event)
+    if (typeof id !== 'string') throw new Error('Invalid conversation ID')
+    sessionLinks.acknowledge(id)
+  })
   ipcMain.handle(DESKTOP_IPC.notificationShow, (event, request: unknown) => {
     assertProductSender(event)
     return taskNotifications.show(request)
@@ -950,7 +982,7 @@ async function main(): Promise<void> {
     tray?.relabel()
   }
   refreshApplicationMenu()
-  const trayIconPath = development ? join(app.getAppPath(), 'resources', 'tray-windows.ico') : join(process.resourcesPath, 'tray.ico')
+  const trayIconPath = w1SystemIconPath(w1IconResources())
   if (process.platform === 'win32') {
     // The tray is the way back to a hidden window; without it, relaunching the application still focuses it.
     try {
@@ -962,10 +994,9 @@ async function main(): Promise<void> {
     } catch (error) { console.warn('desktop tray: unavailable', error) }
   }
   if (process.platform === 'win32') {
-    const disposeSystemIcons = watchW1SystemIcons({ app, theme: nativeTheme, shell,
+    const disposeSystemIcons = applyW1SystemIcons({ app, shell,
       shortcuts: !w1Testing,
-      readDark: () => nativeTheme.shouldUseDarkColors,
-      resources: development ? join(app.getAppPath(), 'resources') : process.resourcesPath,
+      resources: w1IconResources(),
       appId: development ? `${w1Product.appId}.dev` : w1Product.appId,
       windows: () => BrowserWindow.getAllWindows(), tray,
       report: (error) => { console.warn('W1 system icons:', error) } })
@@ -1146,11 +1177,14 @@ async function main(): Promise<void> {
     window.focus()
   }
 
-  if (!w1Testing && (w1Packaged || process.env.DSH_DESKTOP_DEV_APP === '1')) app.setAsDefaultProtocolClient(w1Product.protocol)
-  app.on('open-url', (event, url) => {
-    event.preventDefault()
-    if (url === `${w1Product.protocol}://open` || url === `${w1Product.protocol}://open/`) focusPrimaryWindow()
-  })
+  if (w1Packaged) app.setAsDefaultProtocolClient(sessionLinks.scheme)
+  else if (process.platform === 'win32') {
+    const launcher = w1Testing ? process.env.W1_TEST_LAUNCHER : process.env.W1_SESSION_LINK_LAUNCHER
+    const powershell = w1Testing ? process.env.W1_TEST_POWERSHELL : process.env.W1_DESKTOP_POWERSHELL
+    if (launcher && powershell) app.setAsDefaultProtocolClient(sessionLinks.scheme, powershell,
+      ['-NoProfile', '-WindowStyle', 'Hidden', '-File', join(launcher, '../Open-W1Session.ps1'),
+        '-Environment', w1Testing ? 'test' : 'daily', '-SessionLink'])
+  } else if (process.env.DSH_DESKTOP_DEV_APP === '1') app.setAsDefaultProtocolClient(sessionLinks.scheme)
 
   app.on('activate', (_event, hasVisibleWindows) => {
     if (!hasVisibleWindows) focusPrimaryWindow()
@@ -1253,7 +1287,11 @@ async function main(): Promise<void> {
   void updateSchedule.check()
 }
 
-const ownsDesktopInstance = claimDesktopSingleInstance(app, () => { focusPrimaryWindow() })
+const ownsDesktopInstance = claimDesktopSingleInstance(app, (args) => {
+  const linked = args.some(arg => sessionLinks.accept(arg))
+  if (!linked) focusPrimaryWindow()
+})
+if (ownsDesktopInstance) for (const arg of process.argv) sessionLinks.accept(arg)
 const activationOnly = isW1Development(app) && process.argv.includes('--w1-activate-only')
 if (ownsDesktopInstance && activationOnly) app.exit(75)
 

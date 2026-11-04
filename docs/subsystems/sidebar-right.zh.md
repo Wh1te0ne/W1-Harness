@@ -44,6 +44,7 @@ tab 身份是 `(kind, address)` 二元组：注册表的认领把地址原文用
 | `canOpen(address)` | 可选的同步否决，对 glob 命中生效；每次路由决策都会调用。 |
 | `title(address)` | chip 文本，在 tab 打开时捕获进布局记录，之后不再改写。 |
 | `keepMounted` | 可选的懒保活：已访问正文跨隐藏、Session 切换与停靠切换保留，由所属 View 持有 Session reference。 |
+| `mountHidden` | 可选的首次显示前挂载，用于后台加载；隐藏正文保持不可交互。 |
 | `guide` | 可选的引导页入口框：`{ order, title(), description?(), icon? }`。点一框即把贡献它的类型作为页面打开；省略即不上引导页。 |
 
 完整地址模式匹配地址原文：picomatch 的 globstar（`**`）即使启用 `dot: true` 也排除独立的 `.` 和 `..` 段；该选项允许匹配 dotfile，不改变点段排除规则。地址由资源业务代码解析，文件读取仍受 Host 文件系统权限限制。

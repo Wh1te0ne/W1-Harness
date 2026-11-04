@@ -33,7 +33,7 @@ import { ForkSessionMenuItem } from '../src/client/session-actions/ForkSession.t
 import { PinSessionMenuItem, PinSessionRowButton } from '../src/client/session-actions/PinSession.tsx'
 import { RenameSessionMenuItem, SessionRenameDialog } from '../src/client/session-actions/RenameSession.tsx'
 import { RowActionToast } from '../src/client/session-actions/RowActionToast.tsx'
-import { SessionIdMenuItem } from '../src/client/session-actions/SessionId.tsx'
+import { CopySessionMenuItem } from '../src/client/session-actions/CopySession.tsx'
 import { createWorkspaceViewStore } from '../src/client/stores.ts'
 import { en, zh } from '../src/client/locales.ts'
 import { ShortcutRegistry } from '../../shortcuts/src/client/registry.ts'
@@ -118,12 +118,13 @@ describe('Session ID action', () => {
   it.each([t, tEn])('dismisses the menu before copying the complete row ID', (translate) => {
     const { state, setMenuOpen } = openMenu()
     const sessionId = sid('session-c4421b66-252e-44c0-80ed-6e320abeba25')
-    const copySessionId = vi.fn(async () => {})
-    render(<SessionIdMenuItem {...menuRow(state)} sessionId={sessionId} t={translate} copySessionId={copySessionId} />)
+    const copySession = vi.fn(async () => {})
+    render(<CopySessionMenuItem {...menuRow(state)} sessionId={sessionId} t={translate} copySession={copySession} desktopLinks />)
+    fireEvent.click(screen.getByRole('menuitem', { name: translate('menu.copy') }))
     fireEvent.click(screen.getByRole('menuitem', { name: translate('menu.sessionId') }))
     expect(setMenuOpen).toHaveBeenCalledWith(false)
-    expect(copySessionId).toHaveBeenCalledExactlyOnceWith(sessionId)
-    expect(callOrder(setMenuOpen)).toBeLessThan(callOrder(copySessionId))
+    expect(copySession).toHaveBeenCalledExactlyOnceWith(sessionId, 'id')
+    expect(callOrder(setMenuOpen)).toBeLessThan(callOrder(copySession))
   })
 })
 

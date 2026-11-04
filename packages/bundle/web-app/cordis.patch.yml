@@ -14,6 +14,12 @@
 
 # ── surface-specific values the base deliberately omits ─────────────────────
 
+# Desktop follows the user's network. Other surfaces retain public-address enforcement;
+# later user/settings patches can explicitly select either policy.
+- id: web-fetch-http
+  config:
+    requirePublicIp: !!js "ctx.get('profileContext')?.name !== 'desktop'"
+
 - id: system-prompt
   config:
     personaPrefix: >-
@@ -38,6 +44,27 @@
     mode: !!js process.env.DSH_TOOLS_MODE
 
 # ── web-only host rows, the transport layer, and the browser roster ─────────
+
+# One-shot structured calls must keep their request and response intact through
+# optional compression proxies. No provider or model identity participates.
+- id: llm
+  config:
+    requestTransportByPurpose:
+      auto-review:
+        isolated: true
+        headers: { x-bili-passthrough: '1' }
+      goal-review:
+        isolated: true
+        headers: { x-bili-passthrough: '1' }
+      session-title:
+        isolated: true
+        headers: { x-bili-passthrough: '1' }
+      reply-selection:
+        isolated: true
+        headers: { x-bili-passthrough: '1' }
+      reply-suggestion:
+        isolated: true
+        headers: { x-bili-passthrough: '1' }
 
 # `dsh.client` rows are the browser roster the modules node half scans into
 # window.__DSH_BOOT__; the modules row is simultaneously a host row.
@@ -134,6 +161,8 @@
 
     - id: session-reference
       name: '@deepseek-ai/dsh-session-reference'
+      config:
+        deepLinkScheme: !!js "process.env.W1_TEST_MODE === '1' ? 'w1-harness-test' : 'w1-harness'"
 
     - id: file-reference-local
       name: '@deepseek-ai/dsh-file-reference-local'

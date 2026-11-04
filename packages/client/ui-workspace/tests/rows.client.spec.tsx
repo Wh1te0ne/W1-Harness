@@ -243,8 +243,8 @@ describe('workspace browser rows', () => {
       ? <button type="button" onClick={pluginAction}>plugin</button>
       : null)
     render(<SessionNodeItem node={node} currentId={undefined} now={0} onOpen={onOpen} renderSlot={renderSlot} t={t} />)
-    fireEvent.click(screen.getByRole('button', { name: 'plugin' }))
-    expect(pluginAction).toHaveBeenCalledOnce()
+    expect(screen.queryByRole('button', { name: 'plugin' })).toBeNull()
+    expect(pluginAction).not.toHaveBeenCalled()
     expect(onOpen).not.toHaveBeenCalled()
     fireEvent.click(screen.getByRole('treeitem'))
     expect(onOpen).toHaveBeenCalledWith(node.id)
@@ -692,16 +692,16 @@ describe('workspace browser rows', () => {
       runningSubagentCount: 0, completed: false, updatedAt: 0, pinned: false, archived: false,
     }
     render(<SessionNodeItem node={node} currentId={undefined} now={0} onOpen={onOpen} t={t} />)
-    const trigger = screen.getByRole('button', { name: '会话“One”的操作' })
-    fireEvent.click(trigger)
+    const trigger = screen.getByRole('treeitem')
+    fireEvent.contextMenu(trigger)
     expect(screen.getByRole('menu')).toBeTruthy()
     expect(onOpen).not.toHaveBeenCalled()
     // Escape closes without selecting (Menu onClose path).
     fireEvent.keyDown(document, { key: 'Escape' })
     expect(screen.queryByRole('menu')).toBeNull()
-    // The trigger toggles: a second click closes the menu it opened.
-    fireEvent.click(trigger)
-    fireEvent.click(trigger)
+    // Keyboard context-menu access uses the same actions; outside click dismisses it.
+    fireEvent.keyDown(trigger, { key: 'F10', shiftKey: true })
+    fireEvent.pointerDown(document.body)
     expect(screen.queryByRole('menu')).toBeNull()
     expect(onOpen).not.toHaveBeenCalled()
   })
@@ -739,13 +739,13 @@ describe('workspace browser rows', () => {
     expect(rendered).toHaveBeenCalledWith(
       'sidebar.workspaces.session.menu.item', { sessionId: node.id, displayTitle: 'One' }, [false, expect.any(Function)],
     )
-    expect(rendered).toHaveBeenCalledWith(
+    expect(rendered).not.toHaveBeenCalledWith(
       'sidebar.workspaces.session.row.action', { sessionId: node.id, displayTitle: 'One' }, undefined,
     )
     expect(screen.queryByRole('menuitem')).toBeNull()
-    const trigger = screen.getByRole('button', { name: '会话“One”的操作' })
+    const trigger = screen.getByRole('treeitem')
     trigger.focus()
-    fireEvent.click(trigger)
+    fireEvent.contextMenu(trigger)
     expect(screen.getAllByRole('menuitem').map(item => item.textContent)).toEqual(['Export'])
     expect(rendered).toHaveBeenCalledWith(
       'sidebar.workspaces.session.menu.item', { sessionId: node.id, displayTitle: 'One' }, [true, expect.any(Function)],
@@ -759,28 +759,15 @@ describe('workspace browser rows', () => {
     expect(onOpen).not.toHaveBeenCalled()
   })
 
-  it('renders the row action list inside the actions area after the menu trigger', () => {
-    const onOpen = vi.fn()
-    const onQuick = vi.fn()
-    const renderSlot: RowRenderSlot = (name: RowSlotName) => name === 'sidebar.workspaces.session.row.action'
-      ? (
-        <button type="button" aria-label="Quick action" onClick={(e) => { e.stopPropagation(); onQuick() }} />
-      )
-      : null
+  it('keeps session actions exclusively in the context menu', () => {
     const node: SessionNode = {
       id: sid('s1'), title: 'One', blank: false, running: false,
       runningSubagentCount: 0, completed: false, updatedAt: 0, pinned: false, archived: false,
     }
-    render(<SessionNodeItem node={node} currentId={undefined} now={0} onOpen={onOpen} renderSlot={renderSlot} t={t} />)
-    const trigger = screen.getByRole('button', { name: '会话“One”的操作' })
-    const quick = screen.getByRole('button', { name: 'Quick action' })
-    const actionsArea = trigger.closest('[class*="rowActions"]')
-    expect(actionsArea).not.toBeNull()
-    expect(actionsArea?.contains(quick)).toBe(true)
-    expect(trigger.compareDocumentPosition(quick) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    fireEvent.click(quick)
-    expect(onQuick).toHaveBeenCalledOnce()
-    expect(onOpen).not.toHaveBeenCalled()
+    render(<SessionNodeItem node={node} currentId={undefined} now={0} onOpen={vi.fn()} t={t} />)
+    expect(screen.queryByRole('button', { name: /会话.*的操作/ })).toBeNull()
+    fireEvent.contextMenu(screen.getByRole('treeitem'))
+    expect(screen.getByRole('menu')).toBeTruthy()
   })
 
   it.each([400, 800])('keeps the preview available when hovering More at %dms', (dwell) => {
@@ -793,14 +780,14 @@ describe('workspace browser rows', () => {
       render(<SessionNodeItem node={node} currentId={undefined} now={0} onOpen={vi.fn()} t={t} />)
       const row = screen.getByRole('treeitem')
       const title = screen.getByText('More hover')
-      const more = screen.getByRole('button', { name: '会话“More hover”的操作' })
+      const more = row
       fireEvent.pointerEnter(row)
       act(() => { vi.advanceTimersByTime(dwell) })
       fireEvent(title, new MouseEvent('pointerout', { bubbles: true, relatedTarget: more }))
       fireEvent(more, new MouseEvent('pointerover', { bubbles: true, relatedTarget: title }))
       act(() => { vi.advanceTimersByTime(800) })
       expect(screen.getByRole('button', { name: '复制: More hover' })).toBeTruthy()
-      fireEvent.click(more)
+      fireEvent.contextMenu(more)
       expect(screen.queryByRole('button', { name: '复制: More hover' })).toBeNull()
     } finally {
       cleanup()
@@ -808,62 +795,6 @@ describe('workspace browser rows', () => {
     }
   })
 
-  it.each([0, 400, 800])('keeps card dwell independent of the action tooltip (%dms)', (dwell) => {
-    vi.useFakeTimers()
-    try {
-      const node: SessionNode = {
-        id: sid('action-hover'), title: 'Action hover', blank: false, running: false,
-        runningSubagentCount: 0, completed: false, updatedAt: 0, pinned: false, archived: false,
-      }
-      const renderSlot: RowRenderSlot = (name: RowSlotName) => name === 'sidebar.workspaces.session.row.action'
-        ? <Tooltip label="Archive" delayMs={500}><button type="button" aria-label="Archive" /></Tooltip>
-        : null
-      const { rerender } = render(<SessionNodeItem node={node} currentId={undefined} now={0}
-        onOpen={vi.fn()} renderSlot={renderSlot} t={t} />)
-      const row = screen.getByRole('treeitem')
-      const title = screen.getByText('Action hover')
-      const archive = screen.getByRole('button', { name: 'Archive' })
-      const card = () => screen.queryByRole('button', { name: '复制: Action hover' })
-      fireEvent.pointerEnter(row)
-      act(() => { vi.advanceTimersByTime(dwell) })
-      if (dwell === 800) expect(card()).not.toBeNull()
-
-      fireEvent(title, new MouseEvent('pointerout', { bubbles: true, relatedTarget: archive }))
-      fireEvent(archive, new MouseEvent('pointerover', { bubbles: true, relatedTarget: title }))
-      fireEvent.mouseEnter(archive)
-      if (dwell === 800) expect(card()).not.toBeNull()
-      act(() => { vi.advanceTimersByTime(499) })
-      expect(screen.queryByRole('tooltip')).toBeNull()
-      if (dwell === 0) expect(card()).toBeNull()
-      else expect(card()).not.toBeNull()
-      act(() => { vi.advanceTimersByTime(1) })
-      expect(screen.getByRole('tooltip').textContent).toBe('Archive')
-      if (dwell === 0) expect(card()).toBeNull()
-      else expect(card()).not.toBeNull()
-      act(() => { vi.advanceTimersByTime(300) })
-      expect(card()).not.toBeNull()
-
-      fireEvent(archive, new MouseEvent('pointerout', { bubbles: true, relatedTarget: title }))
-      fireEvent(title, new MouseEvent('pointerover', { bubbles: true, relatedTarget: archive }))
-      fireEvent.mouseLeave(archive, { relatedTarget: title })
-      rerender(<SessionNodeItem node={{ ...node, running: true }} currentId={undefined} now={0}
-        onOpen={vi.fn()} renderSlot={renderSlot} t={t} />)
-      act(() => { vi.advanceTimersByTime(1000) })
-      expect(screen.queryByRole('tooltip')).toBeNull()
-      expect(card()).not.toBeNull()
-
-      fireEvent.pointerLeave(row, { relatedTarget: document.body })
-      act(() => { vi.advanceTimersByTime(300) })
-      fireEvent.pointerEnter(row, { relatedTarget: document.body })
-      act(() => { vi.advanceTimersByTime(799) })
-      expect(card()).toBeNull()
-      act(() => { vi.advanceTimersByTime(1) })
-      expect(card()).not.toBeNull()
-    } finally {
-      cleanup()
-      vi.useRealTimers()
-    }
-  })
 
   it('shows the hover card after the dwell and suppresses it while the row menu is open', () => {
     vi.useFakeTimers()
@@ -882,7 +813,7 @@ describe('workspace browser rows', () => {
       expect(screen.getAllByText('进行中')).toHaveLength(2)
       fireEvent.pointerLeave(wrapper)
       // Menu open (disabled=true) suppresses the card for the same hover.
-      fireEvent.click(screen.getByRole('button', { name: '会话“Hovered”的操作' }))
+      fireEvent.contextMenu(screen.getByRole('treeitem'))
       fireEvent.pointerEnter(wrapper)
       act(() => { vi.advanceTimersByTime(1000) })
       expect(screen.queryByText('1分钟前')).toBeNull()

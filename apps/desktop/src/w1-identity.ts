@@ -9,6 +9,14 @@ import type { W1Product } from './w1-upstream.ts'
  * @param application - Current Electron application; packaged builds use their ordinary restart.
  */
 export function relaunchW1(application: Pick<App, 'isPackaged' | 'relaunch'>): void {
+  if (process.platform === 'win32' && process.env.W1_TEST_MODE === '1') {
+    const entry = process.env.W1_TEST_LAUNCHER, powershell = process.env.W1_TEST_POWERSHELL
+    if (entry && powershell && isAbsolute(entry) && isAbsolute(powershell) && existsSync(entry) && existsSync(powershell)) {
+      application.relaunch({ execPath: powershell, args: ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', entry,
+        ...isW1Development(application) ? [] : ['-Executable', process.execPath]] })
+      return
+    }
+  }
   const launcher = process.env.W1_DESKTOP_LAUNCHER
   if (process.platform === 'win32' && isW1Development(application) && launcher && isAbsolute(launcher) && existsSync(launcher)) {
     application.relaunch({ execPath: launcher, args: [] })
@@ -89,7 +97,7 @@ export function configureW1Taskbar(
       appIconPath: process.execPath,
       appIconIndex: 0,
       relaunchCommand: '"' + powershell + '" -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "'
-        + launcher + '" -Executable "' + process.execPath + '"',
+        + launcher + '"' + (isW1Development(application) ? '' : ' -Executable "' + process.execPath + '"'),
       relaunchDisplayName: product.name,
     })
     return

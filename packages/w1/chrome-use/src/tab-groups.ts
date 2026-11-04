@@ -15,16 +15,23 @@ export class ChromeTabGroups {
     const previous = this.pending.get(windowId) ?? Promise.resolve()
     const operation = previous.catch(() => {}).then(async () => {
       signal.throwIfAborted()
-      const groups = await this.api.tabGroups.query({ title: 'W1', windowId })
+      const groups = await this.api.tabGroups.query({ title: 'W1 Harness', windowId })
+      signal.throwIfAborted()
+      const legacy = groups.length === 0
+        ? await this.api.tabGroups.query({ title: 'W1', windowId })
+        : []
       signal.throwIfAborted()
       const current = await this.api.tabs.get(id)
       signal.throwIfAborted()
       if (current.windowId !== windowId || current.pinned) throw new Error('Chrome tab moved or was pinned while grouping; list tabs again.')
-      const existing = groups[0]
-      if (existing && current.groupId === existing.id) return
+      const existing = groups[0] ?? legacy[0]
+      if (existing && current.groupId === existing.id) {
+        if (existing.title !== 'W1 Harness') await this.api.tabGroups.update(existing.id, { title: 'W1 Harness' })
+        return
+      }
       const group = await this.api.tabs.group({ tabIds: [id],
         ...existing ? { groupId: existing.id } : { createProperties: { windowId } } })
-      await this.api.tabGroups.update(group, { ...existing ? {} : { title: 'W1', color: 'blue' }, collapsed: false })
+      await this.api.tabGroups.update(group, { title: 'W1 Harness', ...existing ? {} : { color: 'blue' }, collapsed: false })
     }).finally(() => { if (this.pending.get(windowId) === operation) this.pending.delete(windowId) })
     this.pending.set(windowId, operation)
     await operation

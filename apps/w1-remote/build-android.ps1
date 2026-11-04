@@ -18,7 +18,10 @@ $env:JAVA_HOME = $Java
 $env:ANDROID_HOME = $Sdk
 & $Gradle -p (Join-Path $remoteRoot 'android') assembleDebug --console=plain
 if ($LASTEXITCODE -ne 0) { throw 'Android build failed' }
-$output = Join-Path $repoRoot '.work\deliveries\w1-remote-0.1.0'
+$version = [regex]::Match((Get-Content -LiteralPath (Join-Path $remoteRoot 'android\app\build.gradle') -Raw), "versionName '([^']+)'").Groups[1].Value
+if (-not $version) { throw 'Android versionName is missing' }
+$output = Join-Path $repoRoot ".work\deliveries\w1-mobile-$version"
 New-Item -ItemType Directory -Force -Path $output | Out-Null
-Copy-Item -LiteralPath (Join-Path $remoteRoot 'android\app\build\outputs\apk\debug\app-debug.apk') -Destination (Join-Path $output 'W1-Harness-Mobile-0.1.0.apk') -Force
-Write-Output (Join-Path $output 'W1-Harness-Mobile-0.1.0.apk')
+$apkName = "W1-Harness-Mobile-$version.apk"
+Copy-Item -LiteralPath (Join-Path $remoteRoot 'android\app\build\outputs\apk\debug\app-debug.apk') -Destination (Join-Path $output $apkName) -Force
+Write-Output (Join-Path $output $apkName)

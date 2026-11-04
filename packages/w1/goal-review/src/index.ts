@@ -109,7 +109,7 @@ export function apply(ctx: Context, config: Config): void {
           timer.signal.throwIfAborted()
           const assembler = new BlockAssembler()
           const stream = call.stream({ ...call.config, system: reviewPrompt, messages, tools: [],
-            sessionId: session.id, signal: timer.signal })
+            sessionId: session.id, purpose: 'goal-review', signal: timer.signal })
           for await (const chunk of stream) {
             timer.signal.throwIfAborted()
             assembler.push(chunk)

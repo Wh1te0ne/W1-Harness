@@ -127,6 +127,7 @@ function mount(overrides: Partial<WorkspaceBrowserProps> = {}) {
     actions: store.actions,
     startSession: vi.fn(),
     open: vi.fn(),
+    acknowledgeCompletions: vi.fn(),
     searchSessions: vi.fn(async () => ({ items: [], hasMore: false })),
     searchResultLimit: 20,
     notifyArchivedNotOpenable: vi.fn(),
@@ -440,7 +441,7 @@ describe('WorkspaceBrowser', () => {
       useSessions: hook(sessions),
       useWorkspaces: hook(workspaceState([workspace('alpha', ['alpha-s']), workspace('beta', ['beta-s'])])),
     })
-    expect(screen.getByText('工作区')).toBeTruthy()
+    expect(screen.getByText(t('section.workspaces'))).toBeTruthy()
     expect(screen.getByText('alpha')).toBeTruthy()
     // Sessions hidden while their group is folded.
     expect(screen.queryByText('alpha-s')).toBeNull()
@@ -466,7 +467,7 @@ describe('WorkspaceBrowser', () => {
     expect(screen.getByRole('menuitem', { name: '手动排序' }).hasAttribute('disabled')).toBe(false)
     fireEvent.click(screen.getByRole('menuitem', { name: '按工作区' }))
     expect(b.store.getSnapshot().groupBy).toBe('workspace')
-    expect(screen.getByText('工作区')).toBeTruthy()
+    expect(screen.getByText(t('section.workspaces'))).toBeTruthy()
 
     // Escape closes the menu without picking.
     fireEvent.click(screen.getByRole('button', { name: '视图选项' }))
@@ -742,11 +743,11 @@ describe('WorkspaceBrowser', () => {
     fireEvent.click(screen.getByText('alpha'))
     const owner = { sessionId: sid('alpha-s'), displayTitle: 'alpha-s' }
     expect(rendered).toHaveBeenCalledWith('sidebar.workspaces.session.menu.item', owner)
-    expect(rendered).toHaveBeenCalledWith('sidebar.workspaces.session.row.action', owner)
+    expect(rendered).not.toHaveBeenCalledWith('sidebar.workspaces.session.row.action', owner)
     rendered.mockClear()
     act(() => { b.store.actions.setGroupBy('flat') })
     expect(rendered).toHaveBeenCalledWith('sidebar.workspaces.session.menu.item', owner)
-    expect(rendered).toHaveBeenCalledWith('sidebar.workspaces.session.row.action', owner)
+    expect(rendered).not.toHaveBeenCalledWith('sidebar.workspaces.session.row.action', owner)
   })
 
   it('shows five sessions by default and clears transient show-all when the Workspace collapses', () => {
@@ -2654,4 +2655,27 @@ describe('Workspace tree grouping', () => {
     expect(b.props.insertWorkspaceBefore).toHaveBeenCalledOnce()
     expect(b.props.insertWorkspaceBefore).toHaveBeenCalledWith(wid('alpha'), wid('gamma'))
   })
+})
+
+
+it('toggles activity without changing project grouping and acknowledges only unread completions', () => {
+  const now = Date.now(), yesterday = now - 86_400_000
+  const markRead = vi.fn(), open = vi.fn()
+  mount({ open, acknowledgeCompletions: markRead,
+    useSessions: hook(sessionState([summary('running', now, { running: true }), summary('unread', now - 10), summary('history', yesterday)])),
+    useSessionStatus: hook(new Map([[sid('unread'), { running: false, completionUnread: true, pendingInteraction: undefined }]])),
+    useWorkspaces: hook(workspaceState([workspace('Project', ['running', 'unread', 'history'])])),
+  })
+  fireEvent.click(screen.getByRole('button', { name: '任务动态' }))
+  expect(screen.getByRole('button', { name: '任务动态' }).getAttribute('aria-pressed')).toBe('true')
+  const attention = screen.getByRole('tree', { name: '优先关注' })
+  expect(within(attention).getAllByRole('treeitem').map(row => row.getAttribute('data-row-key'))).toEqual(['session:unread', 'session:running'])
+  expect(screen.getByRole('tree', { name: '昨天' })).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: '全部标为已读' }))
+  expect(markRead).toHaveBeenCalledWith([sid('unread')])
+  fireEvent.click(within(attention).getByText('running'))
+  expect(open).toHaveBeenCalledWith(sid('running'))
+  fireEvent.click(screen.getByRole('button', { name: '任务动态' }))
+  expect(screen.queryByRole('tree', { name: '优先关注' })).toBeNull()
+  expect(screen.getByText('Project')).toBeTruthy()
 })

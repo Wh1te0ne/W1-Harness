@@ -239,11 +239,13 @@ export type WorkspaceBrowserInjected = {
   /** Publish directory interaction occupancy for command availability. */
   setDirectoryBusy: (busy: boolean) => void
   /**
-   * Create a fresh Session, or preserve a reusable blank with explicit draft options.
+   * Reuse the Workspace's unstarted Session and saved draft, or create one.
    * Without an explicit Workspace, inherit the current Session Workspace,
    * then the recent Workspace, or clear into the New Session view.
    */
   startSession: (workspaceId?: WorkspaceId, options?: StartSessionOptions) => void
+  /** Acknowledge the supplied completion reminders without opening their conversations. */
+  acknowledgeCompletions: (ids: readonly SessionId[]) => void
   /** Open a real Session. */
   open: (sessionId: SessionId) => void
   /**
@@ -299,6 +301,8 @@ export type RowToast =
   | { kind: 'archived'; sessionId: SessionId }
   | { kind: 'stoppedAndArchived'; sessionId: SessionId }
   | { kind: 'sessionIdCopied' }
+  | { kind: 'sessionCopied' }
+  | { kind: 'sessionLinkMissing' }
   | { kind: 'sessionIdCopyFailed' }
   | { kind: 'pinFailed' }
   | { kind: 'unpinFailed' }
@@ -403,9 +407,11 @@ export interface RenameSessionInjected {
 }
 
 /** Session ID action share; copying does not open the Session. */
-export interface SessionIdInjected {
-  /** Copy the complete id and report acceptance or failure through the global toast. */
-  copySessionId: (sessionId: SessionId) => Promise<void>
+export interface SessionCopyInjected {
+  /** Whether the desktop link carrier is present. */
+  desktopLinks: boolean
+  /** Copy one representation of the selected row. */
+  copySession: (sessionId: SessionId, kind: 'id' | 'link' | 'markdown' | 'directory') => Promise<void>
 }
 
 /** A Session rename the rename action asked for; the dialog entry opens on it. */

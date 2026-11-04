@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-With `dsh-web-fetch-http`, the harness can fetch public HTTP(S) pages through the web service (`ctx.web`) and get their status code plus bounded, decoded content without sending credentials. Choose it when a composition needs safe retrieval with URL validation, public-address resolution, connection pinning, same-origin redirects, byte and character caps, and an explicit product `User-Agent`. It returns non-2xx responses as results rather than errors, and rejects non-public destinations, binary data, and unsupported content types. The model-facing `web_fetch` tool lives in `dsh-tool-web`, which renders this provider's bodies.
+With `dsh-web-fetch-http`, the harness retrieves anonymous HTTP(S) text through `ctx.web`, with bounded output, URL validation and same-origin redirects. Strict mode validates and pins public addresses; system mode follows the configured network without that preflight. Neither mode carries browser cookies. Non-2xx responses remain results rather than errors. The model-facing `web_fetch` tool lives in `dsh-tool-web`.
 
 ## Table of Contents
 
@@ -29,7 +29,7 @@ Mount the provider in a composition that already loads the web service; it regis
 
 ### When to choose it
 
-Choose this backend when a deployment must fetch public pages with bounded output and safe transport: no credentials are sent, every resolved address must be public, each connection is pinned to the validated answer set, redirects cannot escape the origin, and every response is capped.
+Choose this backend for anonymous, bounded text retrieval. `requirePublicIp: true` is the provider default: direct connections validate and pin public addresses; explicit proxy routes delegate target DNS to the configured proxy. W1 Desktop sets it to `false`, using system DNS/routing and the installed proxy policy without address preflight. Private destinations are then reachable too. Other profiles retain the strict default; no proxy product or address range is special-cased.
 
 ### Minimal configuration
 
@@ -42,13 +42,14 @@ Load the web service and the provider; configurable limits have safe defaults an
 
 | Field | Default | Meaning |
 |---|---|---|
+| `requirePublicIp` | `true` (`false` in Desktop) | Require public destination IPs on direct connections |
 | `maxResponseBytes` | `5,000,000` | Maximum response body size in bytes |
 | `maxBodyChars` | `100,000` | Maximum decoded body length in characters |
 | `timeoutMs` | `30,000` | Fetch timeout — a resource backstop, not the model-facing tool budget |
 | `maxRedirects` | `5` | Maximum same-origin redirect hops (`0` follows none) |
 | `userAgent` | `deepseek-harness/…` | `User-Agent` header sent on every request |
 
-The generated [configuration catalog](../../../docs/config-catalog.md#deepseek-aidsh-web-fetch-http) is the exhaustive source for every accepted field and its JSDoc.
+The generated [configuration catalog](../../../docs/config-catalog.md#deepseek-aidsh-web-fetch-http) is the exhaustive source for every accepted field and its JSDoc. Enable strict mode with `requirePublicIp: true` on the `web-fetch-http` row in a profile's `cordis.patch.yml`, or in that plugin's existing settings namespace. User settings take precedence over bundle defaults. A live change applies to the next fetch; an in-flight fetch keeps one policy through all its redirects.
 
 ### What a fetch returns
 
@@ -95,7 +96,7 @@ The package is built on one separation and one layered timeout:
 
 ### Read path
 
-A fetch validates the URL, resolves the hostname once, rejects the complete answer set when any address is not public, and pins the connection to the accepted addresses. It repeats that check for each same-origin redirect; a cross-origin redirect or non-public target fails before response bytes are accepted. The final response is classified by `Content-Type`, decoded from its declared charset, and read under the byte cap; the decoded text is then truncated to the character cap.
+A fetch validates the URL before selecting transport. Strict direct requests resolve once, reject non-public results and pin accepted addresses; explicit proxies retain proxy-side DNS. System mode uses the installed process dispatcher without this preflight. Every redirect follows the selected policy; cross-origin redirects remain blocked in both modes. Responses retain content-type, charset, byte and character limits.
 
 </details>
 

@@ -7,6 +7,8 @@ kind: "package-reference"
 
 English | [中文](README.zh.md)
 
+The adapter honors `GenerateOptions.transport` for isolated auxiliary HTTP requests and deployment headers. Authentication and Harness attribution take precedence over per-call headers. OpenAI Chat Completions, Responses and Anthropic Messages are verified; other catalog protocols depend on the SDK supporting a custom fetch transport. Billing capture remains active on isolated calls.
+
 ## Summary
 
 `@deepseek-ai/dsh-llm-pi-ai` routes model requests to multiple pi-ai providers, OpenAI-compatible gateways, or self-hosted servers from one configuration. Installed pi-ai providers supply endpoint, protocol, and model-catalog defaults; custom routes can declare those values without code changes. Profiles and credentials are resolved for each request, so settings changes take effect on the next request without a restart. Supported providers can use stored OAuth or interactive-key sign-in with cross-process refresh locking. The package may start with no routes and activate when user settings add them.
@@ -101,6 +103,8 @@ A profile's `models` list replaces the route's installed catalog rather than ext
 ### Run with reasoning and wire compatibility
 
 `reasoningEfforts` declares a model's selectable thinking levels: each key is a level selectors offer, its value the spelling dispatch sends on the wire, so `max: ultra` renames a level for a gateway with its own vocabulary. Omitting the field keeps the installed catalog entry's capability; `false` declares a non-reasoning model. `compat` switches reshape the request for endpoints pi-ai cannot recognize — which role carries the system prompt, which field caps output, how a thinking level travels — configurable per route and per model. A model neither the entry nor the installed catalog sizes takes the route's `defaultContextWindow` and `defaultMaxTokens` fallbacks.
+
+For strict Responses gateways such as Volcengine Ark, set the route's `responsesReasoningFormat: effort-only` to retain `reasoning.effort` while omitting OpenAI's `reasoning.summary` and the `reasoning.encrypted_content` include request. Omission retains OpenAI behavior; other protocols are unaffected. Declare only the model's accepted `reasoningEfforts`, for example `{ low: low, high: high, max: max }`. Default selection leaves the route/server default in control; it does not select the lowest effort.
 
 Exact-model metadata lists `reasoning.efforts` from least to greatest selectable effort. A configuration function can select from that list before `prepareCall()` validates the concrete effort. The adapter receives only the resolved controls. Selecting `off` does not guarantee disabled reasoning: a protocol that expresses it by omitting the reasoning field leaves the gateway's default in effect. Reasoning tokens at any selected level count toward the request's output cap.
 

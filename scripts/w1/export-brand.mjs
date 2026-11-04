@@ -1,5 +1,5 @@
 /** Export W1 Fold artwork from the canonical SVG using the desktop's locked Sharp dependency. */
-import { readFile, writeFile, mkdir } from 'node:fs/promises'
+import { readFile, writeFile, mkdir, copyFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 
@@ -23,6 +23,12 @@ for (const [name, source] of Object.entries(variants)) {
   }
 }
 
+// Render the transparent delivery images directly from vectors at their target density.
+for (const [name, source] of [['mark-dark', dark], ['mark-light', light]]) {
+  await sharp(Buffer.from(source), { density: 1152 }).resize(8192, 8192).png()
+    .toFile(fileURLToPath(new URL(`${name}-8192.png`, output)))
+}
+
 // ICO stores lossless PNG frames; 0 in each dimension byte means 256 pixels.
 const sizes = [16, 20, 24, 32, 48, 64, 128, 256]
 for (const name of Object.keys(variants)) {
@@ -44,8 +50,25 @@ frames.forEach((frame, i) => {
 await writeFile(new URL(`${name}.ico`, output), Buffer.concat([header, ...frames]))
 }
 
+// Product copies share the canonical artwork; immutable release directories are not touched.
+for (const [source, target] of [
+  ['mark-dark.ico', '../../apps/desktop/resources/w1-mark-dark.ico'],
+  ['mark-light.ico', '../../apps/desktop/resources/w1-mark-light.ico'],
+  ['app-icon.ico', '../../apps/desktop/resources/w1-app-dark.ico'],
+  ['app-icon-light.ico', '../../apps/desktop/resources/w1-app-light.ico'],
+  ['mark-dark.svg', '../../packages/w1/chrome-use/extension/mark.svg'],
+]) await copyFile(new URL(source, output), new URL(target, root))
+for (const size of [16, 32, 48, 128]) {
+  await copyFile(new URL(`app-icon-${size}.png`, output), new URL(`../../packages/w1/chrome-use/extension/app-icon-${size}.png`, root))
+}
+for (const size of [16, 32, 128]) {
+  await copyFile(new URL(`mark-light-${size}.png`, output), new URL(`../../packages/w1/chrome-use/extension/icon-${size}.png`, root))
+}
+await writeFile(new URL('../../apps/w1-remote/mobile/mark.svg', root), master)
+await copyFile(new URL('app-icon-1024.png', output), new URL('../../apps/w1-remote/android/app/src/main/res/drawable/w1_icon.png', root))
+
 const panel = (x, background, foreground) => `<rect x="${x}" y="100" width="360" height="370" rx="24" fill="${background}"/><g transform="translate(${x + 24} 120) scale(.61)" fill="${foreground}">${content}</g>`
-let preview = `<rect width="1200" height="760" fill="#F1F2F4"/><text x="40" y="55" font-family="Arial" font-size="28" fill="#17191F">W1 / FOLD — v1.0</text>`
+let preview = `<rect width="1200" height="760" fill="#F1F2F4"/><text x="40" y="55" font-family="Arial" font-size="28" fill="#17191F">W1 / FOLD — v1.1</text>`
 preview += panel(40, '#FFFFFF', '#17191F') + panel(420, '#17191F', '#FFFFFF')
 preview += `<g transform="translate(820 130) scale(.64)">${app.replace(/<svg[^>]*>|<\/svg>/g, '')}</g>`
 preview += `<text x="40" y="525" font-family="Arial" font-size="18" fill="#17191F">Actual pixel sizes / 16 · 20 · 24 · 32 · 48 · 64 · 128</text>`
@@ -57,4 +80,4 @@ for (const size of sizes.slice(0, -1)) {
 }
 const board = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760">${preview}</svg>`
 await sharp(Buffer.from(board)).png().toFile(fileURLToPath(new URL('preview.png', root)))
-console.log('Exported W1 Fold: 4 SVG variants, 40 PNGs, four 8-frame ICOs, preview.')
+console.log('Exported W1 Fold: 4 SVG variants, 42 PNGs, four 8-frame ICOs, preview and product copies.')

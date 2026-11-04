@@ -449,12 +449,30 @@ describe('new-session default', () => {
     })
   })
 
-  it('fails to read a stored default outside the configured preset table until it is repaired', async () => {
+  it('uses Auto as a future-session default only while its reviewer is live', async () => {
     const ctx = await mountedStore()
-    await mountAuto(ctx)
+    const existing = ctx.sessions.create(SessionId('before-auto-default'))
+    const admit = vi.fn()
+    const fiber = await mountAuto(ctx, admit)
     await configurations.get(ctx)!.update({ defaultPreset: AUTO_PRESET })
-    expect(() => ctx.permissionPresets.defaultPreset).toThrow(/unknown default preset/)
+    expect(ctx.permissionPresets.defaultPreset).toBe(AUTO_PRESET)
+    expect(ctx.permissionPresets.catalog().defaultOptions.some(option => option.value === AUTO_PRESET)).toBe(true)
+    const fresh = ctx.sessions.create(SessionId('after-auto-default'))
+    expect(ctx.permissionPresets.current(fresh)).toBe(AUTO_PRESET)
+    expect(admit).toHaveBeenCalledOnce()
+    expect(ctx.permissionPresets.current(existing)).toBe('workspace-write')
+    await fiber.dispose()
+    expect(() => ctx.permissionPresets.defaultPreset).toThrow(/unavailable default preset/)
+    expect(() => ctx.sessions.create(SessionId('auto-reviewer-missing'))).toThrow(/unavailable default preset/)
     await configurations.get(ctx)!.update({ defaultPreset: 'workspace-write' })
     expect(ctx.permissionPresets.defaultPreset).toBe('workspace-write')
+  })
+
+  it('restores a stored Auto default and refuses session publication when reviewer admission fails', async () => {
+    const ctx = await mounted({ config: { defaultPreset: AUTO_PRESET } })
+    expect(() => ctx.sessions.create(SessionId('auto-before-reviewer'))).toThrow(/unavailable default preset/)
+    await mountAuto(ctx, () => { throw new Error('review model unavailable') })
+    expect(() => ctx.sessions.create(SessionId('auto-admission-refused'))).toThrow('review model unavailable')
+    expect(ctx.sessions.get(SessionId('auto-admission-refused'))).toBeUndefined()
   })
 })

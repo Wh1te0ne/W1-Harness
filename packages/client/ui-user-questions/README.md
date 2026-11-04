@@ -33,7 +33,7 @@ A multi-select draft keeps its selected labels while the user opens or edits the
 
 ### Reading a settled question back
 
-Each late reply is shown once, including when it opens a new Turn. Replies follow normal Chat process grouping and whole-Turn folding. Expand the containing Turn and work group to read a reply that has been folded away.
+Each late reply is shown once, including when it opens a new Turn. Replies are user-input rows outside process grouping and whole-Turn folding, so answered decisions remain visible after a Session switch.
 
 A question that already settled opens as a read-only card: the same pager over the recorded answers, marked `Answered`. Every option and text field is disabled, Skip and the submit action are gone, a question the user skipped says so in place of its empty answer, and a free-text field appears only where the recorded answer used one. Closing it removes the card, and the tool call row builds another from the same record.
 
@@ -55,7 +55,7 @@ Each Session and pending request has an independent draft in browser storage. A 
 
 A browser that reconnects while the tool call is open receives the pending request again and can still complete it with the remaining time. A Session reopened after the agent or process ended shows the card as continued; submitting resumes the Session's root agent and enters the answer as a new user turn.
 
-Settled question replies remain compact in chat history. A caret marks the bubble as a disclosure; clicking it reopens the read-only question and answer details, and never reopens the settled tool call for a second submission. Its copy action writes each question with the answer the user gave, the same text whether the bubble is open or closed.
+Settled question replies open with their questions and answers visible. The reader may collapse the details; reopening never resubmits the settled tool call. Copy writes each question and its answer regardless of disclosure state.
 
 -----
 

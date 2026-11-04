@@ -32,7 +32,11 @@
     },
     "./src/*": "./src/*",
     "./package.json": "./package.json",
-    "./locale/*.json": "./locale/*.json"
+    "./locale/*.json": "./locale/*.json",
+    "./link": {
+      "types": "./lib/types/link.d.ts",
+      "default": "./lib/types/link.js"
+    }
   },
   "files": [
     "locale/*.json",

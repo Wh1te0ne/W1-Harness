@@ -27,6 +27,8 @@ const MESSAGE_TYPES = new Set(['user/message', 'assistant/message'])
 const sessionListMetadataSchema: z.ZodType<SessionListMetadata> = z.object({
   blank: z.boolean(),
   lastPromptAt: z.number().nullable(),
+  activityAt: z.number().optional(),
+  preview: z.string().optional(),
 })
 
 const imageLimitsSchema = z.object({
@@ -52,9 +54,14 @@ export function applySessionListMetadata(
   const lastPromptAt = event.type === 'user/message' && event.data.source.kind === 'user'
     ? event.time
     : state.lastPromptAt
+  const content = event.type === 'assistant/message' ? event.data.message.content : undefined
+  const text = content?.flatMap(block => block.type === 'text' ? [block.text] : []).join(' ').replace(/\s+/gu, ' ').trim()
+  const preview = text ? truncateUnicodeCodePoints(text, 240) : state.preview
+  const activityAt = content !== undefined || event.type === 'turn/end' ? event.time : state.activityAt
   return blank === state.blank && lastPromptAt === state.lastPromptAt
+    && preview === state.preview && activityAt === state.activityAt
     ? state
-    : { blank, lastPromptAt }
+    : { ...state, blank, lastPromptAt, ...(preview === undefined ? {} : { preview }), ...(activityAt === undefined ? {} : { activityAt }) }
 }
 
 /**
@@ -76,18 +83,24 @@ export function truncateUnicodeCodePoints(value: string, maximum: number): strin
 
 /** Owns list projection registration, bounded cold summaries, and authorized search. */
 export class ApiSessionList {
+  private readonly lifetime = new AbortController()
+  private readonly metadataRepairs = new Map<SessionId, { controller: AbortController; promise: Promise<void> }>()
+  private repairTail: Promise<void> = Promise.resolve()
+
   /**
    * @param ctx - Host context carrying Session, query, persistence, and projection services.
    * @param workSliceMs - Resolved positive integral list-work budget in milliseconds.
    */
   constructor(private readonly ctx: Context, private readonly workSliceMs: number) {
+    ctx.effect(() => () => { this.lifetime.abort() }, 'api-session.list: metadata repair lifetime')
+    ctx.on('session/disposed', (session) => { this.metadataRepairs.get(session.id)?.controller.abort() })
     ctx.sessionProjections.register<'sessionListMetadata', SessionListMetadata>({
       key: 'sessionListMetadata',
       stateSchema: sessionListMetadataSchema,
       init: () => ({ blank: true, lastPromptAt: null }),
       apply: applySessionListMetadata,
       wire: { viewSchema: sessionListMetadataSchema, view: state => state },
-      stateVersion: 1,
+      stateVersion: 2,
     })
     ctx.inject(['attachments'], (attachmentCtx) => {
       ctx.sessionProjections.register<'imageLimits', null>({
@@ -102,6 +115,59 @@ export class ApiSessionList {
         stateVersion: 1,
       })
     })
+  }
+
+  /**
+   * Rebuild missing list metadata in the background, without opening conversations or Agents.
+   * The caller supplies authorized rows after the cheap cache-only listing has completed.
+   * Repairs are serialized and coalesced; failures remain visible and may retry on a later list.
+   * @param items - Authorized list rows whose absent metadata needs rebuilding.
+   * @returns completion of the requested repairs, independent of the listing response.
+   */
+  async repairMissingMetadata(items: readonly SessionSummary[]): Promise<void> {
+    const repairs: Promise<void>[] = []
+    for (const item of items) {
+      if (this.lifetime.signal.aborted) break
+      if (item.projections?.values.sessionListMetadata !== undefined
+        || item.formatStatus === 'migration-required' || item.origin === 'subagent'
+        || this.ctx.sessions.get(item.sessionId) !== undefined) continue
+      const existing = this.metadataRepairs.get(item.sessionId)
+      if (existing !== undefined) { repairs.push(existing.promise); continue }
+      const controller = new AbortController()
+      const signal = AbortSignal.any([controller.signal, this.lifetime.signal])
+      const promise = this.repairTail.then(async () => {
+        signal.throwIfAborted()
+        const cache = this.ctx.get('sessionProjectionCache')
+        using observation = await this.ctx.sessionQuery.observeSession(item.sessionId, {
+          signal, projectionMode: cache === undefined ? 'all' : 'none',
+        })
+        signal.throwIfAborted()
+        const live = this.ctx.sessions.get(item.sessionId)
+        if (live !== undefined) {
+          this.ctx.emit('api-session/added', this.summaryFor(live))
+          return
+        }
+        const projections = hintsOf('cached', cache === undefined ? observation.projections
+          : cache.coldSnapshot(observation.header, observation.inheritedEventCount, observation.events))
+        const metadata = projections?.values.sessionListMetadata
+        if (projections !== undefined && metadata !== undefined) this.ctx.emit('api-session/added', {
+          sessionId: item.sessionId,
+          updatedAt: updatedAt(observation.header, metadata),
+          agentAvailable: false,
+          formatStatus: 'current',
+          running: false,
+          blank: metadata.blank,
+          ...listFields(observation.header),
+          projections,
+        })
+      }).catch((error: unknown) => {
+        if (!signal.aborted) this.ctx.logger.warn(`api-session.list: metadata repair for "${item.sessionId}" failed: ${String(error)}`)
+      }).finally(() => { this.metadataRepairs.delete(item.sessionId) })
+      this.metadataRepairs.set(item.sessionId, { controller, promise })
+      this.repairTail = promise
+      repairs.push(promise)
+    }
+    await Promise.all(repairs)
   }
 
   /**

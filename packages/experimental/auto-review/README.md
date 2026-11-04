@@ -49,6 +49,12 @@ Auto reviews every supported call once before its body, including each started P
 
 A final denial uses the ordinary tool card. The collapsed row identifies Auto review; expanded output states that the body did not execute and displays the optional reason. [The Web permission package](../../client/ui-permission-presets/README.md) owns picker interaction, and [the tool UI](../../client/ui-tool/README.md) owns reason display.
 
+Review requests carry the originating session ID and the `auto-review` purpose for usage accounting. Their private review prompt and response remain outside the model-visible conversation history.
+
+Each user-message envelope also contains the complete fixed review policy and an explicit review task. The system policy remains present. This makes the machine request self-contained when an intermediary weakens system-role delivery; it neither promotes embedded conversation facts to instructions nor accepts malformed decisions. Providers that preserve both copies may bill the repeated policy as additional input.
+
+The W1 web composition maps this purpose to an isolated HTTP transport. Reviews still pass through the LLM waterfall and usage accounting, but bypass global conversation-rewriting fetch wrappers. A deployment header preserves transparent forwarding when the configured endpoint is itself a compression proxy. Review policy, strict output parsing and failure denial stay unchanged; this does not depend on a model name or provider identity.
+
 -----
 
 <a id="understand-the-implementation"></a>
@@ -84,7 +90,7 @@ Unloading closes selection and review admission, migrates live Auto Sessions to 
 
 #### What the model sees
 
-The reviewer uses the latest `request/header.config` provider and model with the shipped adapter's default reasoning. Its fixed `REVIEW_POLICY` replaces human approval for exactly one action: allow executes immediately with Full access. The other four sections contain only the retained facts described above. It returns one strict JSON text object with `risk` and `decision`; deny may include a string `reason`. Reasoning blocks may precede that single text block. Only `low + allow`, `medium + allow/deny`, and `high + deny` are valid.
+The reviewer uses the latest `request/header.config` provider and model with the shipped adapter's default reasoning. It omits `temperature`, leaving sampling to the provider's default so models that reject custom temperatures can review calls. Its fixed `REVIEW_POLICY` replaces human approval for exactly one action: allow executes immediately with Full access. The other four sections contain only the retained facts described above. It returns one strict JSON text object with `risk` and `decision`; deny may include a string `reason`. Reasoning blocks may precede that single text block. Only `low + allow`, `medium + allow/deny`, and `high + deny` are valid.
 
 #### Token effect
 

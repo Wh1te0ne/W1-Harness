@@ -7,7 +7,7 @@
  * own `single` directory-flow child hole for the composed picker package's
  * client half. WorkspaceBrowser additionally declares the two Session row
  * action lists, and this apply registers the shipped actions — pin, rename,
- * fork, archive, copy ID — into them the way any client plugin would, each
+ * fork, archive, copy submenu — into them the way any client plugin would, each
  * with its own behavior, plus the dialogs and the row-action notice into
  * `shell.overlay` (see the contract module doc). It also declares two
  * Session-row seats: the leading decoration a row renders only while its own
@@ -24,6 +24,8 @@ import type {
 } from '@deepseek-ai/dsh-api-workspace-controller/client'
 import type { RemoteEndpoint } from '@deepseek-ai/dsh-api-remote-access/client'
 import { createSnapshotStore } from '@deepseek-ai/dsh-client-store'
+import { desktopSessionLinks } from './session-actions/desktop-links.ts'
+import { CopySessionMenuItem } from './session-actions/CopySession.tsx'
 import { writeClipboard } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { HostObservable, SnapshotSelectorHook } from '@deepseek-ai/dsh-client-ui-slots'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
@@ -41,7 +43,7 @@ import {
   type ArchiveSessionInjected, type ForkSessionInjected, menuOpenStateFactory, type PinSessionInjected,
   type SessionArchiveConfirmInjected, type SessionArchiveConfirmRequest,
   type RenameSessionInjected, type RowToast, type RowToastInjected, type RowToastState, type SessionRenameDialogInjected,
-  type SessionIdInjected, type WorkspaceBrowserInjected, type WorkspacePickerInjected,
+  type SessionCopyInjected, type WorkspaceBrowserInjected, type WorkspacePickerInjected,
 } from './contract/slots.ts'
 import { createWorkspaceShortcutControls, installWorkspaceShortcuts } from './shortcuts.ts'
 import { UiWorkspaceService } from './navigation.ts'
@@ -54,7 +56,6 @@ import { PinSessionMenuItem, PinSessionRowButton } from './session-actions/PinSe
 import { RenameSessionMenuItem, SessionRenameDialog } from './session-actions/RenameSession.tsx'
 import { RowActionToast } from './session-actions/RowActionToast.tsx'
 import { registerToasts } from './toast/register.ts'
-import { SessionIdMenuItem } from './session-actions/SessionId.tsx'
 import { WorkspacePicker } from './WorkspacePicker.tsx'
 import { en, zh, type WorkspaceKey } from './locales.ts'
 
@@ -100,7 +101,7 @@ const NS = 'workspace'
  * declaration through `slots.inject()` instead of assuming order.
  */
 export const inject = [
-  'slots', 'sessions', 'workspaces', 'locale', 'remote', 'remote.directoryPicker', 'layout', 'shortcuts', 'remoteAccess',
+  'slots', 'sessions', 'uiSession', 'workspaces', 'locale', 'remote', 'remote.directoryPicker', 'layout', 'shortcuts', 'remoteAccess',
 ]
 
 /**
@@ -112,6 +113,10 @@ export const inject = [
 export function apply(ctx: Context): void {
   const sessions = ctx.get('sessions') as ISessions
   const workspaces = ctx.get('workspaces') as IWorkspaces
+  // Desktop owns this chooser as a modal child of its current BrowserWindow.
+  const desktopPicker = (globalThis as typeof globalThis & {
+    __DSH_DIRECTORY_PICKER__?: { pick: () => Promise<string | null> }
+  }).__DSH_DIRECTORY_PICKER__
   // One viewing-store instance, created here as ui-layout does for its layout
   // store: the browser declares the handle, and the UiWorkspace service writes
   // view order through the same instance the renderer hands the browser.
@@ -233,12 +238,67 @@ export function apply(ctx: Context): void {
       })
     },
   })
-  const sessionIdInjected = (): SessionIdInjected => ({
-    copySessionId: async (sessionId) => {
-      const copied = await writeClipboard(sessionId)
-      notify({ kind: copied ? 'sessionIdCopied' : 'sessionIdCopyFailed' })
+  const sessionLinks = desktopSessionLinks()
+  const sessionCopyInjected = (): SessionCopyInjected => ({
+    desktopLinks: sessionLinks !== undefined,
+    copySession: async (sessionId, kind) => {
+      try {
+        let value: string | undefined
+        if (kind === 'id') value = sessionId
+        else if (kind === 'directory') value = sessions.list.getSnapshot().byId[sessionId]?.cwd
+        else if (kind === 'link') value = await sessionLinks?.create(sessionId)
+        else {
+          const response = await fetch(new URL(`api/session.markdown?sessionId=${encodeURIComponent(sessionId)}`, location.href))
+          if (!response.ok) throw new Error('Conversation export failed')
+          value = await response.text()
+        }
+        if (value === undefined || !await writeClipboard(value)) throw new Error('Clipboard unavailable')
+        notify({ kind: 'sessionCopied' })
+      } catch { notify({ kind: 'sessionIdCopyFailed' }) }
     },
   })
+  if (sessionLinks !== undefined) {
+    const linkLifetime = new AbortController()
+    let navigation = Promise.resolve()
+    const openLinkedSession = (id: string): void => {
+      const row = Object.values(sessions.list.getSnapshot().byId).find(item => item.id === id)
+      if (row === undefined) { notify({ kind: 'sessionLinkMissing' }); return }
+      uiWorkspace.openSession(row.id)
+    }
+    const receive = (): void => {
+      navigation = navigation.then(async () => {
+        if (linkLifetime.signal.aborted || sessions.list.getSnapshot().phase !== 'ready') return
+        const pending = await sessionLinks.pending()
+        linkLifetime.signal.throwIfAborted()
+        if (pending.id === null) return
+        openLinkedSession(pending.id)
+        await sessionLinks.acknowledge(pending.id)
+      }).catch(() => { if (!linkLifetime.signal.aborted) notify({ kind: 'sessionLinkMissing' }) })
+    }
+    ctx.effect(() => sessionLinks.onOpen(receive))
+    ctx.effect(() => {
+      let ready = sessions.list.getSnapshot().phase === 'ready'
+      return sessions.list.subscribe(() => {
+        const nextReady = sessions.list.getSnapshot().phase === 'ready'
+        if (nextReady && !ready) receive()
+        ready = nextReady
+      })
+    })
+    ctx.effect(() => {
+      const click = (event: MouseEvent): void => {
+        const anchor = event.target instanceof Element ? event.target.closest('a[href]') : null
+        const href = anchor?.getAttribute('href')
+        if (!href || !/^w1-harness(?:-test)?:/.test(href)) return
+        event.preventDefault(); event.stopPropagation()
+        void sessionLinks.resolve(href).then((id) => {
+          if (!linkLifetime.signal.aborted) openLinkedSession(id)
+        }).catch(() => { if (!linkLifetime.signal.aborted) notify({ kind: 'sessionLinkMissing' }) })
+      }
+      document.addEventListener('click', click, true)
+      receive()
+      return () => { linkLifetime.abort(); document.removeEventListener('click', click, true) }
+    })
+  }
   const renameInjected = (): RenameSessionInjected => ({ requestSessionRename })
   const renameDialogInjected = (): SessionRenameDialogInjected => ({
     hooks: { renameRequest },
@@ -273,13 +333,14 @@ export function apply(ctx: Context): void {
     renameWorkspace: async (workspaceId, title) => { await workspaces.rename(workspaceId, title) },
     createProject: input => workspaces.createProject(input),
     updateProject: input => workspaces.updateProject(input),
-    pickProjectFolder: () => uiWorkspace.pickDirectory(),
+    pickProjectFolder: () => desktopPicker === undefined ? uiWorkspace.pickDirectory() : desktopPicker.pick(),
     deleteWorkspace: async (workspaceId) => { await workspaces.delete(workspaceId) },
     insertWorkspaceBefore: async (workspaceId, beforeWorkspaceId) => {
       await workspaces.insertBefore(workspaceId, beforeWorkspaceId)
     },
     unarchiveSession: async (sessionId) => { await uiWorkspace.unarchiveSession(sessionId) },
     createWorkspace: input => workspaces.create(input),
+    acknowledgeCompletions: (ids) => { ctx.uiSession.acknowledgeCompletions(ids) },
     requestSearch: shortcutControls.search,
     requestAddWorkspace: shortcutControls.add,
     closeAddWorkspace: shortcutControls.closeAdd,
@@ -321,7 +382,7 @@ export function apply(ctx: Context): void {
     yield ctx.slots.register({ name: 'sidebar.workspaces.session.menu.item', id: 'rename', order: 200, locale: NS, inject: renameInjected }, RenameSessionMenuItem)
     yield ctx.slots.register({ name: 'sidebar.workspaces.session.menu.item', id: 'fork', order: 300, locale: NS, inject: forkInjected }, ForkSessionMenuItem)
     yield ctx.slots.register({ name: 'sidebar.workspaces.session.menu.item', id: 'archive', order: 400, locale: NS, inject: archiveInjected }, ArchiveSessionMenuItem)
-    yield ctx.slots.register({ name: 'sidebar.workspaces.session.menu.item', id: 'session-id', order: 450, locale: NS, inject: sessionIdInjected }, SessionIdMenuItem)
+    yield ctx.slots.register({ name: 'sidebar.workspaces.session.menu.item', id: 'copy', order: 450, locale: NS, inject: sessionCopyInjected }, CopySessionMenuItem)
   })
   ctx.slots.inject('sidebar.workspaces.session.row.action', function* () {
     yield ctx.slots.register({ name: 'sidebar.workspaces.session.row.action', id: 'archive', order: 100, locale: NS, inject: archiveInjected }, ArchiveSessionRowButton)

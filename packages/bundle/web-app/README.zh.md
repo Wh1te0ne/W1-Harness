@@ -7,6 +7,8 @@ kind: "package-bundle"
 
 [English](README.md) | 中文
 
+W1 组合按精确用途隔离 `auto-review`、`goal-review`、`session-title`、`reply-selection` 和 `reply-suggestion` 的 HTTP 调用。可选压缩代理使用现有的 `x-bili-passthrough` 标头，不修改插件源码，也不按模型或供应商编写特例。普通会话、侧聊和压缩保留原有拦截。
+
 桌面埋点遵循[产品采集策略](../../client/product-analytics/README.zh.md)及其动态应用配置，不包含 Web 使用情况。
 
 桌面埋点每 30 秒调度未满批次，exporter 超时为 15 秒，processor 超时为 20 秒。退出时允许 2 秒排空，随后取消待完成的请求和重试等待，避免埋点阻止 Host 退出。尚未发送完成的事件可能丢失。
@@ -47,6 +49,8 @@ dsh --profile web --no-open --port 8080
 已保存的模型选择覆盖组合默认值。设置卡接受兼容 Messages 的 API 地址与凭据引用。
 
 ### 配置
+
+Desktop profile 的匿名 HTTP 正文读取默认沿用系统 DNS 与路由，其他 Web profile 保留公网地址校验；用户设置可启用严格模式。详见 [HTTP 提供方的地址策略](../../web/web-fetch-http/README.zh.md)。
 
 `minimal` agent preset 使用持久 Shell、`read_image` 工具和固定 persona，支持自动历史压缩以及会话空闲时的 `/compact` 命令。它复用 Host token meter，并拥有隔离的压缩后端。[压缩配置与保留策略](../../compaction/compaction-basic/README.zh.md#use-this-package) 沿用现有后端。图片读取复用 Host 文件系统和附件存储，要求模型支持图片输入；不加载文本读取、写入和编辑工具。
 

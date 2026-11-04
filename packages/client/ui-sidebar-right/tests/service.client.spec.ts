@@ -84,6 +84,27 @@ function harness() {
 }
 
 describe('SidebarRightController — opening', () => {
+  it('background pages preserve a collapsed sidebar and the selected tab across repeated opens', () => {
+    const h = harness()
+    h.tabs.register({ id: 'test/browser', kind: 'browser', multiple: true, title: () => 'browser' })
+    const release = h.publish()
+    try {
+      h.expand()
+      const selected = getPane(h.layout(), h.layout().rootId).activeTabId
+      h.instance.actions.setExpanded(SESSION, false)
+      h.controller.openTabIn(SESSION, 'browser', { background: true, preferNewPane: true })
+      h.controller.openTabIn(SESSION, 'browser', { background: true, replaceTab: selected! })
+      expect(h.layout().expanded).toBe(false)
+      expect(getPane(h.layout(), h.layout().rootId).activeTabId).toBe(selected)
+      expect(Object.values(h.layout().tabs).filter(tab => tab.kind === 'browser')).toHaveLength(2)
+      h.instance.actions.setExpanded(SESSION, true)
+      h.controller.openTabIn(SESSION, 'browser', { background: true })
+      expect(h.layout().expanded).toBe(true)
+      expect(getPane(h.layout(), h.layout().rootId).activeTabId).toBe(selected)
+      h.controller.openTab('browser')
+      expect(getPane(h.layout(), h.layout().rootId).activeTabId).not.toBe(selected)
+    } finally { release() }
+  })
   it('keeps independently opened instances distinct when they return to the same pane', () => {
     const h = harness()
     h.tabs.register({ id: 'test/terminal', kind: 'terminal', multiple: true, title: () => 'terminal' })

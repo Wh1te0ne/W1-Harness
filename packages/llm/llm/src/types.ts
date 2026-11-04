@@ -185,6 +185,12 @@ export interface TokenUsage {
   totalTokens?: number
   cacheReadTokens?: number
   cacheWriteTokens?: number
+  /** Reported 1-hour cache writes, a subset of cacheWriteTokens. Absence means the TTL split is unknown. */
+  cacheWrite1hTokens?: number
+  /** Billing-relevant values observed on the outgoing wire; null means that field was absent. */
+  billingParameters?: { outputConfigEffort: string | null }
+  /** Local accounting identity. Repeated stream/final log representations share this ID. */
+  billingCallId?: string
   reasoningTokens?: number
 }
 
@@ -525,6 +531,14 @@ export interface ToolHistory {
   }[]
 }
 
+/** Deployment transport controls, separate from model-visible request content. */
+export interface LlmRequestTransport {
+  /** Send via the host HTTP transport instead of mutable global fetch interceptors. */
+  isolated?: boolean
+  /** Deployment metadata, never model input. Adapter authentication and attribution win collisions. */
+  headers?: Readonly<Record<string, string>>
+}
+
 /** A single model request, fully assembled. */
 export interface GenerateOptions {
   /** Registered provider route selecting the adapter instance. */
@@ -567,5 +581,7 @@ export interface GenerateOptions {
    * map the purpose to model-hidden transport metadata. Ordinary conversation
    * requests leave it unset.
    */
-  purpose?: 'compaction' | 'session-title'
+  purpose?: 'compaction' | 'session-title' | 'reply-selection' | 'reply-suggestion' | 'side-chat' | 'auto-review' | 'goal-review'
+  /** Trusted per-call HTTP metadata; adapters keep it out of model input and preserve their own authentication and attribution. */
+  transport?: LlmRequestTransport
 }

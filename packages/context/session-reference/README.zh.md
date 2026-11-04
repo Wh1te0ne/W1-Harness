@@ -11,6 +11,8 @@ kind: "package-reference"
 
 `dsh-session-reference` 让一次对话可以引用其他会话：宿主把 `@label` mention 转换为规范 URI，服务则为模型准备每个被引用会话的有界、只读快照，作为持久、不受信任的背景上下文。候选发现按工作目录亲和度对其他会话排序，并用其最新标题作标签。快照在捕获后不可变，并带有固定警告，禁止遵循其中的指令、权限声明或工具请求。它是面向支持跨会话 mention 的宿主的可选服务；它消费 `ctx.sessionQuery`，不需要 SQLite FTS。
 
+W1 通过 `deepLinkScheme` 启用链接引用：日用及安装版使用 `w1-harness`，Test 使用 `w1-harness-test`。在直接用户消息中粘贴匹配的 `scheme://session/<encoded-id>` 链接，会接入现有受限快照与完整文本保留流程；拒绝其他环境的链接。快照包含当前会话上下文及保留的压缩摘要，不授予访问其他电脑的权限。浏览器安全的 `./link` 导出维护与桌面共用的会话 ID 编解码。
+
 ## 目录
 
 - [使用本包](#use-this-package)

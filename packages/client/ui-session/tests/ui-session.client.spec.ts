@@ -42,6 +42,7 @@ function createSessionsBench(ctx: Context): SessionsBench {
   roots.push(ctx)
   let statusListener: ((id: SessionId, running: boolean) => void) | undefined
   ctx.provide('remote', {
+    $host: { home: '/ui-session-test' },
     $on: (_event: string, listener: (id: SessionId, running: boolean) => void) => {
       statusListener = listener
       return () => {
@@ -763,4 +764,26 @@ describe('ui-session apply', () => {
   it('keeps the Host loader half inert', () => {
     expect(() => { nodeApply() }).not.toThrow()
   })
+})
+
+
+it('restores unread completions after reload and persists explicit acknowledgement', async () => {
+  const saved = new Map<string, string>()
+  vi.stubGlobal('localStorage', { getItem: (key: string) => saved.get(key) ?? null,
+    setItem: (key: string, value: string) => { saved.set(key, value) } })
+  try {
+    const id = sessionId('persistent-completion'), first = new Context(), firstBench = createSessionsBench(first)
+    firstBench.binding(id)
+    const before = createUiSession(first, firstBench)
+    firstBench.emitStatus(id, true); firstBench.emitStatus(id, false)
+    expect(before.sessionStatus.getSnapshot().get(id)?.completionUnread).toBe(true)
+    await first.fiber.dispose()
+    const second = new Context(), secondBench = createSessionsBench(second)
+    secondBench.binding(id)
+    const after = createUiSession(second, secondBench)
+    expect(after.sessionStatus.getSnapshot().get(id)?.completionUnread).toBe(true)
+    after.acknowledgeCompletions([id])
+    expect(after.sessionStatus.getSnapshot().get(id)?.completionUnread).toBe(false)
+    expect([...saved.values()]).toEqual(['[]'])
+  } finally { vi.unstubAllGlobals() }
 })

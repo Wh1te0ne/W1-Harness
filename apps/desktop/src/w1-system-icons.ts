@@ -1,17 +1,15 @@
-/** Keep W1 taskbar, tray and shortcut icons on the same application color scheme. */
+/** Keep W1 Windows window, taskbar, tray and shortcut icons on the white-background artwork. */
 import { copyFileSync, existsSync, mkdirSync } from 'node:fs'
 import type { EventEmitter } from 'node:events'
 import { join } from 'node:path'
 import type { App, BrowserWindow, Shell } from 'electron'
 import type { DesktopTray } from './tray.ts'
 
-type IconWindow = Pick<BrowserWindow, 'setIcon' | 'setAppDetails' | 'isDestroyed' | 'hookWindowMessage' | 'unhookWindowMessage'> & Pick<EventEmitter, 'once'>
+type IconWindow = Pick<BrowserWindow, 'setIcon' | 'setAppDetails' | 'isDestroyed'>
 
-/** Inputs owned by the desktop main process; resources contain both application icon palettes. */
+/** Inputs owned by the desktop main process; resources contain the Windows icon assets. */
 export interface W1SystemIconsOptions {
   readonly app: Pick<App, 'getPath'> & Pick<EventEmitter, 'on' | 'off'>
-  readonly theme: Pick<EventEmitter, 'on' | 'off'>
-  readonly readDark: () => boolean
   readonly shell: Pick<Shell, 'readShortcutLink' | 'writeShortcutLink'>
   readonly resources: string
   readonly appId: string
@@ -22,29 +20,35 @@ export interface W1SystemIconsOptions {
 }
 
 /**
- * Update windows, tray and existing W1 shortcuts on startup and application theme changes.
- * @param options - Desktop services and the installed icon directory.
- * @returns event cleanup, called when the desktop quits.
+ * File shared by W1 Windows windows, the taskbar, the notification area and shortcuts.
+ * @param resources - Directory containing the Windows icon assets.
+ * @returns The white-background artwork, whose background is opaque.
  */
-export function watchW1SystemIcons(options: W1SystemIconsOptions): () => void {
-  const { app, theme, shell } = options
-  let dark = options.readDark()
+export function w1SystemIconPath(resources: string): string {
+  return join(resources, 'w1-app-light.ico')
+}
+
+/**
+ * Apply the white-background icon to W1 windows, the tray entry, shortcut files, and windows created later.
+ * @param options - Desktop services and the installed icon directory.
+ * @returns cleanup for the window-creation listener, called when the desktop quits.
+ */
+export function applyW1SystemIcons(options: W1SystemIconsOptions): () => void {
+  const { app, shell } = options
+  const icon = w1SystemIconPath(options.resources)
   const shortcuts = options.shortcuts === false ? [] : [
     join(app.getPath('desktop'), 'W1 Harness.lnk'),
     join(app.getPath('appData'), 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'W1 Harness.lnk'),
     join(app.getPath('appData'), 'Microsoft', 'Internet Explorer', 'Quick Launch', 'User Pinned', 'TaskBar', 'W1 Harness.lnk'),
   ]
-  const iconPath = (): string => join(options.resources, dark ? 'w1-app-dark.ico' : 'w1-app-light.ico')
   const applyWindow = (window: IconWindow): void => {
     if (window.isDestroyed()) return
-    const icon = iconPath()
     window.setIcon(icon)
     window.setAppDetails({ appIconPath: icon, appIconIndex: 0 })
   }
-  const update = (): void => {
-    dark = options.readDark()
-    const icon = iconPath()
-    if (!existsSync(icon)) { options.report(new Error(`W1 system icon is missing: ${icon}`)); return }
+  if (!existsSync(icon)) {
+    options.report(new Error(`W1 system icon is missing: ${icon}`))
+  } else {
     for (const window of options.windows()) applyWindow(window)
     options.tray?.setIcon(icon)
     for (const [index, path] of shortcuts.entries()) {
@@ -60,22 +64,7 @@ export function watchW1SystemIcons(options: W1SystemIconsOptions): () => void {
       } catch (error) { options.report(error) }
     }
   }
-  const watched = new Set<IconWindow>()
-  const watch = (window: IconWindow): void => {
-    if (window.isDestroyed() || watched.has(window)) return
-    watched.add(window)
-    // Re-evaluate on Windows settings changes as well as nativeTheme updates.
-    window.hookWindowMessage(0x001A, update)
-    window.once('closed', () => { watched.delete(window) })
-  }
-  const created = (_event: Electron.Event, window: BrowserWindow): void => { watch(window); applyWindow(window) }
-  for (const window of options.windows()) watch(window)
-  update()
-  theme.on('updated', update)
+  const created = (_event: Electron.Event, window: BrowserWindow): void => { applyWindow(window) }
   app.on('browser-window-created', created)
-  return () => {
-    theme.off('updated', update); app.off('browser-window-created', created)
-    for (const window of watched) if (!window.isDestroyed()) window.unhookWindowMessage(0x001A)
-    watched.clear()
-  }
+  return () => { app.off('browser-window-created', created) }
 }

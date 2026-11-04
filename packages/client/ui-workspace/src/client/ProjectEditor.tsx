@@ -62,7 +62,7 @@ export function ProjectEditor({ project, pickFolder, save, close, t }: Props) {
         </div>)}
         <button className={css.add} disabled={busy} onClick={() => { void add() }}>＋ {t('project.addFolder')}</button>
       </div>
-      <p className={css.hint}>{t(folders.length === 0 ? 'project.noFolders' : 'project.primaryHint')}</p>
+      {folders.length > 0 && <p className={css.hint}>{t('project.primaryHint')}</p>}
       {error !== null && <div role="alert" className={css.error}>{error}</div>}
     </div>
   </Modal>

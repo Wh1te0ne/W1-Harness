@@ -28,6 +28,11 @@ export const DESKTOP_IPC = {
   notificationShow: 'w1-desktop:notification-show',
   notificationClose: 'w1-desktop:notification-close',
   notificationSync: 'w1-desktop:notification-sync',
+  sessionLinkCreate: 'w1-desktop:session-link-create',
+  sessionLinkResolve: 'w1-desktop:session-link-resolve',
+  sessionLinkPending: 'w1-desktop:session-link-pending',
+  sessionLinkAck: 'w1-desktop:session-link-ack',
+  sessionLinkOpen: 'w1-desktop:session-link-open',
   notificationClick: 'w1-desktop:notification-click',
   localeBootstrap: 'dsh-desktop:locale-bootstrap',
   localeChanged: 'dsh-desktop:locale-changed',
@@ -90,6 +95,14 @@ export interface DesktopAttentionRequest {
 /** Product documents cannot supply update versions, package URLs, or installation authorization. */
 export interface DshDesktopProductApi {
   readonly protocolVersion: 1
+  /** Conversation links belong to this desktop environment. */
+  readonly sessions: {
+    create(id: string): Promise<string>
+    resolve(link: string): Promise<string>
+    pending(): Promise<{ id: string | null; scheme: 'w1-harness' | 'w1-harness-test' }>
+    acknowledge(id: string): Promise<void>
+    onOpen(listener: () => void): () => void
+  }
   /** Manage paired phones from the primary product settings page. */
   readonly remote: { manage(action: string, value?: unknown): Promise<unknown> }
   readonly notifications: {

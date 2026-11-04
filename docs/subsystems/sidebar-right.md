@@ -44,6 +44,7 @@ Tab identity is the pair `(kind, address)`: the registry's claim uses the addres
 | `canOpen(address)` | Optional synchronous veto of a glob match; it runs on every routing decision. |
 | `title(address)` | The chip's text, captured into the layout record when the tab opens and never rewritten. |
 | `keepMounted` | Optional lazy retention of visited bodies across hiding, Session switches and docking; the owning View holds the Session reference. |
+| `mountHidden` | Optional mounting before first reveal for background loading; the hidden body remains inert. |
 | `guide` | Optional entry boxes for the guide page: `{ order, title(), description?(), icon? }`. Picking a box opens the contributing type as a page; omit to stay off the page. |
 
 Whole-address patterns match the raw address: picomatch globstar (`**`) excludes standalone `.` and `..` segments even with `dot: true`, which includes dotfiles but does not change that exclusion. Resource-specific code parses addresses; the Host enforces file-read permissions.

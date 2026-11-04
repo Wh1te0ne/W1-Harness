@@ -684,16 +684,37 @@ describe('UiWorkspaceService', () => {
     expect(b.sessions.retain).not.toHaveBeenCalled()
   })
 
-  it('creates a fresh Agent on explicit New Session instead of reusing a mounted blank', async () => {
+  it('reuses the unstarted Session on explicit New Session so its saved draft returns', async () => {
     const b = bench({
       sessions: sessionState([summary('blank', { blank: true, cwd: '/w/a' })], 'pending'),
       workspaces: workspaceState([workspace('a', [sid('blank')])]),
     })
     b.uiWorkspace.startSession(wid('a'))
     await vi.waitFor(() => {
-      expect(b.sessions.create).toHaveBeenCalledExactlyOnceWith({ workspaceId: wid('a') })
+      expect(b.sessions.create).toHaveBeenCalledExactlyOnceWith({ workspaceId: wid('a'), sessionId: sid('blank') })
     })
-    await vi.waitFor(() => { expect(b.sessions.retain).toHaveBeenCalledWith(sid('created-a'), expect.anything()) })
+    await vi.waitFor(() => { expect(b.sessions.retain).toHaveBeenCalledWith(sid('blank'), expect.anything()) })
+  })
+
+  it('returns to the same unstarted draft after visiting history and isolates other projects', async () => {
+    const b = bench({
+      sessions: sessionState([
+        summary('draft-a', { blank: true, cwd: '/w/a' }),
+        summary('history', { cwd: '/w/a' }),
+        summary('draft-b', { blank: true, cwd: '/w/b' }),
+      ], 'pending'),
+      workspaces: workspaceState([workspace('a', [sid('draft-a'), sid('history')]), workspace('b', [sid('draft-b')])]),
+    })
+    b.uiWorkspace.openSession(sid('history'))
+    b.uiWorkspace.startSession(wid('a'))
+    await vi.waitFor(() => { expect(b.sessions.retain).toHaveBeenLastCalledWith(sid('draft-a'), { source: 'mainView' }) })
+    b.uiWorkspace.openSession(sid('history'))
+    b.uiWorkspace.startSession(wid('a'))
+    await vi.waitFor(() => { expect(b.sessions.create).toHaveBeenCalledTimes(2) })
+    expect(b.sessions.create).toHaveBeenLastCalledWith({ workspaceId: wid('a'), sessionId: sid('draft-a') })
+    expect(b.requestDraftInitialization).not.toHaveBeenCalled()
+    b.uiWorkspace.startSession(wid('b'))
+    await vi.waitFor(() => { expect(b.sessions.create).toHaveBeenLastCalledWith({ workspaceId: wid('b'), sessionId: sid('draft-b') }) })
   })
 
   it('reports a refused explicit Session creation through the Workspace notice', async () => {

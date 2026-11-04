@@ -27,7 +27,7 @@ export function repairOpenRouterLedger(ledger) {
 }
 
 /** 每个账本共享一次在途请求；总超时覆盖响应体，卸载取消并阻止迟到写入。 */
-export function createOpenRouterPriceRefresh(ledger, { fetchImpl, timeoutMs = 20000 } = {}) {
+export function createOpenRouterPriceRefresh(ledger, { fetchImpl, timeoutMs = 20000, modelKeys = async () => [] } = {}) {
   let active = true, pending = null, controller = null
   const refresh = () => {
     if (!active || ledger.closed) return Promise.reject(new Error('OpenRouter price refresh disposed'))
@@ -47,6 +47,12 @@ export function createOpenRouterPriceRefresh(ledger, { fetchImpl, timeoutMs = 20
       const { models } = parseOpenRouterModels(await readJsonBounded(response, 4 * 1024 * 1024))
       signal.throwIfAborted()
       if (!active || ledger.closed) throw new Error('OpenRouter price refresh disposed')
+      if (ledger.config.prices.book) {
+        const keys = await modelKeys()
+        ledger.refresh()
+        ledger.updatePricing({type:'official-api',revision:ledger.config.prices.book.revision,models:Object.fromEntries(Object.entries(models).map(([k,v])=>[k,normalizePrice(v)])),keys})
+        return {count:keys.length,recostedBuckets:0}
+      }
       // 网络等待后读取当前配置，保留期间的其他设置改动；手改价格不被覆盖。
       const previous = ledger.config.prices?.providers?.openrouter?.models ?? {}
       const merged = { ...previous }, hashes = { ...ledger.openrouterPriceHashes }

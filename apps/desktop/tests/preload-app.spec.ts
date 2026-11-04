@@ -17,6 +17,29 @@ vi.mock('../src/preload-windows.ts', () => ({ syncWindowsAppearance: vi.fn() }))
 vi.mock('../src/preload-mandatory-overlay.ts', () => ({ installMandatoryUpdateOverlay: vi.fn() }))
 
 beforeEach(() => { vi.stubGlobal('process', { ...process, isMainFrame: true }) })
+
+it('exposes conversation link operations and disposes navigation subscriptions', async () => {
+  vi.stubGlobal('location', new URL('dsh-app://app/'))
+  await import('../src/preload-app.ts')
+  const api = electron.contextBridge.exposeInMainWorld.mock.calls.find(([name]) => name === 'dshDesktop')![1] as DshDesktopProductApi
+  await api.sessions.create('source')
+  await api.sessions.resolve('w1-harness-test://session/source')
+  await api.sessions.pending()
+  await api.sessions.acknowledge('source')
+  expect(electron.ipcRenderer.invoke.mock.calls).toEqual([
+    [DESKTOP_IPC.sessionLinkCreate, 'source'],
+    [DESKTOP_IPC.sessionLinkResolve, 'w1-harness-test://session/source'],
+    [DESKTOP_IPC.sessionLinkPending],
+    [DESKTOP_IPC.sessionLinkAck, 'source'],
+  ])
+  const listener = vi.fn()
+  const dispose = api.sessions.onOpen(listener)
+  const handle = electron.ipcRenderer.on.mock.calls.find(([channel]) => channel === DESKTOP_IPC.sessionLinkOpen)![1] as () => void
+  handle()
+  expect(listener).toHaveBeenCalledOnce()
+  dispose()
+  expect(electron.ipcRenderer.off).toHaveBeenCalledWith(DESKTOP_IPC.sessionLinkOpen, handle)
+})
 afterEach(() => { document.body.replaceChildren(); vi.unstubAllGlobals(); vi.restoreAllMocks(); vi.clearAllMocks(); vi.resetModules() })
 
 it('reads only native login API-key presence through the onboarding bridge', async () => {

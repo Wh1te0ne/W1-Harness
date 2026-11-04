@@ -92,6 +92,7 @@ export class ChatNavigation {
 
   /** Request one older page while retaining the current semantic position. */
   readonly loadEarlier = (): void => {
+    if (!this.input.hasMore || this.input.loadingOlder) return
     this.cancel()
     this.viewport.beginPaging()
     this.reading.pauseFollowing()

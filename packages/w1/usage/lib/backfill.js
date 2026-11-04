@@ -256,7 +256,7 @@ export function listSessionLogs(root, onlySessionIds = null) {
 }
 
 /** Merge the plugin journal before replay, so UUID dedup also covers repaired v1.7.21 logs. */
-async function* sessionBillingRecords(ledger, sessionsRoot, onlySessionIds = null) {
+export async function* sessionBillingRecords(ledger, sessionsRoot, onlySessionIds = null) {
   const seen = new Set()
   for (const path of listSessionLogs(sessionsRoot, onlySessionIds)) {
     let records
@@ -328,6 +328,10 @@ export function replaySessionRecords(records, config, wantDates = null, collectS
       calls: current.calls + sign,
       cost: current.cost + sign * sample.cost,
       apiCost: (current.apiCost ?? 0) + sign * (sample.apiCost ?? sample.cost),
+      unpricedCalls: (current.unpricedCalls ?? 0) + sign * (sample.unpricedCalls ?? 0),
+      cacheWrite1h: (current.cacheWrite1h??0)+sign*(sample.buckets.cacheWrite1h??0),
+      estimatedCalls: (current.estimatedCalls??0)+sign*(sample.estimatedCalls??0),
+      stalePriceCalls: (current.stalePriceCalls??0)+sign*(sample.stalePriceCalls??0),
     }
   }
   // 两遍扫预扫描(issue #76):按与主循环一致的 header 状态机,收集全部非包装
@@ -436,6 +440,7 @@ export function replaySessionRecords(records, config, wantDates = null, collectS
       output: num(usage.outputTokens),
       cacheRead: num(usage.cacheReadTokens),
       cacheWrite: num(usage.cacheWriteTokens),
+      cacheWrite1h: Number.isSafeInteger(usage.cacheWrite1hTokens)&&usage.cacheWrite1hTokens>=0&&usage.cacheWrite1hTokens<=num(usage.cacheWriteTokens)?usage.cacheWrite1hTokens:undefined,
       reasoning: num(usage.reasoningTokens),
     }
     // 摘要样本的事件自带路由(header 状态不受影响,后续循环步仍按其 header 计费)。
@@ -481,12 +486,14 @@ export function replaySessionRecords(records, config, wantDates = null, collectS
     if (prev !== null && prev.providerKey === `${effectiveProvider}:${sampleModel}`
       && prev.buckets.input === buckets.input && prev.buckets.output === buckets.output
       && prev.buckets.cacheRead === buckets.cacheRead && prev.buckets.cacheWrite === buckets.cacheWrite
-      && prev.buckets.reasoning === buckets.reasoning) {
+      && prev.buckets.reasoning === buckets.reasoning && prev.buckets.cacheWrite1h === buckets.cacheWrite1h
+        && JSON.stringify(prev.billingParameters) === JSON.stringify(usage.billingParameters)) {
       continue
     }
     // 按事件时刻计费(历史正确):峰谷时代前用 legacyBase,之后按峰谷两档。
     // 计价/归类/归因一律用改挂后的 effectiveProvider(包装层转发对挂语义上游)。
     const resolved = providerPriceEntryFor(effectiveProvider, sampleModel, config?.prices, {
+      atMs,tokens:buckets,billingParameters:usage.billingParameters,
       mode: config?.priceMatch === 'exact' ? 'exact' : 'auto',
       overrides: config?.priceOverrides,
     })
@@ -508,7 +515,7 @@ export function replaySessionRecords(records, config, wantDates = null, collectS
     // 聚合目标按事件分段路由;被替换的旧样本从它当时所在的段扣回(与旧版
     // 单流先减后加的净效果一致,仅种子段的量落到 seedDays 而非 days)。
     if (prev !== null) shift(prev, -1, prev.seed ? seedDays : days)
-    const sample = { key, date, providerKey, buckets, cost, apiCost, seed: isSeed }
+    const sample = { key, date, providerKey, buckets, billingParameters:usage.billingParameters, cost, apiCost, unpricedCalls: resolved.priced ? 0 : 1,estimatedCalls:resolved.estimated?1:0,stalePriceCalls:resolved.stale?1:0, seed: isSeed }
     if (samples) {
       if (prev) samples.delete(prev)
       samples.set(sample, { ...sample, atMs, logSeq: !isNativeSearch && Number.isSafeInteger(event.seq) && event.seq >= 0 ? event.seq : null, provider: effectiveProvider, model: sampleModel, resolved, peak, plan, kind: isCompaction ? 'compaction' : isNativeSearch ? 'search' : 'model',
@@ -734,6 +741,7 @@ function mergeBucketsInto(target, source) {
       calls: current.calls + (b.calls ?? 0),
       cost: current.cost + (b.cost ?? 0),
       apiCost: (current.apiCost ?? 0) + (b.apiCost ?? b.cost ?? 0),
+      ...Object.fromEntries(["unpricedCalls","cacheWrite1h","estimatedCalls","stalePriceCalls"].map(k=>[k,(current[k]??0)+(b[k]??0)])),
     }
   }
 }
@@ -750,6 +758,7 @@ function cloneDayMap(pm) {
       calls: b.calls ?? 0,
       cost: b.cost ?? 0,
       apiCost: b.apiCost ?? b.cost ?? 0,
+      ...Object.fromEntries(["unpricedCalls","cacheWrite1h","estimatedCalls","stalePriceCalls"].map(k=>[k,b[k]??0])),
     }
   }
   return out
@@ -766,6 +775,7 @@ function sumDayMap(pm) {
     acc.calls += b.calls ?? 0
     acc.cost += b.cost ?? 0
     acc.apiCost += b.apiCost ?? b.cost ?? 0
+    for(const k of ["unpricedCalls","cacheWrite1h","estimatedCalls","stalePriceCalls"])acc[k]=(acc[k]??0)+(b[k]??0)
     return acc
   }, { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, reasoning: 0, calls: 0, cost: 0, apiCost: 0 })
 }
@@ -780,6 +790,7 @@ function addTotalsTo(target, totals) {
   target.calls += totals.calls
   target.cost += totals.cost
   target.apiCost = (target.apiCost ?? 0) + (totals.apiCost ?? 0)
+  for(const k of ["unpricedCalls","cacheWrite1h","estimatedCalls","stalePriceCalls"])target[k]=(target[k]??0)+(totals[k]??0)
 }
 
 /** 由回放结果构造账本会话条目(title/at 缺席时不写键,与 Typert schema 一致)。 */
@@ -794,6 +805,7 @@ function sessionEntryOf(sessionId, info, totals, pm) {
     calls: totals.calls,
     cost: totals.cost,
     apiCost: totals.apiCost ?? totals.cost,
+    ...Object.fromEntries(["unpricedCalls","cacheWrite1h","estimatedCalls","stalePriceCalls"].map(k=>[k,totals[k]??0])),
     byProviderModel: cloneDayMap(pm),
   }
   if (typeof info.title === 'string' && info.title.length > 0) entry.title = info.title

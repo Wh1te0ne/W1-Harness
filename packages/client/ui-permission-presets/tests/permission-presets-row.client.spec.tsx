@@ -8,7 +8,7 @@ import type { SettingsNamespaceView } from '@deepseek-ai/dsh-api-remotes/client'
 import { PermissionRow, type PermissionRowProps } from '../src/client/PermissionRow.tsx'
 import { zh } from '../src/client/locales.ts'
 import { SettingsDescribeMirror } from '@deepseek-ai/dsh-client-ui-settings/src/client/settings-mirror.ts'
-import { PermissionPresetSettingsController } from '../src/client/settings-store.ts'
+import { PermissionPresetSettingsController, type PermissionSettingsState } from '../src/client/settings-store.ts'
 
 // Every fixture carries the resource hook the resources plugin merges into GlobalStandardProps.
 const useResource = (() => ({ status: 'none' as const, value: undefined, failure: undefined, reload: () => {} })) as GlobalStandardProps['useResource']
@@ -79,6 +79,24 @@ function mount(controller: PermissionPresetSettingsController) {
 }
 
 describe('PermissionRow', () => {
+  it('saves Auto review as the future-session default only after acknowledgement', async () => {
+    const store = createSnapshotStore<PermissionSettingsState>({
+      status: 'ready', error: null, writable: true, currentValue: 'workspace-write', revision: 0,
+      options: [{ id: 'workspace-write', label: 'workspace-write' }, { id: 'auto', label: 'auto' }],
+    })
+    const select = vi.fn(() => Promise.resolve())
+    render(<PermissionRow {...runtime} load={() => Promise.resolve()} select={select}
+      usePermission={bindSnapshotSelector(store)} t={t} />)
+    fireEvent.click(screen.getByRole('button', { name: '工作区内修改' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: '自动审查' }))
+    expect(select).not.toHaveBeenCalled()
+    const enable = screen.getByRole<HTMLButtonElement>('button', { name: dictionary['auto.confirm.enable']! })
+    expect(enable.disabled).toBe(true)
+    fireEvent.click(screen.getByRole('checkbox'))
+    fireEvent.click(enable)
+    expect(select).toHaveBeenCalledExactlyOnceWith('auto')
+  })
+
   it('loads the descriptor, opens the menu, and selects a new default', async () => {
     const mutate = vi.fn(() => Promise.resolve(ok(view('workspace-write', 1))))
     const controller = derivedController({

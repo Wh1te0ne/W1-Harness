@@ -550,7 +550,7 @@ export function apply(ctx: ClientContext): void {
   const host = ctx.configForms.get<ThemeSettings>(THEME_SETTINGS_NAMESPACE)
   const theme = new ThemeRuntime(ctx, host)
   ctx.provide('theme', theme)
-  const appearance = createW1Appearance(theme)
+  const appearance = createW1Appearance(theme, host)
   ctx.effect(() => () => { appearance.dispose() }, 'ui-theme: W1 appearance')
   ctx.slots.inject('settings.section', () => ctx.slots.register({
     name: 'settings.section', id: 'appearance', order: 5, locale: SETTINGS_NS, label: () => ctx.locale.bind(SETTINGS_NS)('appearance.title'),

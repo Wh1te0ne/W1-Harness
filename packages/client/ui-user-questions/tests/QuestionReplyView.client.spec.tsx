@@ -42,16 +42,18 @@ const data = {
   time: 1,
 } satisfies QuestionReplyData
 describe('QuestionReplyView', () => {
-  it('reopens the settled question details from the history bubble', () => {
+  it('shows settled question details immediately and lets the reader collapse them', () => {
     render(<QuestionReplyBubble data={data} t={t} />)
 
-    const bubble = screen.getByRole('button', { name: /展开问题详情/ })
-    expect(bubble.getAttribute('aria-expanded')).toBe('false')
+    const bubble = screen.getByRole('button', { name: /收起问题详情/ })
+    expect(bubble.getAttribute('aria-expanded')).toBe('true')
     expect(screen.getAllByText('A dashboard')).toHaveLength(1)
     expect(screen.getByRole('button', { name: 'copy' })).toBeTruthy()
     expect(screen.getByText(/\d{2}:\d{2}/)).toBeTruthy()
-    expect(screen.queryByText('What should we build?')).toBeNull()
+    expect(screen.getByText('What should we build?')).toBeTruthy()
 
+    fireEvent.click(bubble)
+    expect(screen.queryByText('What should we build?')).toBeNull()
     fireEvent.click(bubble)
 
     expect(screen.getByRole('button', { name: /收起问题详情/ }).getAttribute('aria-expanded')).toBe('true')
@@ -96,14 +98,12 @@ describe('QuestionReplyView', () => {
       }}
       t={t}
     />)
-    fireEvent.click(screen.getByRole('button', { name: /展开问题详情/ }))
     expect(screen.getByText('Goal')).toBeTruthy()
     expect(screen.getByText('None')).toBeTruthy()
     expect(screen.getAllByText('已跳过')).toHaveLength(2)
     cleanup()
 
     render(<QuestionReplyBubble data={{ ...data, questions: [], answers: [], text: 'raw reply text' }} t={t} />)
-    fireEvent.click(screen.getByRole('button', { name: /展开问题详情/ }))
     expect(screen.getByText('raw reply text')).toBeTruthy()
   })
 
@@ -141,7 +141,6 @@ describe('QuestionReplyView', () => {
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
     render(<QuestionReplyBubble data={data} t={t} />)
 
-    fireEvent.click(screen.getByRole('button', { name: /展开问题详情/ }))
     fireEvent.click(screen.getByRole('button', { name: 'copy' }))
     expect(writeText).toHaveBeenCalledWith('What should we build?\n回答：A dashboard')
   })

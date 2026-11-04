@@ -3,8 +3,11 @@
 # After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/client/ui-tool/README.md
 /:
-  en: d5ef8fa5a5ebfbc2
-  zh: 9870b3f207a248cc
+  en: cb3f91d54eee30e5
+  zh: cb3f91d54eee30e5
+/description-client-tool-presentation-plugin-for-the-dsh-web-client-whole-call-tree-composition-the-keyed-per-tool-view-slot-and-the-built-in-atomic-tool-cards-kind-package-reference:
+  en: aea74f107fc2e878
+  zh: f79cd42c44e85969
 /deepseek-ai-dsh-client-ui-tool:
   en: 03bfcfbf7f1cea76
   zh: 142abbf07affee63
@@ -12,8 +15,8 @@
   en: e7ef510d1764f9b2
   zh: 236bc66607211f0f
 /deepseek-ai-dsh-client-ui-tool/table-of-contents:
-  en: d152484eb41ac6b4
-  zh: 09388d293f9be9cb
+  en: eb6ed279e78f8b65
+  zh: 5583226de8ecca29
 /deepseek-ai-dsh-client-ui-tool/use-this-package:
   en: c6d4e666191521b2
   zh: 2498020e7080e172
@@ -21,11 +24,11 @@
   en: 2e3c306b13d3bc25
   zh: 77127f01763b3976
 /deepseek-ai-dsh-client-ui-tool/use-this-package/built-in-views:
-  en: 3643ffbb8cf80e4c
-  zh: b49654dc3b94b2be
+  en: 0d13b2a41739abe5
+  zh: 17361fd4ac804070
 /deepseek-ai-dsh-client-ui-tool/understand-the-implementation:
-  en: 00bc7b0c84edc603
-  zh: 1cfcf5b435248a91
+  en: ded04ccbc0f60603
+  zh: 8544410f38420f26
 /deepseek-ai-dsh-client-ui-tool/understand-the-implementation/rendering-contract:
   en: 672e63b2f92e689b
   zh: ba950ecb480325a6
@@ -36,8 +39,8 @@
   en: c1926deb4e5f3734
   zh: c5845f465b94a459
 /deepseek-ai-dsh-client-ui-tool/further-exploration:
-  en: b37600769951cbca
-  zh: 816589549d21d176
+  en: 4407c5369d34ec23
+  zh: 19e5033fbeaeac60
 /deepseek-ai-dsh-client-ui-tool/model-experience:
   en: 1e5e72dd269855d5
   zh: 81a4756d460e3af9
@@ -45,8 +48,8 @@
   en: ca75c51c89c2c9b0
   zh: de54f3467ef3b9be
 /deepseek-ai-dsh-client-ui-tool/known-limitations-and-deferred-work:
-  en: 49f7008105e804df
-  zh: e773f101126b01b4
+  en: acb91851f57e9111
+  zh: 98ad644a8fbe966b
 /deepseek-ai-dsh-client-ui-tool/known-limitations-and-deferred-work/dev-note:
-  en: e67f633dc6fe7773
-  zh: 3bb0c20c93f16f98
+  en: 34651d247c0d1bba
+  zh: b8b78bf26d28e4d6

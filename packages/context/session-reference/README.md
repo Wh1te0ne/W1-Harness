@@ -11,6 +11,8 @@ English | [中文](README.zh.md)
 
 `dsh-session-reference` lets a conversation reference other sessions: a host turns a `@label` mention into a canonical URI, and the service prepares a bounded, read-only snapshot of each referenced session as durable, untrusted background context for the model. Candidate discovery ranks other sessions by working-directory affinity and labels them with their latest titles. Snapshots are immutable after capture and carry a fixed warning that forbids following instructions, permission claims, or tool requests inside them. It is an opt-in service for hosts that support cross-session mentions; it consumes `ctx.sessionQuery` and needs no SQLite FTS.
 
+W1 opts into `deepLinkScheme`: `w1-harness` for daily/installed Desktop, `w1-harness-test` for Test. Pasting a matching `scheme://session/<encoded-id>` link into a direct user message uses the existing bounded snapshot and spill flow. Another environment is rejected. Snapshots contain the current conversation surface, including retained compaction summaries; they do not grant access to another computer. The browser-safe `./link` export owns the canonical ID codec shared with Desktop.
+
 ## Table of Contents
 
 - [Use this package](#use-this-package)

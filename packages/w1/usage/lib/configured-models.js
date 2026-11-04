@@ -1,11 +1,11 @@
 // Only public catalog metadata is projected. Connection settings and credentials
 // are never enumerated or sent to the browser.
 const catalogs = new WeakMap()
-export async function configuredModels(ctx) {
+export async function configuredModels(ctx, force = false) {
   const llm = ctx?.get?.('llm')
   if (!llm?.listProviders || !llm?.listModels) return []
   const cached = catalogs.get(llm)
-  if (cached && Date.now() - cached.at < 60_000) return cached.promise
+  if (!force && cached && Date.now() - cached.at < 60_000) return cached.promise
   const promise = (async () => {
     const providers = llm.listProviders()
     const results = await Promise.allSettled(providers.slice(0, 100).map(async item => {

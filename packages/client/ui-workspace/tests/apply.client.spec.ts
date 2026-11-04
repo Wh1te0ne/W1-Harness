@@ -17,7 +17,7 @@ import type { WorkspaceBrowserInjected, WorkspacePickerInjected } from '@deepsee
 import {
   type ArchiveSessionInjected, type ForkSessionInjected, menuOpenStateFactory, type PinSessionInjected,
   type RenameSessionInjected, type RowToastInjected, type SessionArchiveConfirmInjected, type SessionRenameDialogInjected,
-  type SessionIdInjected, type WorkspaceViewStoreHandle,
+  type SessionCopyInjected, type WorkspaceViewStoreHandle,
 } from '../src/client/contract/slots.ts'
 import { WorkspaceBrowser } from '../src/client/rows/WorkspaceBrowser.tsx'
 import { ArchiveSessionMenuItem, ArchiveSessionRowButton, SessionArchiveConfirmDialog } from '../src/client/session-actions/ArchiveSession.tsx'
@@ -26,7 +26,7 @@ import { PinSessionMenuItem, PinSessionRowButton } from '../src/client/session-a
 import { RenameSessionMenuItem, SessionRenameDialog } from '../src/client/session-actions/RenameSession.tsx'
 import { RowActionToast } from '../src/client/session-actions/RowActionToast.tsx'
 import type { ArchiveToastInjected, ToastDisplayInjected } from '../src/client/contract/toast.ts'
-import { SessionIdMenuItem } from '../src/client/session-actions/SessionId.tsx'
+import { CopySessionMenuItem } from '../src/client/session-actions/CopySession.tsx'
 import { WorkspacePicker } from '../src/client/WorkspacePicker.tsx'
 import { FLAT_SESSION_ORDER_KEY } from '../src/client/stores.ts'
 import { UNGROUPED_KEY } from '../src/client/tree.ts'
@@ -67,6 +67,7 @@ async function bench() {
     catalog: createSnapshotStore([]),
   })
   ctx.provide('uiConversation', {})
+  ctx.provide('uiSession', { acknowledgeCompletions: vi.fn() } as never)
   await ctx.plugin(SlotRegistry).await()
   const accessSource = vi.fn((_kind: string, _id: string, _action: string): HostObservable<boolean> => ALLOWED)
   ctx.provide('remoteAccess', { source: accessSource })
@@ -219,7 +220,7 @@ describe('ui-workspace apply', () => {
 
   it('declares the services it drives', () => {
     expect(inject).toEqual([
-      'slots', 'sessions', 'workspaces', 'locale', 'remote', 'remote.directoryPicker', 'layout', 'shortcuts', 'remoteAccess',
+      'slots', 'sessions', 'uiSession', 'workspaces', 'locale', 'remote', 'remote.directoryPicker', 'layout', 'shortcuts', 'remoteAccess',
     ])
   })
 
@@ -288,7 +289,7 @@ describe('ui-workspace apply', () => {
       ['rename', 200, RenameSessionMenuItem, 'workspace'],
       ['fork', 300, ForkSessionMenuItem, 'workspace'],
       ['archive', 400, ArchiveSessionMenuItem, 'workspace'],
-      ['session-id', 450, SessionIdMenuItem, 'workspace'],
+      ['copy', 450, CopySessionMenuItem, 'workspace'],
     ])
     expect(rows(ROW_ACTION)).toEqual([
       ['archive', 100, ArchiveSessionRowButton, 'workspace'],
@@ -306,7 +307,7 @@ describe('ui-workspace apply', () => {
     const rowToastEntry = entry(b.slots, 'shell.overlay', 'workspace.row-toast')
     expect(rowToastEntry.store).toBeUndefined()
     expect(b.slots.entries('workspace.toast').map(row => row.options.key)).toEqual([
-      'sessionIdCopied', 'sessionIdCopyFailed', 'pinFailed', 'unpinFailed', 'archivedNotOpenable',
+      'sessionCopied', 'sessionLinkMissing', 'sessionIdCopied', 'sessionIdCopyFailed', 'pinFailed', 'unpinFailed', 'archivedNotOpenable',
       'defaultWorkspaceFailed', 'shortcutForkFailed', 'createFailed', 'forkRequiresOpen', 'archived', 'stoppedAndArchived',
     ])
     for (const registration of b.slots.entries('workspace.toast')) {
@@ -329,16 +330,16 @@ describe('ui-workspace apply', () => {
     onTestFinished(() => b.ctx.fiber.dispose())
     declare(b.slots, 'sidebar.workspaces', 'shell.overlay')
     await b.ctx.plugin({ inject: [...inject], apply }).await()
-    const action = faceOf(entry(b.slots, MENU_ITEM, 'session-id')) as SessionIdInjected
+    const action = faceOf(entry(b.slots, MENU_ITEM, 'copy')) as SessionCopyInjected
     const toast = faceOf(entry(b.slots, 'shell.overlay', 'workspace.row-toast')) as RowToastInjected
     const writeText = vi.fn(async () => {
       if (!accepted) throw new Error('clipboard denied')
     })
     vi.stubGlobal('navigator', { clipboard: { writeText } })
     onTestFinished(() => { vi.unstubAllGlobals() })
-    await action.copySessionId(sid('cold-session'))
+    await action.copySession(sid('cold-session'), 'id')
     expect(writeText).toHaveBeenCalledExactlyOnceWith('cold-session')
-    expect(toast.hooks.toast.getSnapshot()).toMatchObject({ kind: accepted ? 'sessionIdCopied' : 'sessionIdCopyFailed' })
+    expect(toast.hooks.toast.getSnapshot()).toMatchObject({ kind: accepted ? 'sessionCopied' : 'sessionIdCopyFailed' })
     expect(b.retain).not.toHaveBeenCalled()
     expect(b.using).not.toHaveBeenCalled()
     expect(b.binding).not.toHaveBeenCalled()
@@ -806,6 +807,8 @@ describe('ui-workspace apply', () => {
     const startSession = vi.spyOn(b.ctx.uiWorkspace, 'startSession').mockImplementation(() => undefined)
 
     const browser = faceOf(b.slots.entries('sidebar.workspaces')[0]!) as WorkspaceBrowserInjected
+    await expect(browser.pickProjectFolder!()).resolves.toBe('/projects/picked')
+    expect(b.pickDirectory).toHaveBeenCalledOnce()
     // The browser share delegates to the shared Session navigation action.
     browser.startSession('ws' as never)
     expect(startSession).toHaveBeenLastCalledWith('ws', undefined)
@@ -830,6 +833,24 @@ describe('ui-workspace apply', () => {
     const picker = faceOf(b.slots.entries('conversation.hero.workspace')[0]!) as WorkspacePickerInjected
     await picker.createWorkspace({ path: '/tmp/project' })
     expect(b.create).toHaveBeenCalledWith({ path: '/tmp/project' })
+  })
+
+  it('opens project source folders through Desktop and does not open a second chooser after cancellation or failure', async () => {
+    const pick = vi.fn<() => Promise<string | null>>().mockResolvedValue('/project/source')
+    vi.stubGlobal('__DSH_DIRECTORY_PICKER__', { pick })
+    onTestFinished(() => { vi.unstubAllGlobals() })
+    const b = await bench()
+    declare(b.slots, 'sidebar.workspaces', 'conversation.hero.workspace')
+    const fiber = b.ctx.plugin({ inject: [...inject], apply })
+    await fiber.await()
+    onTestFinished(() => fiber.dispose())
+    const browser = faceOf(b.slots.entries('sidebar.workspaces')[0]!) as WorkspaceBrowserInjected
+    await expect(browser.pickProjectFolder!()).resolves.toBe('/project/source')
+    pick.mockResolvedValueOnce(null)
+    await expect(browser.pickProjectFolder!()).resolves.toBeNull()
+    pick.mockRejectedValueOnce(new Error('dialog failed'))
+    await expect(browser.pickProjectFolder!()).rejects.toThrow('dialog failed')
+    expect(b.pickDirectory).not.toHaveBeenCalled()
   })
 
   it('declares the browser child slots and reports directory-flow occupancy per surface', async () => {

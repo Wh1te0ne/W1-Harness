@@ -2,6 +2,7 @@
 import { providerPriceEntryFor, tierFor, usdFromCost } from './pricing.js'
 import { billingClassOf, enabledPlanSetOf } from './plan-billing.js'
 import { replaySessionRecords } from './backfill.js'
+import {billingSamples} from './billing-receipts.js'
 import { costFromSamples } from './turn-cost.js'
 
 export const CONTEXT_PARTS = ['system', 'tools', 'user', 'inject', 'skill', 'assistant', 'tool', 'other']
@@ -88,7 +89,7 @@ export function getContextCosts(ledger, ctx, query, now = Date.now()) {
   // Only consume published scalar projections; never depend on dsh-context internals.
   try { projections = ctx.get('sessionProjections')?.snapshot?.(session, ['contextBreakdown', 'contextTimeline'])?.values ?? {} } catch { /* optional projection service may be replacing a generation */ }
   const config = ledger.config
-  const resolved = providerPriceEntryFor(provider, model, config.prices, { mode: config.priceMatch, overrides: config.priceOverrides })
+  const resolved = providerPriceEntryFor(provider, model, config.prices, { mode: config.priceMatch, overrides: config.priceOverrides, atMs: now })
   const tier = tierFor(resolved.entry, now, { enabled: ['deepseek-peak', 'utc-peak'].includes(resolved.billingMode) && config.peakEnabled,
     effectiveAtMs: Date.parse(config.peakEffectiveAt ?? ''), windows: config.peakWindows, holidays: config.peakHolidays })
   // Actual reported usage has a separate face. Never allocate its cache hits
@@ -102,7 +103,7 @@ export function getContextCosts(ledger, ctx, query, now = Date.now()) {
       sampleRecords = [routeHeader, row]
     }
   }
-  if (sampleRecords) lastCall = costFromSamples(replaySessionRecords(sampleRecords, config, null, true).samples, config).calls.at(-1) ?? null
+  if (sampleRecords) {const id=sampleRecords.at(-1).data?.usage?.billingCallId;const samples=config.prices.book?.accounting?billingSamples(ledger,query.sessionId,records).filter(s=>s.receiptId===id&&!s.legacy):replaySessionRecords(sampleRecords,config,null,true).samples;lastCall=costFromSamples(samples,config).calls.at(-1)??null}
   return { ...empty, status: 'ready', revision: measurement.logRevision ?? records.length, provider, model,
     basis: billingClassOf(provider, model, config.planBilling, enabledPlanSetOf(config), config.prices) === 'plan' ? 'plan' : 'api',
     priced: resolved.priced, source: measurement.baseline?.kind === 'usage' ? 'usage' : 'estimate', contextTokens: measurement.totalTokens,

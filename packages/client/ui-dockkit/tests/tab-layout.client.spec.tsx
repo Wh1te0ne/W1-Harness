@@ -38,6 +38,29 @@ function mounted(controller = seededController(), options: Partial<ComponentProp
   return { controller, view, redraw, callbacks, node, body: (id: TabId) => node(`[data-body="${id}"]`) }
 }
 
+it('mounts opted-in background bodies before first reveal without taking keyboard focus', () => {
+  const controller = seededController()
+  const tab = controller.openContent({ kind: 'browser', contentId: 'browser:background', title: 'Background' })
+  controller.setExpanded(false)
+  const editor = document.createElement('textarea')
+  document.body.append(editor)
+  editor.focus()
+  try {
+    const h = mounted(controller, { mountHidden: item => item.kind === 'browser', keepMounted: () => true })
+    const body = h.body(tab)
+    expect(body.closest('[data-dockkit-content]')).toHaveProperty('inert', true)
+    expect(document.activeElement).toBe(editor)
+    act(() => { controller.setExpanded(true); h.redraw() })
+    expect(h.body(tab)).toBe(body)
+    expect(body.closest('[data-dockkit-content]')).toHaveProperty('inert', false)
+    act(() => { controller.setExpanded(false); h.redraw() })
+    expect(h.body(tab)).toBe(body)
+    expect(document.activeElement).toBe(editor)
+  } finally {
+    editor.remove()
+  }
+})
+
 it('retains visited bodies and hands keyboard focus to the newly selected strip', () => {
   const controller = seededController()
   controller.setExpanded(true)

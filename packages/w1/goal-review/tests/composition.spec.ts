@@ -128,6 +128,7 @@ describe('W1 goal review through Loader and the real agent loop', () => {
     const request = h.agent.session.snapshotEvents().find(event => event.type === 'w1/goal-review-request')
     expect(request?.type === 'w1/goal-review-request' && request.data.messages).toEqual(h.adapter.requests.find(item => item.system === reviewPrompt)?.messages)
     expect(h.adapter.requests.find(item => item.system === reviewPrompt)?.tools).toEqual([])
+    expect(h.adapter.requests.find(item => item.system === reviewPrompt)).toMatchObject({ sessionId: h.agent.session.id, purpose: 'goal-review' })
     expect(JSON.stringify(h.agent.session.deriveMessages())).not.toContain(reviewPrompt)
   })
   it.each(['needs-work', 'insufficient-evidence', 'invalid'])('rejects %s and deduplicates repeated proposals', async (verdict) => {

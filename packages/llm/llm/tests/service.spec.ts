@@ -116,6 +116,26 @@ async function collect(stream: AsyncIterable<StreamChunk>): Promise<StreamChunk[
 }
 
 describe('LlmRuntime', () => {
+  it('selects immutable transport policy by exact purpose without changing billing identity or model options', async () => {
+    const ctx = new Context()
+    try {
+      await ctx.plugin(LlmRuntime, { requestTransportByPurpose: {
+        'auto-review': { isolated: true, headers: { 'x-utility': '1' } },
+      } })
+      const adapter = new RecordingAdapter(SCRIPT)
+      ctx.llm.registerAdapter(['any-provider'], adapter)
+      const original: GenerateOptions = Object.freeze({ provider: 'any-provider', model: 'any-model', messages: [], maxTokens: 8192, purpose: 'auto-review', transport: { headers: { 'x-other': 'kept' } } })
+      await collect(ctx.llm.stream(original))
+      expect(adapter.lastOptions).toMatchObject({ provider: original.provider, model: original.model, maxTokens: 8192, purpose: 'auto-review', transport: { isolated: true, headers: { 'x-utility': '1', 'x-other': 'kept' } } })
+      expect(original.transport).toEqual({ headers: { 'x-other': 'kept' } })
+      expect(Object.isFrozen(adapter.lastOptions?.transport)).toBe(true)
+      for (const purpose of [undefined, 'compaction', 'side-chat'] as const) {
+        await collect(ctx.llm.stream({ provider: 'any-provider', model: 'any-model', messages: [], purpose }))
+        expect(adapter.lastOptions?.transport).toBeUndefined()
+      }
+    } finally { await ctx.fiber.dispose() }
+  })
+
   it('recognizes structured and model-capacity context-window overflow details', () => {
     expect(isContextWindowExceededError('context_length_exceeded maximum context length')).toBe(true)
     expect(isContextWindowExceededError('context-window-overflowed')).toBe(true)

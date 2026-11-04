@@ -266,6 +266,8 @@
 
 /* The submenu aligns with the parent's bottom edge. Its hit bridge covers
  * the menu inset and the 6px gap so pointer movement keeps it open. */
+.viewport:has([aria-haspopup="menu"]) { overflow: visible; max-height: none; }
+
 .submenu {
   position: absolute;
   top: auto;
@@ -283,3 +285,6 @@
   left: -10px;
   width: 10px;
 }
+.componentSubmenu { bottom: auto; }
+.submenuLeft { left: auto; right: calc(100% + 10px); }
+.submenuLeft::before { left: auto; right: -10px; }

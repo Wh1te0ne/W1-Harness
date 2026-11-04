@@ -3,7 +3,7 @@ import { localDayKey } from './store.js'
 import { providerPriceEntryFor } from './pricing.js'
 import { conversationOwners } from './session-tree.js'
 
-export const STAT_FIELDS = ['input', 'output', 'cacheRead', 'cacheWrite', 'reasoning', 'calls', 'cost', 'apiCost']
+export const STAT_FIELDS = ['input', 'output', 'cacheRead', 'cacheWrite', 'reasoning', 'calls', 'cost', 'apiCost', 'unpricedCalls', 'cacheWrite1h', 'estimatedCalls', 'stalePriceCalls']
 const num = n => typeof n === 'number' && Number.isFinite(n) && n > 0 ? n : 0
 export const emptyStats = () => Object.fromEntries(STAT_FIELDS.map(key => [key, 0]))
 const add = (to, from) => { for (const key of STAT_FIELDS) to[key] += num(key === 'apiCost' ? from?.apiCost ?? from?.cost : from?.[key]); return to }
@@ -69,7 +69,8 @@ export function billingStatistics(ledger, raw, sessionIds = null, headers = []) 
       if (id.provider) providers.add(id.provider)
       if (!query.provider || query.provider === id.provider) modelOptions.add(id.model)
       if (!matchesStats(key, query)) continue
-      const row = models.get(key) ?? { key, ...id, ...emptyStats(), priced: providerPriceEntryFor(id.provider, id.model, ledger.config.prices, { mode: ledger.config.priceMatch, overrides: ledger.config.priceOverrides }).priced }
+      const row = models.get(key) ?? { key, ...id, ...emptyStats(), priced: ledger.config.prices.book ? !(bucket.unpricedCalls > 0) : providerPriceEntryFor(id.provider, id.model, ledger.config.prices, { mode: ledger.config.priceMatch, overrides: ledger.config.priceOverrides }).priced }
+      if (bucket.unpricedCalls > 0) row.priced = false
       add(row, bucket); add(modeled, bucket); models.set(key, row)
     }
     for (const session of day?.sessions ?? []) {
@@ -79,7 +80,7 @@ export function billingStatistics(ledger, raw, sessionIds = null, headers = []) 
       const id = owners.get(session.id) ?? session.id
       const row = sessions.get(id) ?? { id, title: titles.get(id) || id, ...emptyStats(), own: emptyStats(), orphan: headerMap.get(id)?.origin === 'subagent', unpriced: false }
       const unpriced = Object.entries(session.byProviderModel ?? {}).some(([key, bucket]) => matchesStats(key, query) && bucket.calls > 0
-        && !providerPriceEntryFor(identity(key).provider, identity(key).model, ledger.config.prices, { mode: ledger.config.priceMatch, overrides: ledger.config.priceOverrides }).priced)
+        && (ledger.config.prices.book ? bucket.unpricedCalls > 0 : !providerPriceEntryFor(identity(key).provider, identity(key).model, ledger.config.prices, { mode: ledger.config.priceMatch, overrides: ledger.config.priceOverrides }).priced))
       row.unpriced ||= unpriced
       if (id === session.id) add(row.own, selected)
       else {

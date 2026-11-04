@@ -11,6 +11,8 @@ kind: "package-reference"
 
 `dsh-session-log-export` 让 Web 界面可以下载会话的完整历史：Session Header 更多操作按钮下的 `下载 Session 日志` 菜单项与 `/export` 斜杠命令都会把会话树——会话本身、其子会话与附件——作为 ZIP 交给浏览器下载。本包拥有 Host 归档流、经过认证的 Fetch 路由以及浏览器控件和反馈。下载目标位置由浏览器选择。设置与用法在前，随后说明实现细节。
 
+鉴权路由 `GET /api/session.markdown?sessionId=<id>` 将完整校验日志整理为用户与助手的 Markdown，保留正文、代码块，并标注图片和文件附件。省略工具、思考和注入的引用上下文，不展开子会话或启动 Agent；读取失败时返回错误，不把部分内容当作完整导出。复制操作位于会话右键菜单，ZIP 导出继续保留。
+
 ## 目录
 
 - [使用本包](#use-this-package)

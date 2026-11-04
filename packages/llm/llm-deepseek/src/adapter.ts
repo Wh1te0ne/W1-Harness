@@ -1,6 +1,7 @@
 /** Direct Messages transport with one cancellable lifecycle per model request. */
 
 import { attributionHeaders, LlmAdapter, LlmError } from '@deepseek-ai/dsh-llm'
+import { isolatedFetch } from '@deepseek-ai/dsh-http-proxy'
 import type { GenerateOptions, ImageAttachmentAccessResolver, PreparedAdapterCall, StreamChunk } from '@deepseek-ai/dsh-llm'
 import type { DeepSeekLlmApiJson } from '@deepseek-ai/dsh-deepseek-llm-api-extensions'
 import { idleWatchdog, timeoutOf } from '@deepseek-ai/dsh-timeout'
@@ -139,18 +140,22 @@ export class DeepSeekAdapter<C extends Connection = Connection> extends LlmAdapt
         try {
           this.dependencies.onRequestPrepared?.({ options, summarize: maxMessages => requestStructure(extensions.payload, maxMessages) })
         } catch { /* Diagnostics must not affect transport or request bytes. */ }
-        const response = await fetch(`${messagesApiRoot(connection.baseURL)}/messages`, {
+        const headers = new Headers(options.transport?.headers)
+        for (const name of ['authorization', 'x-api-key', 'api-key', 'anthropic-beta', 'x-deepseek-harness-session-id', 'x-deepseek-harness-compact']) headers.delete(name)
+        for (const [name, value] of Object.entries({
+          ...attributionHeaders(),
+          'content-type': 'application/json', 'accept': 'text/event-stream',
+          ...auth.headers,
+          'anthropic-version': '2023-06-01',
+          ...betas.length === 0 ? {} : { 'anthropic-beta': betas.join(',') },
+          'x-deepseek-harness-user-id': this.dependencies.resolveUserId(),
+          ...options.sessionId === undefined ? {} : { 'x-deepseek-harness-session-id': String(options.sessionId) },
+          ...options.purpose === 'compaction' ? { 'x-deepseek-harness-compact': '1' } : {},
+        })) headers.set(name, value)
+        const fetcher = options.transport?.isolated ? isolatedFetch : globalThis.fetch
+        const response = await fetcher(`${messagesApiRoot(connection.baseURL)}/messages`, {
           method: 'POST', signal, body: extensions.payload, redirect: 'error',
-          headers: {
-            ...attributionHeaders(),
-            'content-type': 'application/json', 'accept': 'text/event-stream',
-            ...auth.headers,
-            'anthropic-version': '2023-06-01',
-            ...betas.length === 0 ? {} : { 'anthropic-beta': betas.join(',') },
-            'x-deepseek-harness-user-id': this.dependencies.resolveUserId(),
-            ...options.sessionId === undefined ? {} : { 'x-deepseek-harness-session-id': String(options.sessionId) },
-            ...options.purpose === 'compaction' ? { 'x-deepseek-harness-compact': '1' } : {},
-          },
+          headers,
         })
         if (!response.ok) {
           const text = await response.text()

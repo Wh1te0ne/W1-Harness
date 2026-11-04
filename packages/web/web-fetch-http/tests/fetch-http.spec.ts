@@ -2,10 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http'
 import { AddressInfo } from 'node:net'
 import { Context } from '@deepseek-ai/cordis'
+import { Response as HttpResponse } from 'undici'
 import WebRuntime from '@deepseek-ai/dsh-web'
 import { HttpFetchProvider, LOCAL_FETCH_PROVIDER_ID } from '@deepseek-ai/dsh-web-fetch-http'
 import type { HttpFetchLimits, HttpFetchResolver } from '@deepseek-ai/dsh-web-fetch-http'
 import * as fetchPlugin from '@deepseek-ai/dsh-web-fetch-http'
+import { liveConfig } from '../../../settings/settings/tests/live-config.ts'
+import { volatileForm } from '../../../settings/settings/src/schema.ts'
 import { createPinnedLookup, isPublicIpAddress, publicHttpNetwork, requestPinned, resolvePublicAddresses } from '../src/network.ts'
 import {
   classifyContentType,
@@ -106,6 +109,7 @@ describe('public-network policy', () => {
       '127.0.0.1',
       '169.254.169.254',
       '192.0.2.1',
+      '198.18.0.1',
       '224.0.0.1',
       '255.255.255.255',
       '::',
@@ -567,6 +571,99 @@ describe('HttpFetchProvider body cancellation on error paths', () => {
 })
 
 describe('web-fetch-http plugin registration', () => {
+  it('exposes strict mode in settings and applies a live change to the next fetch without remounting', async () => {
+    restoreResolution()
+    expect(volatileForm(fetchPlugin.Config)?.dict).toHaveProperty('requirePublicIp')
+    const ctx = new Context()
+    await ctx.plugin(WebRuntime, { fetchProvider: LOCAL_FETCH_PROVIDER_ID })
+    try {
+      const config = await liveConfig(ctx, fetchPlugin, { requirePublicIp: false })
+      await expect(ctx.web.fetch({ url: base })).resolves.toMatchObject({ statusCode: 200 })
+      await config.update({ requirePublicIp: true })
+      expect(config.entry.fiber === config.fiber).toBe(true)
+      await expect(ctx.web.fetch({ url: base })).rejects.toThrow(expect.objectContaining({ code: 'WEB_BLOCKED_URL' }))
+      await config.update({ requirePublicIp: false })
+      await expect(ctx.web.fetch({ url: base })).resolves.toMatchObject({ statusCode: 200 })
+    } finally { await ctx.fiber.dispose() }
+  })
+
+  it('holds the selected address policy through redirects until the next fetch', async () => {
+    restoreResolution()
+    let strict = false
+    const readPolicy = vi.fn(() => strict)
+    handler = (req, res) => {
+      if (req.url === '/start') { strict = true; res.writeHead(302, { location: '/result' }); res.end() }
+      else { res.writeHead(200, { 'content-type': 'text/plain' }); res.end('redirect complete') }
+    }
+    const instance = new HttpFetchProvider(limits, undefined, readPolicy)
+    await expect(instance.fetch({ url: `${base}/start` })).resolves.toMatchObject({ body: { content: 'redirect complete' } })
+    expect(readPolicy).toHaveBeenCalledOnce()
+    await expect(instance.fetch({ url: `${base}/result` })).rejects.toThrow(expect.objectContaining({ code: 'WEB_BLOCKED_URL' }))
+    expect(readPolicy).toHaveBeenCalledTimes(2)
+  })
+
+  it.each(['198.18.0.1', '10.0.0.2'])('does not preflight DNS in system mode, while strict mode blocks %s', async (address) => {
+    const resolver = vi.fn((hostname: string, signal: AbortSignal) => resolvePublicAddresses(hostname, signal,
+      async () => [{ address, family: 4 }]))
+    const request = vi.spyOn(publicHttpNetwork, 'requestSystem').mockResolvedValue({
+      response: new HttpResponse('synthetic page', { headers: { 'content-type': 'text/plain' } }), close: () => Promise.resolve(),
+    })
+    const url = 'https://example.test/article'
+    await expect(new HttpFetchProvider(limits, resolver).fetch({ url }))
+      .rejects.toThrow(expect.objectContaining({ code: 'WEB_BLOCKED_URL' }))
+    expect(resolver).toHaveBeenCalledOnce()
+    expect(request).not.toHaveBeenCalled()
+    resolver.mockClear()
+    await expect(new HttpFetchProvider(limits, resolver, false).fetch({ url }))
+      .resolves.toMatchObject({ body: { content: 'synthetic page' } })
+    expect(resolver).not.toHaveBeenCalled()
+    expect(request).toHaveBeenCalledWith(new URL(url), expect.any(Object), expect.any(AbortSignal))
+  })
+
+  it('uses the system network when opted out and restores the strict default on remount', async () => {
+    restoreResolution()
+    const ctx = new Context()
+    await ctx.plugin(WebRuntime, { fetchProvider: LOCAL_FETCH_PROVIDER_ID })
+    try {
+      const system = await ctx.plugin(fetchPlugin, { requirePublicIp: false })
+      await expect(ctx.web.fetch({ url: base })).resolves.toMatchObject({ body: { content: 'default' } })
+      await system.dispose()
+      await ctx.plugin(fetchPlugin, {})
+      await expect(ctx.web.fetch({ url: base })).rejects.toThrow(expect.objectContaining({ code: 'WEB_BLOCKED_URL' }))
+    } finally { await ctx.fiber.dispose() }
+  })
+
+  it('system mode still follows same-origin redirects and enforces the body cap', async () => {
+    restoreResolution()
+    const requests: string[] = []
+    handler = (req, res) => {
+      requests.push(req.url ?? '')
+      if (req.url === '/start') { res.writeHead(302, { location: '/result' }); res.end() }
+      else { res.writeHead(200, { 'content-type': 'text/plain' }); res.end('bounded text') }
+    }
+    const system = new HttpFetchProvider({ ...limits, maxResponseBytes: 4 }, undefined, false)
+    await expect(system.fetch({ url: `${base}/start` })).resolves.toMatchObject({ body: { content: 'boun' }, truncated: true })
+    expect(requests).toEqual(['/start', '/result'])
+  })
+
+  it('system mode refuses cross-origin redirects before contacting the target', async () => {
+    restoreResolution()
+    const requests: string[] = []
+    handler = (req, res) => {
+      requests.push(req.url ?? '')
+      res.writeHead(302, { location: 'http://another.test/private' }); res.end()
+    }
+    await expect(new HttpFetchProvider(limits, undefined, false).fetch({ url: base }))
+      .rejects.toThrow(expect.objectContaining({ code: 'WEB_REDIRECT_BLOCKED' }))
+    expect(requests).toEqual(['/'])
+  })
+
+  it.each(['ftp://example.test', 'http://user:password@example.test'])('system mode retains URL restrictions: %s', async (url) => {
+    const request = vi.spyOn(publicHttpNetwork, 'requestSystem')
+    await expect(new HttpFetchProvider(limits, undefined, false).fetch({ url })).rejects.toThrow()
+    expect(request).not.toHaveBeenCalled()
+  })
+
   it('registers the provider into ctx.web (HMR-safe)', async () => {
     const ctx = new Context()
     await ctx.plugin(WebRuntime, { fetchProvider: LOCAL_FETCH_PROVIDER_ID })

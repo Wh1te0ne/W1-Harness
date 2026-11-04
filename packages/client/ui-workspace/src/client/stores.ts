@@ -21,6 +21,7 @@ export type SessionOrderBy = 'manual' | 'updated'
 /** Workspace browser viewing state persisted across surface remounts and reloads. */
 type WorkspaceViewState = {
   groupBy: SessionGroupBy
+  activityView?: boolean
   orderBy: SessionOrderBy
   /** Explicit group expansion keyed by Workspace identity, including descendants in tree mode. */
   groupExpansion: Record<string, boolean>
@@ -41,6 +42,7 @@ type SessionOrderSource = {
  * return type); drift fails assignability at the defineStore call.
  */
 type WorkspaceViewActions = {
+  setActivityView: (draft: WorkspaceViewState, active: boolean) => void
   setGroupBy: (draft: WorkspaceViewState, mode: SessionGroupBy) => void
   setOrderBy: (
     draft: WorkspaceViewState,
@@ -90,6 +92,7 @@ export function createWorkspaceViewStore(): EngineStoreHandle<WorkspaceViewState
     }),
     persist: 'dsh.workspace.view.v5',
     actions: {
+      setActivityView: (d, active: boolean) => { d.activityView = active },
       setGroupBy: (d, mode: SessionGroupBy) => { d.groupBy = mode },
       setOrderBy: (d, mode: SessionOrderBy, initialOrders) => {
         if (mode === d.orderBy) return

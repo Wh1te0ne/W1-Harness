@@ -26,6 +26,8 @@ kind: "package-reference"
 
 本包注入 Client `remoteAccess` 服务，并在其 `source()` 之上发布会话访问 Hook：根作用域的 `useSessionAccess(sessionId, action)` 回答某一个 Session 资源上的访问，Session 作用域的 `useAccess(action)` 回答所绑定 Session 资源上的访问；`global` 资源上的答案是另一个 Hook `useRemoteAccess(action)`，两者互不遮蔽。SessionMaybe 作用域的 `useAccess(action)` 在未绑定 Session 时返回 `undefined`，调用方将其视为不允许；需要 `global` 资源上的判断时读 `useRemoteAccess`。快照语义归 [`dsh-api-remote-access`](../../api/remote-access/README.zh.md#client-face)。
 
+完成提醒的会话标识按 Host home 分开保存在浏览器存储中，与实时交互请求分离。打开对应会话或显式标为已读会清除提醒；存储不可用时保留内存内行为，提醒记录不保存对话正文。
+
 <a id="model-experience"></a>
 ## 模型体验
 

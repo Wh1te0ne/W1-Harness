@@ -290,6 +290,9 @@ export class UiSession extends Service {
   private pendingSnapshot: ReadonlyMap<SessionId, SessionPendingInteractionBase> = new Map()
   private readonly running = new Map<SessionId, boolean>()
   private readonly completionUnread = new Set<SessionId>()
+  private unreadStorageKey = ''
+  private savedUnread = ''
+  private unreadLoaded = false
   private statusSnapshot: SessionStatusSnapshot = new Map()
   private readonly statusListeners = new Set<() => void>()
   private mainRetainId: SessionId | undefined
@@ -499,6 +502,16 @@ export class UiSession extends Service {
 
   private reconcileStatus(): void {
     const list = this.sessions.list.getSnapshot()
+    if (!this.unreadLoaded && list.phase === 'ready') {
+      this.unreadStorageKey = 'w1.session.unread.v1:' + (this.ctx.remote.$host.home ?? 'local')
+      try {
+        const stored: unknown = JSON.parse(localStorage.getItem(this.unreadStorageKey) ?? '[]')
+        if (Array.isArray(stored)) for (const id of stored) {
+          if (typeof id === 'string') this.completionUnread.add(id as SessionId)
+        }
+      } catch { /* Restricted or invalid storage leaves reminders in memory. */ }
+      this.unreadLoaded = true
+    }
     const present = new Set(Object.keys(list.byId) as SessionId[])
     // Subagent catalog rows and retained subagent fallback rows do not establish Host running state.
     for (const id of list.ids) {
@@ -524,7 +537,21 @@ export class UiSession extends Service {
     return (this.sessions.list.getSnapshot().byId[sessionId]?.retainedBy.mainView ?? 0) > 0
   }
 
+  /**
+   * Acknowledge completion reminders without changing running or pending-interaction state.
+   * @param ids - Session identities explicitly marked read by the user.
+   */
+  acknowledgeCompletions(ids: readonly SessionId[]): void {
+    for (const id of ids) this.completionUnread.delete(id)
+    this.publishStatus()
+  }
+
   private publishStatus(): void {
+    const stored = JSON.stringify([...this.completionUnread])
+    if (this.unreadLoaded && stored !== this.savedUnread) {
+      try { localStorage.setItem(this.unreadStorageKey, stored); this.savedUnread = stored }
+      catch { /* Reminders remain available for this client lifetime. */ }
+    }
     const ids = new Set<SessionId>([
       ...(Object.keys(this.sessions.list.getSnapshot().byId) as SessionId[]),
       ...this.running.keys(),

@@ -11,6 +11,8 @@ English | [中文](README.zh.md)
 
 `dsh-session-log-export` lets the Web interface download a session's full history: a `Download session log` menu item under the Session Header's more-actions button and an `/export` slash command both hand the session tree — the session, its sub-sessions, and attachments — to the browser as a ZIP download. The package owns the Host archive stream, its authenticated Fetch route, and the browser controls and feedback. The browser chooses the download destination. Setup and usage come first; implementation details follow.
 
+The authenticated `GET /api/session.markdown?sessionId=<id>` route copies the complete validated log as user/assistant Markdown, retaining original text and code fences and marking image/file attachments. It omits tools, reasoning and injected reference context, does not expand descendants or start an Agent, and returns a read failure instead of a partial export. The clipboard action lives in the workspace context menu; ZIP export remains available.
+
 ## Table of Contents
 
 - [Use this package](#use-this-package)

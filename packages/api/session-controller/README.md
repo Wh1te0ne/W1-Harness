@@ -12,6 +12,8 @@ Desktop analytics follows the [product collection policy](../../client/product-a
 
 `@deepseek-ai/dsh-api-session-controller` owns the Host `ctx.sessionController` service and the generated Client `session`, `skills`, and `fileReferences` Remote namespaces. It serves Session lifecycle and history, the Host-generation model catalog, human background-job kill, workspace-path opening, user-invocable skill discovery, and Agent-scoped file references. Use it through API Gateway when a Client needs operations addressed by a Session.
 
+The versioned session-list metadata projection includes optional activity time and a plain-text assistant-reply excerpt bounded to 240 Unicode code points. Prompts, reasoning blocks, and tool arguments are excluded. Turn completion advances activity time without changing prompt-based project ordering. The listing stays cache-only. After access filtering, missing metadata is rebuilt serially in the background through the Session observation and projection cache services, then published to the list without opening an Agent. Duplicate repairs coalesce, disposal cancels them, and failed reads may retry on a later listing; migration-required Sessions are not migrated automatically.
+
 ## Table of Contents
 
 - [Use this package](#use-this-package)

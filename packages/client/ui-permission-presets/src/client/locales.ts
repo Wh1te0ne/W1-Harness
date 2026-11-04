@@ -7,6 +7,10 @@ export const PERMISSION_ACCESS_NS = 'permission.access'
 export const zh = {
   'title': '权限',
   'description': '选择新会话的默认权限模式',
+  'auto.label': '自动审查',
+  'auto.confirm.title': '默认使用自动审查？',
+  'auto.confirm.description': '之后的新会话将由模型逐次审查工具操作，拒绝时仍需你确认。此模式不使用沙箱，会产生额外 Token 消耗；已有会话保持原权限。',
+  'auto.confirm.enable': '设为默认',
   'loading': '加载中',
   'unavailable': '不可用',
   'preset.readOnly': '仅可查看',
@@ -24,6 +28,10 @@ export type PermissionSettingsKey = keyof typeof zh
 
 /** English dictionary, checked complete against the zh key set. */
 export const en = {
+  'auto.label': 'Auto review',
+  'auto.confirm.title': 'Use Auto review by default?',
+  'auto.confirm.description': 'New sessions will use model review for each tool call and ask you when it denies a call. This mode runs without a sandbox and uses additional tokens. Existing sessions keep their permissions.',
+  'auto.confirm.enable': 'Set as default',
   'title': 'Permission',
   'description': 'Choose the default permission mode for new sessions',
   'loading': 'Loading',
