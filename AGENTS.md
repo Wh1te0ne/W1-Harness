@@ -8,9 +8,9 @@ Model API/reasoning-effort failures: [diagnostics](docs/模型接口与思考强
 
 For [startup diagnosis](docs/启动性能排查.md), isolate diagnostic launches/candidate builds from daily.
 
-**Order: source Test → explicitly approved daily promotion → separately authorized GitHub release.** Test must launch `.work/self-dev/scripts/w1/Start-W1Test.ps1`. Before promotion, reconcile all prior daily changes into Test and verify actual candidate loading; queued builds are not acceptance.
+**Single-workspace development:** edit the canonical W1 workspace, run checks for the changed behavior, and apply prepared updates when W1 exits and restarts. Do not provision or require a separate W1 Harness Test app. Preserve user work and recovery copies; GitHub release remains separately authorized. See [workflow](docs/开发与上游维护.md#w1-self-development).
 
-**Edit/build in [source Test](docs/开发与上游维护.md#w1-self-development).** Prepare and verify there; never fall back to daily. Docs-only maintenance is exempt. Only on explicit promotion instruction: stage verified artifacts, save handoff, finish the turn; apply via external launcher after daily exit.
+Keep the running application's outputs and dependencies stable. Queue supported package builds; stop W1 before desktop, static-shell, dependency or runtime replacement. Use isolated worktrees only for a specific diagnostic or release, not as a mandatory promotion stage. Verify the restarted application and record acceptance limits.
 
 Use [daily launcher](scripts/w1/Start-W1.ps1); [baseline](scripts/w1/Start-W1Baseline.ps1) is disposable. [Local workflow](docs/开发与上游维护.md): targeted builds/checks; packaging, installer cycles/full checks require delivery/contract need. Isolate release builds in separate checkouts. Maintain [work record](docs/工作记录.md); only manifest-exempt Chinese-only W1 docs bypass bilingual rules.
 

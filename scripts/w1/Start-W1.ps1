@@ -28,7 +28,7 @@ $env:W1_DESKTOP_EXECUTABLE = & $node (Join-Path $PSScriptRoot 'prepare-windows-s
 if ($LASTEXITCODE -ne 0) { throw 'W1 desktop runtime missing; run Install-W1Launcher.ps1 once.' }
 $w1Home = Join-Path $env:USERPROFILE '.w1-harness'
 $w1Data = Join-Path $env:APPDATA 'W1 Harness'
-foreach ($name in @('ELECTRON_RUN_AS_NODE','ELECTRON_OVERRIDE_DIST_PATH','DSH_DESKTOP_DSH_DIR','DSH_DESKTOP_PNPM_ENTRY','DSH_DESKTOP_PRIMARY_RUNTIME_DIR','DSH_DESKTOP_MANDATORY_UPDATE_CONFIG')) {
+foreach ($name in @('W1_TEST_MODE','W1_TEST_LAUNCHER','W1_TEST_POWERSHELL','ELECTRON_RUN_AS_NODE','ELECTRON_OVERRIDE_DIST_PATH','DSH_DESKTOP_DSH_DIR','DSH_DESKTOP_PNPM_ENTRY','DSH_DESKTOP_PRIMARY_RUNTIME_DIR','DSH_DESKTOP_MANDATORY_UPDATE_CONFIG')) {
   Remove-Item -LiteralPath ("Env:" + $name) -ErrorAction SilentlyContinue
 }
 $env:W1_HOME = $w1Home
