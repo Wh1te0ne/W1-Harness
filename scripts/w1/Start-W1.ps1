@@ -68,10 +68,6 @@ if (-not $PrepareOnly -and -not $RefreshProject -and $DebugPortBase -eq 0) {
     # The owner exited during activation. Continue through the publisher before taking over.
   }
 }
-if (-not $PrepareOnly) {
-  & $node (Join-Path $PSScriptRoot 'resume-promotion.mjs') $root
-  if ($LASTEXITCODE -ne 0) { throw 'W1 待更新交接未完成，请检查 .work/daily-updates 中的状态和备份。' }
-}
 New-Item -ItemType Directory -Path $w1Home -Force | Out-Null
 $projectStore = Join-Path $w1Home 'storages/workspace.json'
 if (Test-Path -LiteralPath $projectStore) {
