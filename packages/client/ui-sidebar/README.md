@@ -75,6 +75,8 @@ On Desktop, the official navigation controls report `sidebar_menu_click` with `m
 <a id="understand-the-implementation"></a>
 ## Understand the implementation
 
+Expanded sidebar marks receive expanded=true and may render a complete horizontal brand logo; the independent name slot can then render nothing. Compact marks retain the requested square size.
+
 <details>
 <summary>Implementation internals — click to expand</summary>
 

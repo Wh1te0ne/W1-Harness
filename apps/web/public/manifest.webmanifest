@@ -1,6 +1,6 @@
 {
-  "name": "DeepSeek Harness",
-  "short_name": "DSH",
+  "name": "W1 Harness",
+  "short_name": "W1 Harness",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

@@ -3988,7 +3988,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
     doc: 'Brand mark rendered in the expanded brand row and collapsed rail.\nDeclared by this package\'s `sidebar` entry; deployments may replace\nthe shell\'s fish fallback without replacing the surrounding controls.',
     registerOptions: [],
     ownerProps: [
-      '/** Geometry supplied to the sidebar brand-mark occupant. */\nexport interface SidebarBrandMarkOwnerProps {\n  /** Requested square edge in pixels. */\n  size: number\n}',
+      '/** Geometry supplied to the sidebar brand-mark occupant. */\nexport interface SidebarBrandMarkOwnerProps {\n  /** Requested compact mark edge in pixels. */\n  size: number\n  /** Expanded rows also allow a complete horizontal logo instead of separate mark/name occupants. */\n  expanded?: boolean\n}',
     ],
     ownerPropsReferences: [],
     standardProps: [
@@ -4008,7 +4008,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
     slotInject: '',
     declaredBy: 'an entry in \'sidebar\' (client-ui-sidebar), so it exists while that entry is mounted',
     occupants: [
-      'client-ui-brand-official OfficialBrandMark',
+      'client-ui-brand-official OfficialSidebarBrandMark',
       'experimental-liveshare ViewerBrandMark',
     ],
     replaceRisk: 'shadows-shipped-ui',

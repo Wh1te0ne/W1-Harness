@@ -42,7 +42,7 @@ app.whenReady().then(async () => {
       mkdirSync(backup, { recursive: true })
       copyFileSync(path, join(backup, `${index}.lnk`))
     }
-    const details = { target, args: '', cwd: root, description: 'W1 Harness · 本机日用开发版',
+    const details = { target, args: '', cwd: root, description: 'W1 Harness',
       icon, iconIndex: 0, appUserModelId: appId }
     if (!shell.writeShortcutLink(path, existsSync(path) ? 'update' : 'create', details)) throw new Error(`Cannot write shortcut: ${path}`)
     const actual = shell.readShortcutLink(path)

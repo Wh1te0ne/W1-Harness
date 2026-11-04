@@ -51,7 +51,7 @@ it('ships install metadata with the built web application', async () => {
   expect(index).toContain('<link rel="manifest" href="./manifest.webmanifest" />')
   expect(index).toContain('<link rel="apple-touch-icon" href="./apple-touch-icon.png" />')
   expect(index).toContain('<meta name="mobile-web-app-capable" content="yes" />')
-  expect(index).toContain('<meta name="apple-mobile-web-app-title" content="DSH" />')
+  expect(index).toContain('<meta name="apple-mobile-web-app-title" content="W1 Harness" />')
   // No `theme-color` here: `ThemePresenter` owns the single metadata node and
   // follows the resolved in-application theme, which a static media query
   // cannot. The manifest's `theme_color` covers the surrounding chrome before
@@ -62,8 +62,8 @@ it('ships install metadata with the built web application', async () => {
   // so only an absent `id`, which defaults to the resolved `start_url`, gives
   // each mount its own identity. `public-mount.e2e.ts` reads the resolved form.
   expect(manifest).toEqual({
-    name: 'DeepSeek Harness',
-    short_name: 'DSH',
+    name: 'W1 Harness',
+    short_name: 'W1 Harness',
     start_url: './',
     scope: './',
     // `standalone` keeps the phone's status bar; `fullscreen` hides it and the
@@ -115,9 +115,11 @@ it('ships fixed-color favicons selected by document media queries', async () => 
   const light = await readFile(join(DIST_ROOT, 'favicon.svg'), 'utf8')
   const dark = await readFile(join(DIST_ROOT, 'favicon-dark.svg'), 'utf8')
   expect(light).not.toContain('<style>')
-  expect(light).toContain('fill="#000"')
-  expect(dark).toContain('fill="#fff"')
-  expect(dark.replace('fill="#fff"', 'fill="#000"')).toBe(light)
+  expect(light).toContain('color="#252A33"')
+  expect(dark).toContain('color="#F5F6F8"')
+  const geometry = (value: string) => value.replace(/(?:color|fill)="#[\dA-Fa-f]+"/gu, 'color="theme"')
+    .replace(/harness-(?:light|dark)/gu, 'harness-theme')
+  expect(geometry(dark)).toBe(geometry(light))
 })
 
 it('preserves fractional coverage along the Apple icon curves', async () => {

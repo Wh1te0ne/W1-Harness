@@ -8,7 +8,7 @@ $node = (Get-Command node -CommandType Application | Select-Object -First 1).Sou
 $pwsh = (Get-Command pwsh -CommandType Application | Select-Object -First 1).Source
 $icon = Join-Path $root 'assets/w1/exports/app-icon.ico'
 New-Item -ItemType Directory -Path $output,$install -Force | Out-Null
-& $node (Join-Path $PSScriptRoot 'prepare-windows-shell.mjs') $install
+$shellExecutable = & $node (Join-Path $PSScriptRoot 'prepare-windows-shell.mjs') $install
 if ($LASTEXITCODE -ne 0) { throw 'W1 desktop runtime preparation failed.' }
 $candidate = Join-Path $output 'W1 Harness.exe'
 & $compiler /nologo /target:winexe /platform:x64 /optimize+ /utf8output "/win32icon:$icon" "/out:$candidate" /reference:System.Windows.Forms.dll /reference:System.Web.Extensions.dll (Join-Path $PSScriptRoot 'W1Launcher.cs')
@@ -25,9 +25,7 @@ if (-not (Test-Path -LiteralPath $executable) -or (Get-FileHash -LiteralPath $ca
 @{ProjectRoot=$root;PowerShell=$pwsh;Node=$node} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $install 'launcher.json') -Encoding utf8NoBOM
 $env:W1_LAUNCHER_INSTALL_DIRECTORY = $install
 Remove-Item Env:ELECTRON_RUN_AS_NODE,Env:ELECTRON_OVERRIDE_DIST_PATH -ErrorAction SilentlyContinue
-$electron = & $node -e "console.log(require(process.argv[1]))" (Join-Path $root 'apps/desktop/node_modules/electron')
-if ($LASTEXITCODE -ne 0) { throw 'Cannot resolve the prepared Electron runtime.' }
-$setup = Start-Process -FilePath $electron -ArgumentList ('"' + (Join-Path $PSScriptRoot 'install-shortcuts.cjs') + '"') -WindowStyle Hidden -Wait -PassThru -RedirectStandardOutput (Join-Path $output 'shortcuts-stdout.log') -RedirectStandardError (Join-Path $output 'shortcuts-stderr.log')
+$setup = Start-Process -FilePath $shellExecutable -ArgumentList ('"' + (Join-Path $PSScriptRoot 'install-shortcuts.cjs') + '"') -WindowStyle Hidden -Wait -PassThru -RedirectStandardOutput (Join-Path $output 'shortcuts-stdout.log') -RedirectStandardError (Join-Path $output 'shortcuts-stderr.log')
 if ($setup.ExitCode -ne 0) { throw "Shortcut installation failed; see $output/shortcuts-stderr.log" }
 # Notify Explorer after replacing the shortcut's explicit icon location.
 Add-Type -TypeDefinition @'

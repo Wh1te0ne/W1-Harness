@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render } from '@testing-library/react'
 import { SlotRegistry } from '@deepseek-ai/dsh-client-ui-renderer/client'
 import { apply, inject } from '../src/client/index.ts'
-import { OfficialBrandMark, OfficialBrandName } from '../src/client/Brand.tsx'
+import { OfficialBrandMark, OfficialBrandName, OfficialSidebarBrandMark } from '../src/client/Brand.tsx'
 import { apply as hostApply } from '../src/index.ts'
 
 afterEach(() => {
@@ -79,12 +79,23 @@ describe('W1 browser-brand plugin', () => {
     expect(subject.slots.entries(HERO_HOLE)).toHaveLength(1)
   })
 
-  it('renders the W1 name independently from both requested mark sizes', () => {
+  it('uses the paired product logo when expanded and retains a compact mark', () => {
     vi.stubEnv('DSH_CLIENT_TITLE', 'W1 Harness')
     const name = render(<OfficialBrandName />)
-    expect(name.container.textContent).toBe('Harness')
-    expect(name.container.firstElementChild?.getAttribute('aria-label')).toBe('W1 Harness')
+    expect(name.container.childElementCount).toBe(0)
     name.unmount()
+
+    const sidebar = render(<OfficialSidebarBrandMark size={24} expanded />)
+    expect(sidebar.container.firstElementChild?.getAttribute('aria-label')).toBe('W1 Harness')
+    const images = sidebar.container.querySelectorAll('img')
+    expect(images).toHaveLength(2)
+    expect(images[0]?.getAttribute('src')).not.toBe(images[1]?.getAttribute('src'))
+    expect(images[0]?.getAttribute('width')).toBe('160')
+    expect(images[0]?.getAttribute('height')).toBe('48')
+    sidebar.rerender(<OfficialSidebarBrandMark size={24} />)
+    expect(sidebar.container.querySelector('img')).toBeNull()
+    expect(sidebar.container.querySelector('svg')?.getAttribute('width')).toBe('24')
+    sidebar.unmount()
 
     const mark = render(<OfficialBrandMark size={34} />)
     expect(mark.container.querySelector('svg')?.getAttribute('width')).toBe('34')

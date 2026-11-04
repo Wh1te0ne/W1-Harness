@@ -1,22 +1,9 @@
 /**
- * Render the install icons of the Web application from the official
- * application tile.
- *
- * A browser installs a Web App only with a raster 192px and a 512px icon, masks
- * the icon it puts on the home screen, and has no manifest support for iOS,
- * which reads `apple-touch-icon` instead. The whale favicon is the bare mark
- * drawn edge to edge: handed to a launcher directly it loses its fins to the
- * mask, and it carries neither the tile nor a background of its own. This
- * script rasterizes the official application tile (`apps/desktop/resources/icon.svg`,
- * the artwork the desktop application ships) into the committed PNGs under
- * `public/`. Every variant crops the tile's drop shadow, which belongs to a
- * desktop window rather than a launcher; the maskable variant additionally
- * scales the whale inside the safe zone a platform mask may crop, leaving the
- * tile's own gradient to fill the icon so no mask meets a seam.
- *
- * The committed PNGs are the output; rerun
- * `pnpm --filter @deepseek-ai/dsh-web-frontend run render:app-icons` after the
- * tile artwork changes.
+ * Render Web install icons from the approved W1 product tile. The maskable
+ * variant scales the complete mark/wordmark group together and preserves its
+ * opaque background; the canonical brand asset remains unchanged.
+ * Run scripts/w1/export-brand.mjs to refresh the pinned exports, favicons and
+ * these PNGs together. The document helpers also accept the legacy shadowed tile.
  * @module render-app-icons
  */
 
@@ -25,8 +12,8 @@ import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { assertNever } from '@deepseek-ai/dsh-util-values'
 
-/** Vector source owned by the desktop application; 1104 units square with the tile inset. */
-export const TILE_SOURCE = fileURLToPath(new URL('../../desktop/resources/icon.svg', import.meta.url))
+/** Approved W1 product tile exported from the pinned brand assets. */
+export const TILE_SOURCE = fileURLToPath(new URL('../../../assets/w1/exports/app-icon-light.svg', import.meta.url))
 
 /** Directory the generated PNGs are committed to. */
 export const ICON_OUTPUT_DIRECTORY = fileURLToPath(new URL('../public/', import.meta.url))
@@ -47,10 +34,8 @@ const SOURCE_DENSITY = 72
 const RENDER_SCALE = 4
 
 /**
- * Fraction of a maskable icon the artwork keeps: the platform may crop the
- * border outside it. The tile's own ink reaches 0.461 of its edge from the
- * centre, so 0.868 is the largest scale a circular mask still shows whole;
- * `pwa-manifest.e2e.ts` checks the committed artwork against that circle.
+ * Uniform foreground scale for a platform mask; both product rows keep their
+ * shared centre and proportions. The PWA check verifies the complete ink radius.
  */
 export const MASKABLE_ARTWORK_SCALE = 0.82
 
@@ -117,6 +102,7 @@ function reparent(source: string): string {
  * @returns an SVG document whose 1024-unit square is the tile without its shadow.
  */
 export function tileDocument(source: string): string {
+  if (/^<svg\b[^>]*\bviewBox="0 0 1024 1024"/u.test(source.trim())) return source.trim()
   return reparent(source)
 }
 
@@ -128,6 +114,15 @@ export function tileDocument(source: string): string {
  * @returns an SVG document whose artwork survives a circular mask whole.
  */
 export function maskableDocument(source: string): string {
+  if (/^<svg\b[^>]*\bviewBox="0 0 1024 1024"/u.test(source.trim())) {
+    const document = source.trim()
+    const background = /<rect width="1024" height="1024" fill="#[\dA-Fa-f]+"\/>/u.exec(document)
+    if (background === null) throw new Error('app icons: the W1 tile requires an opaque background')
+    const prefixEnd = background.index + background[0].length
+    const foreground = document.slice(prefixEnd, document.lastIndexOf('</svg>'))
+    return document.slice(0, prefixEnd)
+      + `<g transform="translate(512 512) scale(${String(MASKABLE_ARTWORK_SCALE)}) translate(-512 -512)">${foreground}</g></svg>`
+  }
   const relocated = reparent(source)
   return relocated.replace(
     TILE_ARTWORK_GROUP,

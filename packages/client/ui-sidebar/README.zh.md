@@ -75,6 +75,8 @@ root 作用域的 `sidebar.panellist.actions` list 有注册项时，导航区�
 <a id="understand-the-implementation"></a>
 ## 理解实现
 
+展开侧栏的标志接收 expanded=true，可呈现完整横排品牌 Logo，此时独立名称 slot 可返回空内容；收起态标志仍使用请求的方形尺寸。
+
 <details>
 <summary>实现细节——点击展开</summary>
 

@@ -274,13 +274,12 @@
   cursor: default;
 }
 
-/* Mark and name are independent slots; the shell owns their shared baseline,
-   spacing, and height so either occupant can vary in width. */
+/* Independent occupants share a baseline; a complete logo can keep its natural height. */
 .brandIdentity {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  height: 24px;
+  min-height: 24px;
   min-width: 0;
 }
 

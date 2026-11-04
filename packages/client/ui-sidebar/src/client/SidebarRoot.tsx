@@ -313,7 +313,7 @@ export function SidebarRoot({
           const identity = (
             <span className={css.brandIdentity} aria-hidden="true">
               <span className={css.brandMark}>
-                {renderSlot('sidebar.brand.mark', { size: 24 }, {
+                {renderSlot('sidebar.brand.mark', { size: 24, expanded: true }, {
                   fallback: buildVersion === undefined
                     ? <FishLogo size={24} />
                     : <span className={css.copyVersion} data-copy-version onClick={copyVersion(buildVersion)}><FishLogo size={24} /></span>,

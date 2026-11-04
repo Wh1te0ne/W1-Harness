@@ -1,5 +1,7 @@
 /** W1 artwork uses the approved Fold export without changing its paths. */
 import type { HeroBrandMarkOwnerProps } from '@deepseek-ai/dsh-client-ui-conversation/client'
+import type { SidebarBrandMarkOwnerProps } from '@deepseek-ai/dsh-client-ui-sidebar/client'
+import { harnessLogo } from './brand-assets.ts'
 import styles from './Brand.module.css'
 
 /** @param props - Host-selected dimensions. @returns The approved W1 Fold mark. */
@@ -13,9 +15,16 @@ export function OfficialBrandMark({ size, className }: HeroBrandMarkOwnerProps) 
   </g></g></svg>
 }
 
-/** @returns The visible descriptor beside the W1 mark, with the complete accessible name. */
+/** @param props - Sidebar size and expanded state. @returns The product lockup or compact family mark. */
+export function OfficialSidebarBrandMark({ size, expanded }: SidebarBrandMarkOwnerProps) {
+  if (!expanded) return <OfficialBrandMark size={size} />
+  return <span className={styles.logo} aria-label={process.env.DSH_CLIENT_TITLE}>
+    <img className={styles.light} src={harnessLogo.light} width={harnessLogo.width} height={harnessLogo.height} alt="" />
+    <img className={styles.dark} src={harnessLogo.dark} width={harnessLogo.width} height={harnessLogo.height} alt="" />
+  </span>
+}
+
+/** @returns No separate label; the expanded product logo includes its outlined wordmark. */
 export function OfficialBrandName() {
-  const title = process.env.DSH_CLIENT_TITLE ?? ''
-  const descriptor = title.split(' ').slice(1).join(' ')
-  return <span className={styles.wordmark} aria-label={title}>{descriptor}</span>
+  return null
 }
