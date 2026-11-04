@@ -38,9 +38,9 @@ export function apply(ctx: Context): void {
   ctx.systemPrompt.section({
     name: 'w1:tool-selection',
     order: ctx.systemPrompt.getSectionOrder('PLAN_POLICY'),
-    text: ({ scope }) => {
-      const builtIn = ctx.tools.get('w1_browser', scope) !== undefined
-      const chrome = ctx.tools.get('w1_chrome', scope) !== undefined
+    text: ({ scope, toolSet }) => {
+      const builtIn = ctx.tools.get('w1_browser', scope, toolSet) !== undefined
+      const chrome = ctx.tools.get('w1_chrome', scope, toolSet) !== undefined
       return [GENERAL, ...builtIn || chrome ? [BROWSER_ENVIRONMENT, ...builtIn ? [BUILT_IN] : [], chrome ? CHROME : NO_CHROME] : []].join('\n\n')
     },
   })

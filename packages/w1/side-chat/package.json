@@ -46,7 +46,8 @@
     "@deepseek-ai/dsh-session": "workspace:*",
     "@deepseek-ai/dsh-typert-protocol": "workspace:*",
     "@deepseek-ai/schemastery": "workspace:~",
-    "zod": "4.4.3"
+    "zod": "4.4.3",
+    "@deepseek-ai/dsh-session-query": "workspace:*"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "workspace:~",

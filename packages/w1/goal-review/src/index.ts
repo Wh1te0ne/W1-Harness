@@ -1,3 +1,9 @@
+declare module '@deepseek-ai/dsh-llm/types' {
+  interface LlmRequestPurposeMap {
+    'goal-review': true
+  }
+}
+
 /** Tool-free completion review, mounted only by W1. */
 import type { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
@@ -40,9 +46,10 @@ const verdictSchema = schema.object({ verdict: schema.enum(['satisfied', 'needs-
  * Register the completion policy and durable UI projection.
  * @param ctx - owning W1 plugin context.
  * @param config - validated review limits.
+ * @returns when projection readers and dependent listeners are ready.
  */
-export function apply(ctx: Context, config: Config): void {
-  ctx.sessionProjections.register(reviewProjection(config.maxInputBytes))
+export async function apply(ctx: Context, config: Config): Promise<void> {
+  const projection = await ctx.sessionProjections.register(reviewProjection(config.maxInputBytes))
   if (!config.enabled) return
   const active = new Map<Agent, { controller: AbortController; done: Promise<void> }>()
   ctx.effect(() => async () => {
@@ -59,7 +66,7 @@ export function apply(ctx: Context, config: Config): void {
     }
   })
   ctx.on('agent/created', async ({ agent }) => {
-    const state = ctx.sessionProjections.stateOf(agent.session, 'w1GoalReview')?.view
+    const state = projection.stateOf(agent.session).view
     if (state?.status === 'reviewing' && !active.has(agent)) {
       agent.session.append('w1/goal-review-result', { ...state, status: 'runtime-error', reason: 'Review interrupted by Host restart; completion was not accepted.' })
       await ctx.get('sessionPersistence')?.flush()
@@ -70,8 +77,7 @@ export function apply(ctx: Context, config: Config): void {
     if (downstream.kind === 'deny') return downstream
     if (goal.phase !== 'active') return { kind: 'deny', reason: 'Resume the goal before proposing completion.' }
     const session = agent.session
-    const state = ctx.sessionProjections.stateOf(session, 'w1GoalReview')
-    if (state === undefined) throw new Error('Goal review evidence projection is unavailable')
+    const state = projection.stateOf(session)
     const cut = Number(session.seq)
     const evidence = reviewEvidence(state, goal, cut)
     if (state.view?.key === evidence.key) {
@@ -128,9 +134,9 @@ export function apply(ctx: Context, config: Config): void {
             : 'Review unavailable or invalid; supply new evidence or revise the goal before retrying.' }
       }
       const current = ctx.goals.get(agent)
-      const latestEvidence = ctx.sessionProjections.stateOf(session, 'w1GoalReview')
+      const latestEvidence = projection.stateOf(session)
       if (signal.aborted || controller.signal.aborted || current?.id !== goal.id || current.revision !== goal.revision
-        || latestEvidence === undefined || reviewEvidence(latestEvidence, goal, Number(session.seq)).key !== evidence.key) {
+        || reviewEvidence(latestEvidence, goal, Number(session.seq)).key !== evidence.key) {
         result = { ...base, status: 'runtime-error', reason: 'Review superseded; the goal or its evidence changed.' }
       }
       session.append('w1/goal-review-result', result)

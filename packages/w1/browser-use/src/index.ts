@@ -64,7 +64,7 @@ export function apply(ctx: Context, config: Config): void {
   ctx.systemPrompt.section({
     name: 'w1:browser-workflow',
     order: ctx.systemPrompt.getSectionOrder('TOOL_COMPUTER_USE'),
-    text: ({ scope }) => ctx.tools.get('w1_browser', scope) === tool ? BROWSER_GUIDANCE : '',
+    text: ({ scope, toolSet }) => ctx.tools.get('w1_browser', scope, toolSet) === tool ? BROWSER_GUIDANCE : '',
   })
   if (config.chromeRequest) {
     const request = config.chromeRequest
@@ -89,7 +89,7 @@ export function apply(ctx: Context, config: Config): void {
     })
     ctx.tools.register(chrome)
     ctx.systemPrompt.section({ name: 'w1:chrome-workflow', order: ctx.systemPrompt.getSectionOrder('TOOL_COMPUTER_USE'),
-      text: ({ scope }) => ctx.tools.get('w1_chrome', scope) === chrome ? CHROME_GUIDANCE : '' })
+      text: ({ scope, toolSet }) => ctx.tools.get('w1_chrome', scope, toolSet) === chrome ? CHROME_GUIDANCE : '' })
   }
 }
 

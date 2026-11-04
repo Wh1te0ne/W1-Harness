@@ -1,5 +1,7 @@
 # W1 品牌资源导航
 
+W1 Fold 为系列公共品牌。独立共享副本位于 `E:\ProjectDev\W1-Brand\assets\fold\1.1.0`，用途与维护导航在 `E:\ProjectDev\W1-Brand\README.md`；本仓库的源文件、运行资源和既有交付继续保留。
+
 取用图片请进入[按用途分类的素材包](../../releases/w1-brand/README.md)：头像、透明标志、应用图标、预览和矢量源文件。完整说明见[品牌规范](../../docs/W1品牌规范.md)。
 
 | 位置 | 用途 | 维护方式 |

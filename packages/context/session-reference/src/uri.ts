@@ -65,6 +65,7 @@ export interface ParsedSessionReferenceText {
  * as a reference only when it has a non-empty base64url-shaped payload, then
  * still fails if that candidate is not canonical.
  * @param text - host text to normalize.
+ * @param deepLinkScheme - optional W1 environment whose canonical desktop links are accepted.
  * @returns readable text and structured references in appearance order.
  */
 export function parseSessionReferenceText(text: string, deepLinkScheme?: SessionLinkScheme): ParsedSessionReferenceText {

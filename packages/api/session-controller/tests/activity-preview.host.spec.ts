@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
 import Sessions from '@deepseek-ai/dsh-session'
-import { createMessage } from '@deepseek-ai/dsh-llm'
+import { createMessage, createUserMessage } from '@deepseek-ai/dsh-llm'
 import { applySessionListMetadata } from '../src/list.ts'
 
 it('projects bounded assistant text without exposing prompts, reasoning or tool arguments', async () => {
@@ -9,7 +9,7 @@ it('projects bounded assistant text without exposing prompts, reasoning or tool 
   await ctx.plugin(Sessions)
   try {
     const session = ctx.sessions.create()
-    const prompt = session.append('user/message', { content: [{ type: 'text', text: 'private prompt' }], source: { kind: 'user' } }, { surfaceOp: 'append' })
+    const prompt = session.append('user/message', createUserMessage({ content: [{ type: 'text', text: 'private prompt' }], source: { kind: 'user' } }), { surfaceOp: 'append' })
     const start = applySessionListMetadata({ blank: true, lastPromptAt: null }, prompt)
     expect(start.preview).toBeUndefined()
     const message = session.append('assistant/message', { turn: 1, step: 0,

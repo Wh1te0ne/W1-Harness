@@ -1,3 +1,10 @@
+declare module '@deepseek-ai/dsh-llm/types' {
+  interface LlmRequestPurposeMap {
+    'reply-selection': true
+    'reply-suggestion': true
+  }
+}
+
 /** Tool-free model selection and reply generation with exact auxiliary request records. */
 import type { Context } from '@deepseek-ai/cordis'
 import { BlockAssembler, createUserMessage } from '@deepseek-ai/dsh-llm'

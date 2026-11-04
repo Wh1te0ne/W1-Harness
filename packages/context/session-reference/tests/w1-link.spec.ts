@@ -3,7 +3,7 @@ import { encodeSessionLink, decodeSessionLink } from '../src/link.ts'
 import { parseSessionReferenceText } from '../src/uri.ts'
 
 describe('W1 conversation links', () => {
-  it.each(['plain-id', '中文 / % # ? (test).', 'with\nnewline'])('round trips opaque IDs: %s', id => {
+  it.each(['plain-id', '中文 / % # ? (test).', 'with\nnewline'])('round trips opaque IDs: %s', (id) => {
     expect(decodeSessionLink(encodeSessionLink(id, 'w1-harness'), 'w1-harness')).toBe(id)
   })
   it('rejects another environment and noncanonical URL fields', () => {

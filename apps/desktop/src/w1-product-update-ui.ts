@@ -6,6 +6,7 @@ import type { DesktopUpdateState } from './ipc.ts'
 import type { UpdateDialogOptions } from './update-dialog.ts'
 import { renderReleaseNotes } from './release-notes.ts'
 import { W1_RELEASES } from './w1-product-updates.ts'
+import { resolveDesktopLocale, type DesktopLocale } from './locale.ts'
 
 const copy = {
   'zh-CN': { title: 'W1H 产品更新', current: 'W1H 当前版本', base: 'DSH 已整合基线', target: 'W1H 新版本',
@@ -26,10 +27,10 @@ const copy = {
     version: 'W1H {version}' },
 }
 
-/** User-owned confirmation path; every returned index belongs to the currently displayed choices. */
+/** User-owned confirmation path; rejected downloads or installs stop the flow and display their failed operation. */
 export async function showW1ProductUpdate(options: {
   readonly product: W1Product
-  readonly locale: 'zh-CN' | 'en'
+  readonly locale: DesktopLocale['id']
   readonly source: boolean
   readonly testing?: boolean
   readonly check: () => Promise<DesktopUpdateState>
@@ -40,7 +41,8 @@ export async function showW1ProductUpdate(options: {
 }): Promise<void> {
   const { product, source, updates, show } = options
   const discoveryOnly = source || options.testing === true
-  const t = copy[options.locale]
+  const t = options.locale === 'zh-CN' ? copy['zh-CN'] : copy.en
+  const messages = resolveDesktopLocale(options.locale).messages
   let state = await options.check()
   const release = () => ({ versions: [{ label: t.current, value: product.version },
     ...state.version === undefined ? [] : [{ label: t.target, value: state.version }]],
@@ -51,16 +53,27 @@ export async function showW1ProductUpdate(options: {
       buttons: [discoveryOnly ? t.releases : t.download, t.later], cancelId: 1, defaultId: 1 })
     if (response.response !== 0) return
     if (discoveryOnly) { await options.openExternal(W1_RELEASES); return }
-    state = await updates.download(state.version)
+    const version = state.version
+    try { state = await updates.download(version) }
+    catch (error) {
+      state = { phase: 'error', failedOperation: 'download', version,
+        message: error instanceof Error ? error.message : String(error) }
+    }
   }
   if (!discoveryOnly && state.phase === 'ready' && state.version !== undefined) {
     const response = await show({ type: 'info', title: t.title, message: t.ready, release: release(),
       buttons: [t.install, t.later], cancelId: 1, defaultId: 1 })
-    if (response.response === 0) await updates.install(state.version)
-    return
+    if (response.response !== 0) return
+    try { await updates.install(state.version); return }
+    catch (error) {
+      state = { phase: 'error', failedOperation: 'install', version: state.version,
+        message: error instanceof Error ? error.message : String(error) }
+    }
   }
   await show({ type: state.phase === 'error' ? 'error' : 'info', title: t.title,
-    message: state.phase === 'idle' ? t.latest : state.phase === 'error' ? t.failed : t.busy,
+    message: state.phase === 'idle' ? t.latest : state.phase === 'error'
+      ? state.failedOperation === 'download' ? messages.updateDownloadFailed
+        : state.failedOperation === 'install' ? messages.updateInstallFailed : t.failed : t.busy,
     ...state.phase === 'error' ? { detail: t.retry, ...state.message === undefined ? {} : { technicalDetails: state.message } } : {},
     release: release(), buttons: [t.close], cancelId: 0 })
 }

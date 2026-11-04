@@ -1,4 +1,5 @@
 import { expect, it } from 'vitest'
+import { PendingQuestion } from '@deepseek-ai/dsh-client-ui-user-questions/src/client/contract/slots.ts'
 import type { SessionListState, SessionSummary } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { SessionStatus } from '@deepseek-ai/dsh-client-ui-session/client'
@@ -17,7 +18,7 @@ it('groups by activity dates, orders attention and excludes archived, blank and 
   const list: SessionListState = { ids: rows.map(r => r.id), byId: Object.fromEntries(rows.map(r => [r.id, r])), phase: 'ready', projectionsBySession: {} }
   const statuses = new Map<SessionId, SessionStatus>([
     [sid('unread'), { running: false, completionUnread: true, pendingInteraction: undefined }],
-    [sid('waiting'), { running: true, completionUnread: false, pendingInteraction: { kind: 'question', key: 'question-1', sessionId: sid('waiting') } }],
+    [sid('waiting'), { running: true, completionUnread: false, pendingInteraction: new PendingQuestion(sid('waiting'), [{ id: 'question-1', question: 'Continue?' }]) }],
   ])
   const result = deriveActivity(list, [], { pinnedSessionIds: [sid('earlier')], archivedSessionIds: [sid('archived')], archivedFilter: 'show' }, statuses, now)
   expect(result.attention.map(r => r.id)).toEqual(['waiting', 'unread', 'running'])

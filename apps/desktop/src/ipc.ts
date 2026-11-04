@@ -1,11 +1,15 @@
+import type { DesktopFileActions } from '@deepseek-ai/dsh-client-ui-file-actions/types'
 /** Typed preload operations exposed only by the Electron shell. */
 
 import type { DesktopKeyboardApi, DesktopShortcutsApi } from '@deepseek-ai/dsh-client-shortcuts/protocol'
 import type { IpcMainInvokeEvent } from 'electron'
 import type { DesktopBrowserBridge } from '@deepseek-ai/dsh-client-ui-sidebar-browser/types'
+import type { DesktopFileDrag } from '@deepseek-ai/dsh-util-file-drag'
 
 /** IPC channel names kept private to the desktop application bundle. */
 export const DESKTOP_IPC = {
+  fileSave: 'dsh-desktop:file-save',
+  clipboardImageRead: 'dsh-desktop:clipboard-image-read',
   shortcutsInput: 'dsh-desktop:shortcuts-input',
   shortcutsCloseWindow: 'dsh-desktop:shortcuts-close-window',
   shortcutsGet: 'dsh-desktop:shortcuts-get',
@@ -23,6 +27,10 @@ export const DESKTOP_IPC = {
   browserCreateRequested: 'w1-desktop:browser-create-requested',
   browserAutomation: 'w1-desktop:browser-automation',
   directoryPick: 'dsh-desktop:directory-pick',
+  fileDragPrepare: 'dsh-desktop:file-drag-prepare',
+  fileDragCancel: 'dsh-desktop:file-drag-cancel',
+  fileDragStart: 'dsh-desktop:file-drag-start',
+  fileDragRelease: 'dsh-desktop:file-drag-release',
   deviceInfo: 'dsh-desktop:device-info',
   remoteManage: 'w1-desktop:remote-manage',
   notificationShow: 'w1-desktop:notification-show',
@@ -46,7 +54,7 @@ export const DESKTOP_IPC = {
 } as const
 
 /** Desktop release update state rendered by desktop-owned UI. */
-export type DesktopUpdatePreparationFailureKind = 'stop-failed' | 'tasks-changed' | 'tasks-unavailable'
+export type DesktopUpdatePreparationFailureKind = 'stop-failed' | 'tasks-changed' | 'tasks-unavailable' | 'fullscreen-timeout'
 
 export interface DesktopUpdateState {
   readonly phase: 'idle' | 'checking' | 'available' | 'downloading' | 'verifying' | 'installing' | 'ready' | 'error'
@@ -71,6 +79,7 @@ export type DesktopUpdateFailureKind =
   | 'stop-failed'
   | 'tasks-changed'
   | 'tasks-unavailable'
+  | 'fullscreen-timeout'
 
 /** Semantic status content; actions open main-process confirmation dialogs only. */
 export interface DesktopUpdatePresentation {
@@ -94,6 +103,7 @@ export interface DesktopAttentionRequest {
 }
 /** Product documents cannot supply update versions, package URLs, or installation authorization. */
 export interface DshDesktopProductApi {
+  readonly fileActions: DesktopFileActions
   readonly protocolVersion: 1
   /** Conversation links belong to this desktop environment. */
   readonly sessions: {
@@ -112,6 +122,7 @@ export interface DshDesktopProductApi {
     onClick(listener: (id: string) => void): () => void
   }
   readonly browser: DesktopBrowserBridge
+  readonly fileDrag: DesktopFileDrag
   readonly keyboard: DesktopKeyboardApi
   readonly shortcuts: DesktopShortcutsApi
   /**

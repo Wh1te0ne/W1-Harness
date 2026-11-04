@@ -2,33 +2,31 @@
 
 ## W1 Harness downstream workspace
 
-Read [W1](docs/W1-Harness.md), [versions](docs/版本与发布.md) and [releases](docs/发布操作.md). Keep W1H binary and DSH source updates separate. Preserve installed DSH/plugins; authorized private-data migration requires backups and preserves originals. Keep real credentials/user data outside this repository. Use PowerShell 7.
+Read [W1](docs/W1-Harness.md), [versions](docs/版本与发布.md) and [releases](docs/发布操作.md). Separate W1H binary/DSH source updates. Preserve installed DSH/plugins; back up authorized private-data migrations and preserve originals. Keep credentials/user data outside this repository. Use PowerShell 7.
 
-Model API and reasoning-effort failures: see [configuration, incident, and diagnostics](docs/模型接口与思考强度排查.md).
+Model API/reasoning-effort failures: [diagnostics](docs/模型接口与思考强度排查.md).
 
-Startup latency: see [plugin timings and isolated measurements](docs/启动性能排查.md); keep diagnostic launches and candidate builds separate from the running daily instance.
+For [startup diagnosis](docs/启动性能排查.md), isolate diagnostic launches/candidate builds from daily.
 
-**Development order: source Test → explicitly approved daily promotion → separately authorized GitHub release.** Desktop W1 Harness Test must launch `.work/self-dev/scripts/w1/Start-W1Test.ps1`. Before promotion, reconcile all prior daily changes into Test and verify the candidate actually loads; a queued build alone is not Test acceptance. See [workflow](docs/开发与上游维护.md#w1-self-development).
+**Order: source Test → explicitly approved daily promotion → separately authorized GitHub release.** Test must launch `.work/self-dev/scripts/w1/Start-W1Test.ps1`. Before promotion, reconcile all prior daily changes into Test and verify actual candidate loading; queued builds are not acceptance.
 
-**Default implementation edits/builds to the [source-test worktree](docs/开发与上游维护.md#w1-self-development):** prepare and verify it; never fall back to daily. Docs-only maintenance is exempt. Promote only on explicit instruction: stage verified artifacts, save handoff, finish the turn; apply through the external launcher after daily exit.
+**Edit/build in [source Test](docs/开发与上游维护.md#w1-self-development).** Prepare and verify there; never fall back to daily. Docs-only maintenance is exempt. Only on explicit promotion instruction: stage verified artifacts, save handoff, finish the turn; apply via external launcher after daily exit.
 
-Use the [daily launcher](scripts/w1/Start-W1.ps1); [baseline](scripts/w1/Start-W1Baseline.ps1) is disposable. Follow [local iteration](docs/开发与上游维护.md): targeted builds/checks; packaging, installer cycles and full checks require delivery/contract need. Isolate release builds. Maintain the [work record](docs/工作记录.md); the manifest exempts Chinese-only W1 docs, otherwise retain bilingual rules.
+Use [daily launcher](scripts/w1/Start-W1.ps1); [baseline](scripts/w1/Start-W1Baseline.ps1) is disposable. [Local workflow](docs/开发与上游维护.md): targeted builds/checks; packaging, installer cycles/full checks require delivery/contract need. Isolate release builds in separate checkouts. Maintain [work record](docs/工作记录.md); only manifest-exempt Chinese-only W1 docs bypass bilingual rules.
 
-DeepSeek Harness is an all-plugin Cordis agent harness. Read [docs/architecture.md](docs/architecture.md) before changing `packages/`; follow [docs/AGENTS.md](docs/AGENTS.md) for documentation.
+DeepSeek Harness is an all-plugin Cordis agent harness. Before `packages/` changes read [architecture](docs/architecture.md); for docs follow [docs/AGENTS.md](docs/AGENTS.md).
 
 ## Pre-stable APIs and released Session data
 
-Public APIs are pre-stable; update every consumer. Follow [version/status](docs/session-format-status.md) and [type acknowledgements](docs/cookbook/reviewing-persistence-type-changes.md). [Adjacent migration](.agents/notes/implemented/architecture/2026-08-31-released-session-format-migrations.md) may add a version-named successor but never move, overwrite, or delete committed generations; predecessors imply neither fallback nor downgrade support. SQLite uses monotonic `SCHEMA_VERSION`.
-
-Acknowledge [declared persistence-type changes](docs/cookbook/reviewing-persistence-type-changes.md).
+Public APIs are pre-stable; update every consumer. Follow [version/status](docs/session-format-status.md); acknowledge [declared persistence-type changes](docs/cookbook/reviewing-persistence-type-changes.md). [Adjacent migration](.agents/notes/implemented/architecture/2026-08-31-released-session-format-migrations.md) may add a version-named successor but never move, overwrite, or delete committed generations; predecessors imply neither fallback nor downgrade support. SQLite uses monotonic `SCHEMA_VERSION`.
 
 Record each externally perceptible breaking change immediately in an [upgrade guide](.agents/skills/dsh-create-upgrade-guide/SKILL.md).
 
 **Application launch.** Only `dsh` profiles launch supported Node apps; package bins, demos, and public SDK argv escapes are forbidden ([rule](docs/architecture.md#application-launch)).
 
-W1 remote companion and NAS relay: see [deployment and verification](docs/远程访问与NAS中继.md) and [component README](apps/w1-remote/README.md). The relay is standalone forwarding infrastructure, not a Harness execution profile; keep credentials and production history out of its package.
+[W1 remote companion/NAS relay](docs/远程访问与NAS中继.md) ([README](apps/w1-remote/README.md)): standalone forwarding, not a Harness execution profile. Exclude credentials/production history from its package.
 
-W1 built-in Windows notifications and legacy-bundle migration: see [notification ownership and verification](packages/w1/notifications/README.md). Preserve the original DSH profile and keep native IPC restricted to the product window.
+[W1 Windows notifications/legacy-bundle migration](packages/w1/notifications/README.md): preserve the original DSH profile; restrict native IPC to the product window.
 
 ## Repository layout
 
@@ -98,10 +96,10 @@ Package groups: [packages/README.md](packages/README.md). [Experimental status](
 
 ## Commands
 
-Use [development](docs/development.md) and package.json for commands. Daily W1 builds follow [the local workflow](docs/开发与上游维护.md); release builds run in an isolated checkout.
+Commands: [development](docs/development.md) and package.json.
 
 ```sh
-pnpm install
+pnpm install            # pnpm workspaces, node >=24.9
 pnpm run build          # artifacts plus aggregate checks
 pnpm run build:artifacts
 pnpm run build:check
@@ -117,14 +115,14 @@ pnpm run hygiene
 
 ### Host sandbox failures
 
-If a required `gh`, `pnpm`, build, test, or generator command fails because the sandbox blocks credentials, network, IPC, watching, or nested `sandbox-exec`, retry unchanged with the narrowest host escalation. Require sandbox evidence; never bypass test failures or the product sandbox.
+For required `gh`/`pnpm`/build/test/generator commands blocked by sandbox credentials, network, IPC, watching, or nested `sandbox-exec`, retry unchanged with the narrowest host escalation. Require sandbox evidence; never bypass test failures or the product sandbox.
 
 ### Run relevant checks locally
 
 Before pushing, follow [dsh-pre-push-checks](.agents/skills/dsh-pre-push-checks/SKILL.md); report only commands run. After `gh stack sync`, validate immediately; do not merge before checks pass.
 
 - Match evidence to the surface: focused behavior tests, model/user-output snapshots, `doc-sync` for docs, built smokes for published paths, and real-API e2e for providers.
-- Never default to the full suite or repeat a passing check for commit or push. CI owns exhaustive coverage and the platform matrix; rehearse all locally only by explicit request, for CI diagnosis, or for an irreducibly repository-wide change.
+- Never default to full suites or repeat passing checks for commits/pushes. CI owns exhaustive coverage/platform matrices; local full runs require explicit request, CI diagnosis, or irreducibly repository-wide changes.
 - `test:coverage`, not `test`, is the CI coverage gate ([why](docs/testing.md)).
 - Develop with `build:artifacts`; before claiming completion, run `build:check` after the latest `build:artifacts`, or `build` ([layout](docs/development.md#typescript-project-layout)).
 - **Web browser automation and GIF recording:** launch with `pnpm dsh web --patch apps/web/tests/pin-browse-picker.overlay.yml` to use the [in-page directory picker](apps/web/tests/pin-browse-picker.overlay.yml); omit this override only when testing native picker behavior explicitly.
@@ -138,12 +136,13 @@ Real-API tests/demos read `DEEPSEEK_API_KEY`, optional `DEEPSEEK_BASE_URL`, and 
 ## Conventions
 
 - Packages use `@deepseek-ai/dsh-<name>`; vendor is [rescoped](docs/rescope.md) and `private: true`. Harness packages declare `@deepseek-ai/cordis` in `peerDependencies`/`devDependencies`. Workspace dependency sections use DSH `workspace:*`, vendor/native `workspace:~` ([rules](.agents/notes/implemented/process/2026-08-10-npm-release-sequences.md)).
-- ESM everywhere (`"type": "module"`). Use package names across packages and `.ts` in local relative imports. Config subprocesses run built `lib/` under plain Node; source regressions use their declared launcher ([testing policy](docs/testing.md#test-subprocess-launch-modes)). The `dsh` CLI source launch runs through tsx's ESM-only hook (`node --import tsx/esm`); modules it reaches must stay ESM (no CJS-only exports) — Node's native TypeScript modes are unavailable across the engines range ([source-launch contract](.agents/notes/implemented/architecture/2026-07-29-dsh-source-launch-tsx-esm.md)). Raw/Web `cordis.yml` bare plugins must appear in their resolver manifest's `dependencies`; `verify-cordis-config` enforces it.
-- **Registrations are effects**: every contribution goes through `ctx.effect()` / `ctx.on()`; a registry's `register()` returns the disposer.
+- ESM everywhere (`"type": "module"`). Use package names across packages and `.ts` in local relative imports. Config subprocesses run built `lib/` under plain Node; source regressions use their declared launcher ([testing policy](docs/testing.md#test-subprocess-launch-modes)). The `dsh` CLI source launch runs through tsx's ESM-only hook (`node --import tsx/esm`); modules it reaches must stay ESM (no CJS-only exports) ([source-launch contract](.agents/notes/implemented/architecture/2026-07-29-dsh-source-launch-tsx-esm.md)). Raw/Web `cordis.yml` bare plugins must appear in their resolver manifest's `dependencies`; `verify-cordis-config` enforces it.
+- **Registrations are effects**: every contribution goes through `ctx.effect()` / `ctx.on()`; a registry's `register()` returns the disposer, directly or through its documented registration handle.
 - **Typed events use declaration merging** and merge-extensible maps. Event JSDoc needs `@mode` and payload `@param`. Public service methods document parameters and non-void returns. `SessionEventMap` members are required-on-read unless the envelope carries `ignorable: true`. Bump `SESSION_FORMAT_VERSION` only when existing discriminators cannot prevent unsafe interpretation; same-version changes require safe reader behavior ([review](.agents/notes/implemented/process/2026-10-08-session-reader-compatibility-review.md)).
 - **Switch on discriminant tags.** Closed unions end in `assertNever`; merge-extensible unions fall through a documented default.
 - **Waterfall listeners MUST call `next()`** to delegate; returning without it short-circuits the chain ([semantics](docs/cordis-primer.md#cordis-waterfall-semantics)).
 - **Model-visible ⟺ logged**: anything that reaches a model request must be reconstructable from the session log; a new model-visible input requires a session event.
+- **Session projections:** follow [dsh-session-projection](.agents/skills/dsh-session-projection/SKILL.md) when creating, extending, or reviewing one, or migrating a fold helper to one.
 - **Plugins, not loop changes**: new behavior goes on documented extension points; changing `agent-loop` requires updating docs/architecture.md.
 - **A capability seam comprises Service Definition / Service Provider / Consumer roles.** It is complete, never one role; split only when roles evolve independently ([glossary](docs/glossary.md#capability-seam)).
 - **Prefer maintained dependencies over hand-rolling** when they genuinely delete owned code and tests ([policy](.agents/notes/implemented/process/2026-07-26-dependencies-over-hand-rolling.md)).
@@ -163,27 +162,28 @@ Real-API tests/demos read `DEEPSEEK_API_KEY`, optional `DEEPSEEK_BASE_URL`, and 
 - **Tests describe behavior, not correctness.** Change obsolete behavior with its tests; explain why in the PR.
 - **Create Agent Notes only for durable decision rationale;** mechanical/local edits are exempt, including local UI changes ([scope](.agents/notes/README.md#when-to-write-one)). Archived notes are frozen: never edit or treat them as current authority ([archive policy](.agents/notes/README.md#archiving-and-deletion)).
 - **Official plugin artwork:** use [dsh-official-plugin-artwork](.agents/skills/dsh-official-plugin-artwork/SKILL.md) for official and official experimental plugin icons; obtain designer approval before landing new glyphs.
-- **Client UI copy is locale-owned.** Route product text through typed dictionaries and `t` or localized primitive props; `verify-client-ui-i18n` rejects hardcoded copy ([decision](.agents/notes/implemented/architecture/2026-08-23-locale-owned-client-ui-copy.md)).
+- **Client UI copy is locale-owned.** Route product text through typed dictionaries and `t` or localized primitive props; `verify-client-ui-i18n` rejects hardcoded copy ([decision](.agents/notes/implemented/architecture/2026-08-23-locale-owned-client-ui-copy.md)). English copy, including plugin titles, uses sentence case ([rule](.agents/skills/dsh-prose-standard/SKILL.md#required-coverage-by-prose-location)).
 - **Testing policy** — [docs/testing.md](docs/testing.md). Every non-trivial model- or product-user-visible change updates a keyless recorded-session snapshot; [snapshot ownership](snapshots/AGENTS.md) reserves the top-level tree for session-driven cases and keeps other expected output owner-local. Fixtures replay on macOS/Linux; fix fixtures, not normalizers.
 - **Design each tool's UI presentation up front.** Host presenters stay pure; Web cards derive from raw events and persisted result metadata ([cookbook](docs/cookbook/adding-a-tool.md)).
 - **Plan unit, e2e, and snapshot coverage** for capability seams, lifecycle paths, and transcript output; include missing snapshot-harness support in the same change.
 - **Both SDKs project the loop.** Agent-loop, session-lifecycle, and `SessionEventMap` changes update the TypeScript and Python SDK expected outputs in the same PR; `pnpm run test` covers neither ([surfaces](docs/testing.md#when-a-snapshot-test-is-required)).
 - **Choose PR history deliberately.** Split independent changes and fix the introducing PR before propagation. Standalone/stack branches may merge-forward or rebase. Rewrites use `--force-with-lease`, abort on remote movement, never raw `--force`; preserve an in-progress merge-forward checkpoint before taking a newer base ([rationale](.agents/notes/implemented/process/2026-08-02-native-github-stacks-and-optional-rebases.md)).
 - **Labels:** one PR `kind/*`, all material `area/*`, and native Issue Type ([taxonomy](.agents/notes/implemented/process/2026-08-08-unified-github-label-taxonomy.md)).
+- **PR descriptions:** write and update every PR description with [dsh-pr-description](.agents/skills/dsh-pr-description/SKILL.md).
 - TODO markers: `FIXME`/`TODO`/`XXX` by urgency ([semantics](docs/development.md)).
 - Files end with exactly one trailing newline; `git diff --cached --check` (pre-commit) gates it.
 
 ## Defensive patterns
 
-Read [docs/defensive-patterns/README.md](docs/defensive-patterns/README.md) before changing a package surface, remote service, client component or state, conversation or Session behavior, or lifecycle, concurrency, subprocess, and teardown code. Its [review principles](docs/defensive-patterns/README.md#why-these-rules) apply per artifact.
+Before package surfaces, remote services, client components/state, conversation/Session behavior, or lifecycle/concurrency/subprocess/teardown changes, read [defensive patterns](docs/defensive-patterns/README.md). Apply its [review principles](docs/defensive-patterns/README.md#why-these-rules) per artifact.
 
 ## Type safety and documentation
 
-Everything compiles under `strict: true` with `noImplicitAny`; every remaining `any` explains why narrowing is infeasible. Every module and export has concise JSDoc for its non-obvious contract; function-like exports include `@param`/`@returns`, as enforced by `verify-export-jsdoc`. Heritage-declared members, plugin-protocol slots, and constructors keep their docs at the declaring Service Definition, protocol, or class.
+Compile with `strict: true`/`noImplicitAny`; explain why each remaining `any` cannot narrow. Document each module/export's non-obvious contract with concise JSDoc; function-like exports need `@param`/`@returns` (`verify-export-jsdoc`). Document heritage-declared members, plugin-protocol slots, and constructors at their declaring Service Definition, protocol, or class.
 
-Comments and docs state complete contracts and context, not reasoning transcripts. Use direct, concrete terms. Do not use metaphors. Before writing `contract`, `boundary`, or `shape`, ask whether a more exact term names the subject: write `response fields`, `JSON validation`, or `ESM exports` instead of `response shape`, `validation boundary`, or `module shape`. Keep `contract` for preconditions, postconditions, invariants, compatibility promises, and other obligations that callers, callees, implementers, providers, producers, or consumers rely on. Keep a literal process, wire, security, transaction, or lifecycle boundary. Do not narrate control flow or tests, preserve review history, or restate code. Keep behavior, failure, timing, ownership, and safe-use facts; link the rationale. Use [dsh-prose-standard](.agents/skills/dsh-prose-standard/SKILL.md) for decisions. Wire mechanically checkable invariants into an executed top-level gate and prove each changed acceptance path rejects an invalid case. Use narrow, justified exceptions instead of disabling a rule globally.
+Comments/docs state complete contracts and context, not reasoning transcripts. Use direct, concrete terms without metaphors. Prefer exact subjects (`response fields`, `JSON validation`, `ESM exports`) over vague `contract`, `boundary`, or `shape`. Reserve `contract` for preconditions, postconditions, invariants, compatibility promises, and other participant obligations; retain literal process, wire, security, transaction, and lifecycle boundaries. Omit control-flow/test narration, review history, and code restatement; preserve behavior, failure, timing, ownership, and safe-use facts with rationale links. Follow [dsh-prose-standard](.agents/skills/dsh-prose-standard/SKILL.md). Enforce mechanically checkable invariants in an executed top-level gate; prove each changed acceptance path rejects an invalid case. Exceptions must be narrow and justified, never global rule disabling.
 
-Docs accompany every code change: update affected README and JSDoc contracts together. Routine bilingual work follows [docs/AGENTS.md](docs/AGENTS.md); only explicit user invocation may run `dsh-translate-docs`. Current-state prose, one physical line per paragraph, one home per fact, and word budgets live there.
+Every code change updates affected README/JSDoc contracts together. Follow [docs/AGENTS.md](docs/AGENTS.md) for bilingual, current-state, one-line paragraphs, single fact ownership, and budgets; run `dsh-translate-docs` only on explicit user invocation.
 
 ## Editing these instructions
 

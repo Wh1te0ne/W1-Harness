@@ -34,6 +34,6 @@ jobs:
         run: corepack pnpm run build
       - name: Product update and W1 component checks
         run: |
-          corepack pnpm exec vitest run apps/desktop/tests/w1-product-updates.spec.ts apps/desktop/tests/update-coordinator.spec.ts apps/desktop/tests/update-schedule.spec.ts apps/desktop/tests/w1-upstream.spec.ts apps/desktop/tests/w1-upstream-ui.spec.ts apps/desktop/tests/w1-taskbar.spec.ts packages/w1/browser-use/tests packages/w1/chrome-use/tests packages/w1/tool-selection/tests
+          corepack pnpm exec vitest run apps/desktop/tests/w1-release.spec.ts apps/desktop/tests/w1-product-updates.spec.ts apps/desktop/tests/update-coordinator.spec.ts apps/desktop/tests/update-schedule.spec.ts apps/desktop/tests/w1-upstream.spec.ts apps/desktop/tests/w1-upstream-ui.spec.ts apps/desktop/tests/w1-taskbar.spec.ts packages/w1/browser-use/tests packages/w1/chrome-use/tests packages/w1/tool-selection/tests
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node --test apps/w1-remote/tests/remote.test.mjs apps/w1-remote/tests/connection.test.mjs
+          node --test apps/w1-remote/tests/remote.test.mjs apps/w1-remote/tests/connection.test.mjs scripts/w1/tests/collect-release.test.mjs

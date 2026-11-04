@@ -362,6 +362,11 @@ export const Config: z<Config> = z.object({
   })).default({}),
 })
 
+/** Resolve policy for an optional purpose contributed by a consuming plugin. */
+function resolveRequestTransport(config: Config, purpose: string | undefined): LlmRequestTransport | undefined {
+  return purpose === undefined ? undefined : config.requestTransportByPurpose?.[purpose]
+}
+
 /**
  * The abstract `llm` service: an adapter registry plus a streaming model-call
  * API, interceptable via the `llm/stream` waterfall.
@@ -750,12 +755,16 @@ export class LlmRuntime extends TypertRemoteService {
       }
       seen.add(model.id)
       const inputModalities = this.detachedModalities(model.inputModalities)
+      const badge = model.badge
       return {
         provider: model.provider,
         id: model.id,
         name: model.name,
         ...model.description === undefined ? {} : { description: model.description },
         ...inputModalities === undefined ? {} : { inputModalities },
+        ...badge === undefined ? {} : {
+          badge: { text: typeof badge.text === 'string' ? badge.text : { ...badge.text }, tone: badge.tone },
+        },
       }
     })
   }
@@ -1187,7 +1196,7 @@ export class LlmRuntime extends TypertRemoteService {
     options: GenerateOptions,
     prepared?: PreparedDispatch,
   ): AsyncIterable<StreamChunk> {
-    const transport = options.purpose === undefined ? undefined : this.config.requestTransportByPurpose?.[options.purpose]
+    const transport = resolveRequestTransport(this.config, options.purpose)
     const request = transport === undefined ? options : Object.freeze({
       ...options, transport: Object.freeze({
         ...options.transport, ...transport,

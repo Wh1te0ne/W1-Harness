@@ -11,8 +11,6 @@ English | [中文](README.zh.md)
 
 `dsh-session-reference` lets a conversation reference other sessions: a host turns a `@label` mention into a canonical URI, and the service prepares a bounded, read-only snapshot of each referenced session as durable, untrusted background context for the model. Candidate discovery ranks other sessions by working-directory affinity and labels them with their latest titles. Snapshots are immutable after capture and carry a fixed warning that forbids following instructions, permission claims, or tool requests inside them. It is an opt-in service for hosts that support cross-session mentions; it consumes `ctx.sessionQuery` and needs no SQLite FTS.
 
-W1 opts into `deepLinkScheme`: `w1-harness` for daily/installed Desktop, `w1-harness-test` for Test. Pasting a matching `scheme://session/<encoded-id>` link into a direct user message uses the existing bounded snapshot and spill flow. Another environment is rejected. Snapshots contain the current conversation surface, including retained compaction summaries; they do not grant access to another computer. The browser-safe `./link` export owns the canonical ID codec shared with Desktop.
-
 ## Table of Contents
 
 - [Use this package](#use-this-package)
@@ -30,6 +28,8 @@ W1 opts into `deepLinkScheme`: `w1-harness` for daily/installed Desktop, `w1-har
 Enable this service when hosts should let a user mention another session and give the model its context. It works with any session-query backend because it consumes the backend-independent compact checkpoint marker.
 
 ### Mention syntax
+
+W1 opts into `deepLinkScheme`: `w1-harness` for daily/installed Desktop, `w1-harness-test` for Test. Pasting a matching `scheme://session/<encoded-id>` link into a direct user message uses the existing bounded snapshot and spill flow. Another environment is rejected. Snapshots contain the current conversation surface, including retained compaction summaries; they do not grant access to another computer. The browser-safe `./link` export owns the canonical ID codec shared with Desktop.
 
 A canonical mention is `@[label](dsh-session:<base64url-encoded-id>)` in Markdown, or the bare `dsh-session:` URI; every JavaScript string session id round-trips exactly. The service rewrites mentions into readable `@label` text in the message and returns the structured references. Explicit Markdown mentions reject malformed URIs; empty or punctuation-only scheme mentions stay ordinary discussion text.
 
@@ -52,7 +52,7 @@ For a truncated reference, an optional spill backend saves the full captured tex
 | `maxReferenceBytes` | automatic | Explicit maximum serialized JSON bytes per source; overrides the automatic budget exactly |
 | `referenceContextFraction` | `0.2` | Context-window fraction per source, from `0` to `1` |
 
-The automatic budget is `max(65536, floor(contextWindow × 4 × referenceContextFraction))` bytes per source. Model context capacity is measured in tokens; four bytes per token is a sizing heuristic, not an exact token conversion. A missing route, LLM service, adapter, or capacity uses 64 KiB; other model metadata lookup errors and cancellation fail preparation.
+The automatic budget is `max(65536, floor(contextWindow × 4 × referenceContextFraction))` bytes per source. Model context capacity is measured in tokens; four bytes per token is a sizing heuristic, not an exact token conversion. A missing LLM service, adapter, or capacity uses 64 KiB; other model metadata lookup errors and cancellation fail preparation.
 
 The generated [configuration catalog](../../../docs/config-catalog.md#deepseek-aidsh-session-reference) is the exhaustive source for every accepted field and its JSDoc.
 
@@ -72,7 +72,7 @@ Preparation reads each referenced session's current surface exactly once, when t
 
 The resolver discovers optional storage through `ctx.get("spillStore")` and saves only truncated references. Storage ownership is the target session; the source descriptor identifies the referenced session and label, without a fabricated tool call. Cancellation is checked after the asynchronous save and prevents publication even if an artifact was written. Artifact expiry remains the backend's existing policy.
 
-The budget uses the provider and model captured after `system-prompt/assemble` completes for the target agent. Direct `prepare` calls before any assembly use agent options; session headers do not select the budget model. Diagnostic assemblies without an agent do not affect captured routes.
+The budget uses the provider and model passed in `agent/pre-step.modelSelection`, so reference sizing follows the route captured for that step. Direct `prepare` callers supply the route explicitly; prompt variables, Agent options, and stored headers do not implicitly select it.
 
 ### Source map
 

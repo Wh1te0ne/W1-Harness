@@ -1,11 +1,11 @@
 import { Context } from '@deepseek-ai/cordis'
 import AgentRegistry from '@deepseek-ai/dsh-agent'
-import Sessions, { SessionId, SessionLogOffset } from '@deepseek-ai/dsh-session'
+import Sessions, { Session, SessionId, SessionLogOffset } from '@deepseek-ai/dsh-session'
 import { createMessage } from '@deepseek-ai/dsh-llm'
 import { afterEach, expect, it, vi } from 'vitest'
 import { ApiSessionList } from '../src/list.ts'
 import type { SessionSummary } from '../src/types.ts'
-import { installSessionReadTestServices, testSessionPersistence } from './test-remote.ts'
+import { installSessionReadTestServices, testSessionPersistence, TEST_IMAGE_LIMITS } from './test-remote.ts'
 
 const contexts: Context[] = []
 afterEach(async () => { await Promise.all(contexts.splice(0).map(ctx => ctx.fiber.dispose())) })
@@ -15,10 +15,16 @@ async function fixture() {
   contexts.push(ctx)
   await ctx.plugin(Sessions)
   await ctx.plugin(AgentRegistry)
+  ctx.provide('attachments', { imageLimits: TEST_IMAGE_LIMITS } as never)
   installSessionReadTestServices(ctx)
   const list = new ApiSessionList(ctx, 16)
-  const blank = ctx.sessions.prepare(SessionId('unstarted'), { meta: { cwd: '/workspace' } })
-  const history = ctx.sessions.prepare(SessionId('history'), { meta: { cwd: '/workspace' } })
+  await list.initialize()
+  const storedSession = (name: string) => {
+    const id = SessionId(name)
+    return Session.create(id, undefined, { ...Session.create(id).header, cwd: '/workspace' })
+  }
+  const blank = storedSession('unstarted')
+  const history = storedSession('history')
   history.append('turn/start', { turn: 1 })
   history.append('assistant/message', { turn: 1, step: 0, stream: [], message: createMessage({
     role: 'assistant', content: [{ type: 'text', text: 'Existing reply without opening the conversation' }],

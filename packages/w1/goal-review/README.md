@@ -53,6 +53,8 @@ Mount this plugin beside the W1 Web services. The shipped W1 composition explici
 <details>
 <summary>Implementation internals</summary>
 
+Activation awaits the durable projection handle before installing review listeners. Readers use that handle for the exact Session and keep the registry's disposal guarantees.
+
 The `goal/before-model-complete` waterfall runs after goal-tool authority and revision checks. An exact goal/evidence attempt is flushed before dispatch; the complete request and result stay outside main history. Changed goals, new human input and cancellation invalidate pending work. Repeated evidence reuses a recorded verdict; interrupted or failed attempts do not automatically buy another review. Runtime failures disarm continuation without marking the goal blocked. The Goal service still performs the final compare-and-set.
 
 [The implementation](src/index.ts) owns reversible registrations and [composition tests](tests/composition.spec.ts) exercise the Loader and real services with external model or network fixtures.

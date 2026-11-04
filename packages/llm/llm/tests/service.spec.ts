@@ -130,7 +130,7 @@ describe('LlmRuntime', () => {
       expect(original.transport).toEqual({ headers: { 'x-other': 'kept' } })
       expect(Object.isFrozen(adapter.lastOptions?.transport)).toBe(true)
       for (const purpose of [undefined, 'compaction', 'side-chat'] as const) {
-        await collect(ctx.llm.stream({ provider: 'any-provider', model: 'any-model', messages: [], purpose }))
+        await collect(ctx.llm.stream({ provider: 'any-provider', model: 'any-model', messages: [], ...purpose === undefined ? {} : { purpose } }))
         expect(adapter.lastOptions?.transport).toBeUndefined()
       }
     } finally { await ctx.fiber.dispose() }
@@ -714,6 +714,22 @@ describe('LlmRuntime', () => {
     await expect(ctx.llm.listModels('catalog')).resolves.toEqual([{
       provider: 'catalog', id: 'fast', name: 'source mutated', description: 'Low latency', inputModalities: ['text'],
     }])
+  })
+
+  it('detaches advertised model badges, including their translations', async () => {
+    const ctx = new Context()
+    await ctx.plugin(LlmRuntime)
+    const translated = { text: { en: 'New', zh: '新' }, tone: 'info' as const }
+    const literal = { text: '1017', tone: 'neutral' as const }
+    ctx.llm.registerAdapter(['catalog'], new CatalogAdapter({ id: 'catalog', name: 'Catalog' }, [
+      { provider: 'catalog', id: 'new', name: 'New', badge: translated },
+      { provider: 'catalog', id: 'dated', name: 'Dated', badge: literal },
+    ]))
+    const [first, second] = await ctx.llm.listModels('catalog')
+    expect(first?.badge).toEqual(translated)
+    expect(first?.badge).not.toBe(translated)
+    expect(first?.badge?.text).not.toBe(translated.text)
+    expect(second?.badge).toEqual(literal)
   })
 
   it('defaults adapters to their route name and an empty advisory model list', async () => {

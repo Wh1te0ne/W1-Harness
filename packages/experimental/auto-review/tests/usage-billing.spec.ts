@@ -7,13 +7,14 @@ import { Context } from '@deepseek-ai/cordis'
 import Loader from '@deepseek-ai/cordis-plugin-loader'
 import Include from '@deepseek-ai/cordis-plugin-include'
 import { provideWorkingDirectoryFixture } from '@deepseek-ai/dsh-agent-loop-testkit'
-import type { Agent } from '@deepseek-ai/dsh-agent'
+import AgentRegistry, { type Agent } from '@deepseek-ai/dsh-agent'
 import LlmRuntime, { LlmAdapter, createUserMessage, createMessage, ToolCallId, type GenerateOptions, type StreamChunk } from '@deepseek-ai/dsh-llm'
 import SessionStore, { SessionId } from '@deepseek-ai/dsh-session'
 import Projections from '@deepseek-ai/dsh-session-projection'
 import { SqliteSessionQueryEngine } from '@deepseek-ai/dsh-session-query-sqlite'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import Tools, { defineContentToolFixture } from '@deepseek-ai/dsh-tools'
+import Tools from '@deepseek-ai/dsh-tools'
+import { defineContentToolFixture, executeToolFixture } from '@deepseek-ai/dsh-tool-testkit'
 import Approval from '@deepseek-ai/dsh-user-approval'
 import PermissionPresets, { AUTO_PRESET } from '@deepseek-ai/dsh-permission-presets'
 import * as AutoReview from '../src/index.ts'
@@ -71,9 +72,9 @@ it('Loader-composed reviews persist parent and child costs in one ledger and lea
     run() { throw Error('Billing fixture does not run shell commands') },
     start() { throw Error('Billing fixture does not run shell commands') },
   })
-  const modules = new Map<string, unknown>([['llm', LlmRuntime], ['sessions', SessionStore], ['query', SqliteSessionQueryEngine], ['projections', Projections], ['prompt', SystemPrompt], ['tools', Tools], ['approval', Approval], ['permissions', PermissionPresets], ['review', AutoReview]])
+  const modules = new Map<string, unknown>([['llm', LlmRuntime], ['sessions', SessionStore], ['agents', AgentRegistry], ['query', SqliteSessionQueryEngine], ['projections', Projections], ['prompt', SystemPrompt], ['tools', Tools], ['approval', Approval], ['permissions', PermissionPresets], ['review', AutoReview]])
   const file = join(directory, 'cordis.yml')
-  await writeFile(file, '- name: llm\n  config: { requestTransportByPurpose: { auto-review: { isolated: true, headers: { x-utility: \"1\" } } } }\n- name: sessions\n- name: query\n  config: { path: ":memory:", openAt: never }\n- name: projections\n- name: prompt\n- name: tools\n- name: approval\n  config: { policy: ask }\n- name: permissions\n- name: review\n')
+  await writeFile(file, '- name: llm\n  config: { requestTransportByPurpose: { auto-review: { isolated: true, headers: { x-utility: \"1\" } } } }\n- name: sessions\n- name: agents\n- name: query\n  config: { path: ":memory:", openAt: never }\n- name: projections\n- name: prompt\n- name: tools\n- name: approval\n  config: { policy: ask }\n- name: permissions\n- name: review\n')
   ctx.baseUrl = pathToFileURL(directory).href + '/'
   await ctx.plugin(Loader)
   ctx.loader.builtins.include = Include
@@ -114,7 +115,7 @@ it('Loader-composed reviews persist parent and child costs in one ledger and lea
     session.append('step/start', { turn: 1, step: 1 })
     session.append('assistant/message', { turn: 1, step: 1, stream: [], message: createMessage({ role: 'assistant', content: [{ type: 'tool-call', id: callId, name: 'probe', arguments: '{}' }], source: { kind: 'model', provider: 'review', model: 'model' } }) }, { surfaceOp: 'append' })
     session.append('tool/call', { turn: 1, step: 1, callId, name: 'probe', arguments: '{}' })
-    const result = await ctx.tools.execute({ signal: new AbortController().signal, callId, name: 'probe', arguments: {}, agent })
+    const result = await executeToolFixture(ctx, { signal: new AbortController().signal, callId, name: 'probe', arguments: {}, agent })
     expect(result.isError).toBe(false)
   }
   expect(executions).toBe(2)

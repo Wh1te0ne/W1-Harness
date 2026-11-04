@@ -1,3 +1,9 @@
+declare module '@deepseek-ai/dsh-llm/types' {
+  interface LlmRequestPurposeMap {
+    'side-chat': true
+  }
+}
+
 /** Temporary side conversations. No Agent is created, resumed, or interrupted. */
 import { randomUUID } from 'node:crypto'
 import type { Context } from '@deepseek-ai/cordis'
@@ -6,6 +12,7 @@ import { BlockAssembler, createUserMessage, createAssistantMessage, ReasoningEff
 import type { Message } from '@deepseek-ai/dsh-llm'
 import { Session, SessionId } from '@deepseek-ai/dsh-session'
 import type {} from '@deepseek-ai/dsh-api-session-controller'
+import type {} from '@deepseek-ai/dsh-session-query'
 import { Remote, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
 import type { SideFrame, SideOpened, SideRoute } from './types.ts'
 
@@ -34,7 +41,7 @@ function parentResource(sessionId: SessionId): SessionId { return sessionId }
 
 /** Session-authorized RPC owner of independent temporary chat logs. */
 export class SideChatService extends TypertRemoteService {
-  static inject = ['typert', 'llm', 'sessions', 'sessionController']
+  static inject = ['typert', 'llm', 'sessions', 'sessionController', 'sessionQuery']
   /**
    * Deployment-owned byte, output and concurrent-chat limits.
    */
@@ -68,14 +75,15 @@ export class SideChatService extends TypertRemoteService {
     const existing = this.chats.get(key)
     if (existing !== undefined) return { route: existing.route, contextMessages: existing.context.length }
     if (this.chats.size >= this.config.maxChats) throw new Error('Close an unused side chat before opening another.')
-    const inspected = await this.ctx.sessionController.inspect(sessionId, signal)
+    using observation = await this.ctx.sessionQuery.observeSession(sessionId, { signal, projectionMode: 'none' })
     signal.throwIfAborted()
+    const events = observation.events
     const source = Session.create(
-      sessionId, inspected.events, inspected.meta, inspected.inheritedEventCount, this.ctx.sessions.messageProjections,
+      sessionId, events, observation.header, observation.inheritedEventCount, this.ctx.sessions.messageProjections,
     )
     const context = source.deriveMessages().filter(message => message.role !== 'system')
     let route: SideRoute | undefined
-    for (const event of inspected.events) {
+    for (const event of events) {
       if (event.type === 'model/selection') route = event.data
       if (event.type === 'request/header') route = event.data.header.config
     }

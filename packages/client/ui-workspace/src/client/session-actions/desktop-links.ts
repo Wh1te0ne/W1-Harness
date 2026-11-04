@@ -7,7 +7,10 @@ export interface DesktopSessionLinks {
   onOpen(listener: () => void): () => void
 }
 
-/** Return the origin-restricted preload capability when running in W1 Desktop. */
+/**
+ * Return the origin-restricted preload capability when running in W1 Desktop.
+ * @returns the Desktop link capability, or undefined outside a compatible W1 window.
+ */
 export function desktopSessionLinks(): DesktopSessionLinks | undefined {
   return (globalThis as typeof globalThis & { dshDesktop?: { sessions?: DesktopSessionLinks } }).dshDesktop?.sessions
 }

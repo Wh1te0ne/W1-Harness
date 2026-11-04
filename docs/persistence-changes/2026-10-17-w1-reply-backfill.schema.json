@@ -1,72 +1,14 @@
 {
   "formatVersion": 2,
   "roots": [
-    {
-      "key": "event:w1/reply-attempt",
-      "kind": "event",
-      "event": "w1/reply-attempt",
-      "surface": false,
-      "digest": "e9b30014331880c466eaa0351a4975d96eedbd415a3802921877aaf9e3c17bfc",
-      "schema": {
-        "root": 0,
-        "nodes": [
-          {
-            "kind": "object",
-            "properties": [
-              {
-                "name": "data",
-                "type": 1,
-                "optional": false
-              },
-              {
-                "name": "ignorable",
-                "type": 3,
-                "optional": true
-              },
-              {
-                "name": "seq",
-                "type": 2,
-                "optional": false
-              },
-              {
-                "name": "time",
-                "type": 2,
-                "optional": false
-              },
-              {
-                "name": "type",
-                "type": 4,
-                "optional": false
-              }
-            ],
-            "indices": []
-          },
-          {
-            "kind": "object",
-            "properties": [
-              {
-                "name": "turn",
-                "type": 2,
-                "optional": false
-              }
-            ],
-            "indices": []
-          },
-          {
-            "kind": "primitive",
-            "type": "number"
-          },
-          {
-            "kind": "literal",
-            "value": true
-          },
-          {
-            "kind": "literal",
-            "value": "w1/reply-attempt"
-          }
-        ]
-      }
-    }
+    {"key":"event:w1/reply-attempt","kind":"event","event":"w1/reply-attempt","surface":false,"digest":"e9b30014331880c466eaa0351a4975d96eedbd415a3802921877aaf9e3c17bfc"}
   ],
-  "types": []
+  "types": [],
+  "nodes": {
+    "0657d3ca5ac4e7bf": {"kind":"primitive","type":"number"},
+    "5a71a6b19813177a": {"kind":"literal","value":"w1/reply-attempt"},
+    "dacf3d5f3e4ff619": {"kind":"literal","value":true},
+    "e9b30014331880c4": {"kind":"object","properties":[{"name":"data","type":"f90eb4ab2d3897bc","optional":false},{"name":"ignorable","type":"dacf3d5f3e4ff619","optional":true},{"name":"seq","type":"0657d3ca5ac4e7bf","optional":false},{"name":"time","type":"0657d3ca5ac4e7bf","optional":false},{"name":"type","type":"5a71a6b19813177a","optional":false}],"indices":[]},
+    "f90eb4ab2d3897bc": {"kind":"object","properties":[{"name":"turn","type":"0657d3ca5ac4e7bf","optional":false}],"indices":[]}
+  }
 }

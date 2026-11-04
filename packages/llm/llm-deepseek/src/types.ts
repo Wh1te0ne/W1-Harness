@@ -4,7 +4,7 @@ import type { RequestStructure } from './request-structure.ts'
 
 /** Lazy, content-free observation after Files/inline projection and extension serialization. */
 export interface PreparedRequestObservation {
-  readonly options: GenerateOptions
+  readonly options: GenerateOptions<string>
   /** Computes digests without exposing request text, credentials, headers or endpoint URLs. */
   readonly summarize: (maxMessages: number) => RequestStructure
 }

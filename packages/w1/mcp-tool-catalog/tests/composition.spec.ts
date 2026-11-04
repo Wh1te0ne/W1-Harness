@@ -15,6 +15,9 @@ import AgentRegistry from '@deepseek-ai/dsh-agent'
 import AgentLoop from '@deepseek-ai/dsh-agent-loop'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import ToolRuntime from '@deepseek-ai/dsh-tools'
+import * as NativeToolExecutor from '@deepseek-ai/dsh-tool-executor-native'
+import * as PtcToolExecutor from '@deepseek-ai/dsh-tool-executor-ptc'
+import { executeToolFixture } from '@deepseek-ai/dsh-tool-testkit'
 import { PtcRuntime } from '@deepseek-ai/dsh-ptc-runtime'
 import { createMcpToolDefinition, publicToolName } from '../../../mcp/mcp-client/src/tools.ts'
 import * as catalog from '../src/index.ts'
@@ -26,7 +29,7 @@ async function load(options: { disk?: string; resume?: boolean; maxLoadedTools?:
   const modules = new Map<string, unknown>([
     ['llm', LlmRuntime], ['sessions', SessionStore], ['projections', SessionProjectionRegistry],
     ['agents', AgentRegistry], ['loop', AgentLoop], ['prompt', SystemPrompt], ['tools', ToolRuntime],
-    ['catalog', catalog], ['persistence', JsonlPersistence],
+    ['catalog', catalog], ['persistence', JsonlPersistence], ['native', NativeToolExecutor],
   ])
   const file = join(directory, 'cordis.yml')
   await writeFile(file, `${options.disk === undefined ? '' : `- name: persistence\n  config: { root: ${JSON.stringify(options.disk)}, compression: none }\n`}- name: llm
@@ -35,6 +38,7 @@ async function load(options: { disk?: string; resume?: boolean; maxLoadedTools?:
 - name: agents
 - name: prompt
 - name: tools
+- name: native
 - name: loop
   config: { agents: [] }
 - id: catalog
@@ -81,7 +85,8 @@ async function load(options: { disk?: string; resume?: boolean; maxLoadedTools?:
   const { agent } = options.resume === true
     ? await ctx.agents.resume({ resumeSessionId: SessionId('catalog-test'), agentOptions })
     : await ctx.agents.create({ sessionId: SessionId('catalog-test'), agentOptions, meta: { cwd: directory } })
-  const execute = (arguments_: object) => ctx.agents.withInitiator(agent, () => ctx.tools.execute({ signal: new AbortController().signal,
+  const execute = (arguments_: object) => ctx.agents.withInitiator(agent, () => executeToolFixture(ctx, {
+    signal: new AbortController().signal,
     agent, name: 'w1_tool_catalog', callId: ToolCallId(`manual-${Math.random()}`), arguments: arguments_ }))
   const visible = async () => (await ctx.systemPrompt.assemble({ scope: agent })).tools
   return { ctx, agent, adapter, artifact, fixture, register, execute, visible }
@@ -127,7 +132,7 @@ describe('Native MCP disclosure in the Loader-composed agent', () => {
     h.agent.ctx.tools.restrict({ deny: [h.fixture.name] })
     expect((await h.execute({ action: 'search', query: 'write.fixture' })).value).toMatchObject({ total: 0 })
     expect((await h.execute({ action: 'load', names: [h.fixture.name] })).isError).toBe(true)
-    const denied = await h.ctx.tools.execute({ agent: h.agent, signal: new AbortController().signal, name: h.fixture.name, callId: ToolCallId('denied'), arguments: {} })
+    const denied = await executeToolFixture(h.ctx, { agent: h.agent, signal: new AbortController().signal, name: h.fixture.name, callId: ToolCallId('denied'), arguments: {} })
     expect(denied.isError).toBe(true)
   })
   it('refuses disclosure beyond the configured count without partial loading', async () => {
@@ -145,7 +150,7 @@ describe('Native MCP disclosure in the Loader-composed agent', () => {
       run(): never { throw new Error('Schema-only fixture cannot execute a program') }
     }
     await h.ctx.plugin(FixturePtc)
-    h.agent.ctx.tools.presentAs('ptc')
+    await h.agent.ctx.plugin(PtcToolExecutor)
     const assembly = await h.ctx.systemPrompt.assemble({ scope: h.agent })
     expect(assembly.tools.map(tool => tool.name)).toEqual(['run_code'])
     expect(JSON.stringify(assembly.sections)).toContain(h.fixture.name)
@@ -159,6 +164,15 @@ describe('Native MCP disclosure in the Loader-composed agent', () => {
     await h.execute({ action: 'load', names: [h.fixture.name] })
     const { agent } = await h.ctx.agents.create({ sessionId: SessionId('separate'), agentOptions: { provider: 'mock', model: 'main' }, meta: { cwd: tmpdir() } })
     expect((await h.ctx.systemPrompt.assemble({ scope: agent })).tools.map(tool => tool.name)).toEqual(['w1_tool_catalog'])
+  })
+  it('treats disclosure as presentation while preserving execution permissions', async () => {
+    const h = await load()
+    expect((await h.visible()).map(tool => tool.name)).not.toContain(h.fixture.name)
+    expect(h.ctx.tools.get(h.fixture.name, h.agent)).toBeDefined()
+    const input = { agent: h.agent, signal: new AbortController().signal, name: h.fixture.name, callId: ToolCallId('hidden-direct'), arguments: {} }
+    expect((await executeToolFixture(h.ctx, input)).isError).toBe(false)
+    h.agent.ctx.tools.guard(() => 'Test execution denial')
+    expect((await executeToolFixture(h.ctx, { ...input, callId: ToolCallId('hidden-denied') })).isError).toBe(true)
   })
   it('withholds a declaration when its persistence flush fails, and permits an explicit repair', async () => {
     const disk = await mkdtemp(join(tmpdir(), 'w1-mcp-flush-'))

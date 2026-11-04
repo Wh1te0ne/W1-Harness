@@ -44,9 +44,10 @@ const identitySchema = schema.object({
  * Register durable selection and filter scoped Native prompt assemblies.
  * @param ctx - tool registry and prompt assembly owner.
  * @param config - validated disclosure policy.
+ * @returns when the durable disclosure reader and tool registrations are ready.
  */
-export function apply(ctx: Context, config: Config): void {
-  ctx.sessionProjections.register({ key: 'w1McpDisclosure', stateVersion: 1, stateSchema: schema.array(identitySchema), init: () => [],
+export async function apply(ctx: Context, config: Config): Promise<void> {
+  const disclosure = await ctx.sessionProjections.register({ key: 'w1McpDisclosure', stateVersion: 1, stateSchema: schema.array(identitySchema), init: () => [],
     apply(state, event) {
       if (event.type !== 'w1/mcp-disclosure') return state
       const selected = new Map(state.map(tool => [tool.name, tool]))
@@ -65,20 +66,17 @@ export function apply(ctx: Context, config: Config): void {
         fingerprint: createHash('sha256').update(JSON.stringify({ origin, schema: tool })).digest('hex') }]
     })
   }
-  const selected = (agent: Agent) => new Map((ctx.sessionProjections.stateOf(agent.session, 'w1McpDisclosure') ?? [])
+  const selected = (agent: Agent) => new Map(disclosure.stateOf(agent.session)
     .filter(tool => !unsettled.get(agent.session)?.has(tool.fingerprint)).map(tool => [tool.name, tool.fingerprint]))
-  ctx.on('system-prompt/assemble', async (_assembly, context, next) => {
-    const assembly = await next()
-    if (assembly.tools.some(tool => tool.name === 'run_code') || !assembly.tools.some(tool => tool.name === catalogName)) return assembly
+  ctx.tools.filterDeclarations((tool, context) => {
+    if (context.schemas.some(schema => schema.name === 'run_code') || !context.schemas.some(schema => schema.name === catalogName)) return true
     const agent = ctx.agents.list().find(agent => agent === context.scope)
-    if (agent === undefined) return assembly
-    const chosen = selected(agent)
-    const deferred = new Map(directory(agent, assembly.tools).map(tool => [tool.name, tool]))
-    return { ...assembly, tools: assembly.tools.filter((tool) => {
-      const entry = deferred.get(tool.name)
-      return entry === undefined || chosen.get(tool.name) === entry.fingerprint
-    }) }
-  }, { global: true })
+    if (agent === undefined) return true
+    const origin = ctx.tools.get(tool.name, agent)?.origin
+    if (origin?.kind !== 'mcp') return true
+    const fingerprint = createHash('sha256').update(JSON.stringify({ origin, schema: tool })).digest('hex')
+    return selected(agent).get(tool.name) === fingerprint
+  })
   ctx.tools.register(defineTool({
     name: catalogName,
     description: 'Find available MCP operations by names or descriptions. Search returns names and summaries. Load selected names to make their full calling schemas available on your next step. Existing execution permissions still apply.',

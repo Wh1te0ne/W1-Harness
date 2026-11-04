@@ -3321,8 +3321,8 @@ export function apply(ctx) {
   // usageManagerUsage 投影:向会话历史页/推送帧提供 token 桶(客户端计价)。
   installNativeSearchBilling(ctx, ledger)
 
-  ctx.inject(['sessionProjections'], (projectionCtx) => {
-    projectionCtx.sessionProjections.register(makeCostUsageProjection(ledger))
+  ctx.inject(['sessionProjections'], async (projectionCtx) => {
+    await projectionCtx.sessionProjections.register(makeCostUsageProjection(ledger))
   })
 
   // RPC 服务:客户端经 remote.usageManager.* 调用(./typert 清单由 typert-loader 注册)。

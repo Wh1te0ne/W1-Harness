@@ -53,6 +53,8 @@ Mount this plugin beside the W1 Web services. The shipped W1 composition explici
 <details>
 <summary>Implementation internals</summary>
 
+Activation awaits both projection registrations before observing streams. Position reads use the acquired handle rather than a registry lookup by key.
+
 Only marked main-loop `llm/stream` requests establish baselines. Auxiliary reviews, suggestions, side chats and compaction do not participate. The DeepSeek adapter offers a lazy content-free summary after Files/inline conversion and extension serialization. Diagnostics retain bounded hashes in memory and persist only route, counts, observation level and cause categories. Usage chunks are cumulative: the last value replaces earlier values. Input, cache-read and cache-write buckets are disjoint; absent buckets are never replaced with zero.
 
 [The implementation](src/index.ts) owns reversible registrations and [composition tests](tests/composition.spec.ts) exercise the Loader and real services with external model or network fixtures.

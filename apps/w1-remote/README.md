@@ -61,6 +61,8 @@ location / {
 
 远程连接入口位于电脑设置页，经受限 IPC 调用 Host；build-desktop-ui.mjs 生成客户端模块，桌面构建会自动执行。`host.mjs` 是连接管理器；`crypto.mjs` 与 `client.mjs` 由 Node 测试和手机共用；`relay.mjs` 是独立 NAS 转发基础设施，不启动 Harness；`mobile/` 保存手机界面；`android/` 保存原生壳、相机扫码及 Keystore；电脑适配位于 `apps/desktop-host/src/w1-remote.ts`，设备管理窗口位于 `apps/desktop/src/w1-remote-window.ts`。
 
+历史分页在 `sessionController.events` 上使用固定截止序号和 20 条消息预算，保留手机端 `page` 操作及 `messages`/`hasMore` 响应。
+
 ```powershell
 # 在 W1 仓库根目录执行
 node --experimental-vm-modules --test apps/w1-remote/tests/*.test.mjs

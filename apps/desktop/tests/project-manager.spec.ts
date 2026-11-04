@@ -53,13 +53,21 @@ describe('desktop external plugin profile', () => {
     mkdirSync(path, { recursive: true })
     writeFileSync(join(path, 'package.json'), JSON.stringify({ name, version: '1.0.0' }))
     const manifestPath = join(profile, 'package.json')
-    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as { dependencies: Record<string, string> }
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as {
+      dependencies: Record<string, string>
+      dsh: { profile: { bundles: string[] } }
+    }
     manifest.dependencies[name] = '1.0.0'
+    manifest.dependencies['billion-context'] = '1.0.0'
+    manifest.dependencies['dsh-plugin'] = '2.0.0'
+    manifest.dsh.profile.bundles.push('billion-context', 'dsh-plugin', '@deepseek-ai/dsh-experimental-tool-worktree')
     writeFileSync(manifestPath, JSON.stringify(manifest))
+    writeFileSync(join(profile, 'cordis.patch.yml'), '- id: w1-test-profile\n  disabled: true\n')
     writeFileSync(join(profile, 'desktop-runtime-state.json'), JSON.stringify({ links: [] }))
     writeFileSync(join(profile, 'pnpm-lock.yaml'), 'lockfileVersion: 9.0\n')
     const files = [
       'package.json',
+      'cordis.patch.yml',
       'pnpm-workspace.yaml',
       'desktop-runtime-state.json',
       'pnpm-lock.yaml',

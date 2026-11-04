@@ -7,11 +7,18 @@
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
   "exports": {
-    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
-    "./types": { "types": "./lib/types/types.d.ts" },
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./types": {
+      "types": "./lib/types/types.d.ts"
+    },
     "./package.json": "./package.json"
   },
-  "files": ["lib"],
+  "files": [
+    "lib"
+  ],
   "license": "MIT",
   "peerDependencies": {
     "@deepseek-ai/cordis": "workspace:~",
@@ -29,18 +36,19 @@
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "workspace:~",
-    "@deepseek-ai/cordis-plugin-loader": "workspace:~",
     "@deepseek-ai/cordis-plugin-include": "workspace:~",
+    "@deepseek-ai/cordis-plugin-loader": "workspace:~",
     "@deepseek-ai/dsh-agent": "workspace:*",
     "@deepseek-ai/dsh-agent-loop": "workspace:*",
     "@deepseek-ai/dsh-goal": "workspace:*",
-    "@deepseek-ai/dsh-tool-goal": "workspace:*",
-    "@deepseek-ai/dsh-tools": "workspace:*",
-    "@deepseek-ai/dsh-system-prompt": "workspace:*",
     "@deepseek-ai/dsh-llm": "workspace:*",
     "@deepseek-ai/dsh-session": "workspace:*",
-    "@deepseek-ai/dsh-session-projection": "workspace:*",
     "@deepseek-ai/dsh-session-persistence": "workspace:*",
-    "@deepseek-ai/dsh-session-persistence-jsonl": "workspace:*"
+    "@deepseek-ai/dsh-session-persistence-jsonl": "workspace:*",
+    "@deepseek-ai/dsh-session-projection": "workspace:*",
+    "@deepseek-ai/dsh-system-prompt": "workspace:*",
+    "@deepseek-ai/dsh-tool-executor-native": "workspace:*",
+    "@deepseek-ai/dsh-tool-goal": "workspace:*",
+    "@deepseek-ai/dsh-tools": "workspace:*"
   }
 }

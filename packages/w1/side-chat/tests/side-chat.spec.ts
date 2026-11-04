@@ -15,9 +15,11 @@ function setup() {
   const requests: GenerateOptions[] = []
   let hold = false
   let fail = false
+  let releasedReads = 0
   ctx.provide('sessions', { messageProjections: [] } as never)
-  ctx.provide('sessionController', { inspect: async () => ({ meta: parent.header, inheritedEventCount: parent.inheritedEventCount, events: parent.snapshotEvents() }),
-    modelCatalog: async () => ({ default: { provider: 'mock', model: 'fallback' } }) } as never)
+  ctx.provide('sessionQuery', { observeSession: async () => ({ header: parent.header, events: parent.snapshotEvents(),
+    inheritedEventCount: parent.inheritedEventCount, [Symbol.dispose]() { releasedReads++ } }) } as never)
+  ctx.provide('sessionController', { modelCatalog: async () => ({ default: { provider: 'mock', model: 'fallback' } }) } as never)
   ctx.provide('llm', { prepareCall: async (config: object) => ({ config,
     async *stream(options: GenerateOptions): AsyncIterable<StreamChunk> {
       requests.push(options)
@@ -41,13 +43,21 @@ function setup() {
     for await (const frame of service.send(parent.id, id, text, { provider: 'mock', model: 'main' }, context, signal)) result.push(frame)
     return result
   }
-  return { service, parent, open, send, requests, hold: () => { hold = true }, fail: (value: boolean) => { fail = value } }
+  return { service, parent, open, send, requests, releasedReads: () => releasedReads,
+    hold: () => { hold = true }, fail: (value: boolean) => { fail = value } }
 }
 
 describe('temporary side-chat isolation', () => {
+  it('releases the cold-read lease when opening is cancelled', async () => {
+    const h = setup()
+    const stream = h.service.open(h.parent.id, 'cancelled', AbortSignal.abort())[Symbol.asyncIterator]()
+    await expect(stream.next()).rejects.toMatchObject({ name: 'AbortError' })
+    expect(h.releasedReads()).toBe(1)
+  })
   it('freezes opening context, retains multiple turns, logs exact requests and never writes to the main log', async () => {
     const h = setup()
     expect((await h.open('a')).receipt).toEqual({ route: { provider: 'mock', model: 'main' }, contextMessages: 1 })
+    expect(h.releasedReads()).toBe(1)
     h.parent.append('user/message', createUserMessage({ content: [{ type: 'text', text: 'Later main message' }], source: { kind: 'user' } }), { surfaceOp: 'append' })
     const parentBefore = h.parent.snapshotEvents()
     await h.send('a', 'Side one')

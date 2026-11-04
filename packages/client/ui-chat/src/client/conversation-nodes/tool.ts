@@ -4,7 +4,7 @@ import type {
   ToolCallBlock, ToolResultNode,
 } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import { isAppendSurfaceEvent } from '@deepseek-ai/dsh-session/surface'
-import type {} from '@deepseek-ai/dsh-tools/types'
+import type {} from '@deepseek-ai/dsh-tool-executor-ptc/client'
 import { PartialArguments } from '@deepseek-ai/dsh-util-values'
 import type { ChatNode, ToolChatData } from '../contract/chat-nodes.ts'
 import { CHAT_SYNTHETIC_SEQ_OFFSETS, chatNode, contextLocation } from './common.ts'
@@ -348,11 +348,7 @@ export const toolDefinition: ConversationNodeDefinition<ToolState> = {
     const data = current?.data.root === projected ? current.data : { root: projected } satisfies ToolChatData
     if (current?.data === data && current.anchorSeq === anchor
       && current.visibility === visibility && current.location === location) return current
-    return chatNode(context, 'tool-call', anchor, data, {
-      visibility, location,
-      // User decisions belong to the transcript, outside both levels of process folding.
-      ...projected.name === 'ask_user_question' ? { groupTree: 'turn' as const } : {},
-    })
+    return chatNode(context, 'tool-call', anchor, data, { visibility, location })
   },
 }
 

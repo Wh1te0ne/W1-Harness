@@ -3,6 +3,7 @@ import { selectW1ProductRelease, W1SourceUpdates, w1UpdateChannel } from '../src
 import { showW1ProductUpdate } from '../src/w1-product-update-ui.ts'
 import type { DesktopUpdateState } from '../src/ipc.ts'
 import type { UpdateDialogOptions } from '../src/update-dialog.ts'
+import { resolveDesktopLocale } from '../src/locale.ts'
 import product from '../w1-product.json' with { type: 'json' }
 
 const row = (version: string) => ({ tag_name: `v${version}`, draft: false, prerelease: version.includes('-'),
@@ -74,6 +75,26 @@ it('closing the available prompt keeps both tasks and the updater untouched', as
     show: async () => ({ response: 1, checkboxChecked: false }) })
   expect(download).not.toHaveBeenCalled()
   expect(install).not.toHaveBeenCalled()
+})
+
+it.each(['download', 'install'] as const)('reports a rejected %s without continuing the update flow', async (operation) => {
+  const failure = new Error('The confirmation expired')
+  const download = vi.fn(async () => {
+    if (operation === 'download') throw failure
+    return { phase: 'ready' as const, version: '0.3.0' }
+  })
+  const install = vi.fn(async (): Promise<DesktopUpdateState> => { throw failure })
+  const views: UpdateDialogOptions[] = []
+  await showW1ProductUpdate({ product, locale: 'ja', source: false,
+    check: async () => ({ phase: 'available', version: '0.3.0' }), notes: () => '',
+    updates: { download, install }, openExternal: vi.fn(), show: async (options) => {
+      views.push(options)
+      return { response: 0, checkboxChecked: false }
+    } })
+  expect(views.at(-1)).toMatchObject({ type: 'error', technicalDetails: failure.message,
+    message: resolveDesktopLocale('ja').messages[operation === 'download' ? 'updateDownloadFailed' : 'updateInstallFailed'] })
+  expect(download).toHaveBeenCalledOnce()
+  expect(install).toHaveBeenCalledTimes(operation === 'download' ? 0 : 1)
 })
 
 it('cancels an in-flight check without publishing into a disposed application', async () => {

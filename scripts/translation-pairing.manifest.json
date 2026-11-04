@@ -29,6 +29,8 @@
     "CHANGELOG.md",
     "SECURITY.md",
     "docs/模型接口与思考强度排查.md",
-    "docs/启动性能排查.md"
+    "docs/启动性能排查.md",
+    "docs/上游同步-0.2.2-alpha.3.md",
+    "assets/w1/README.md"
   ]
 }

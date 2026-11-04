@@ -10,7 +10,7 @@ import { SessionNodeItem } from './Rows.tsx'
 import css from './ActivityList.module.css'
 
 type ActivityProps = Pick<WorkspaceBrowserProps, 'useSessionStatus' | 'usePanelInfo' | 'open' | 'requestSessionRename'
-  | 'acknowledgeCompletions' | 'renderSlot' | 't'> & {
+  | 'acknowledgeCompletions' | 'renderSlot' | 't' | 'useSessionAccess' | 'openSessionMenu' | 'useContextMenu' | 'useContextMenuTarget'> & {
     list: SessionListState
     workspaces: readonly WorkspaceView[]
     rowState: SessionRowState
@@ -22,7 +22,8 @@ type ActivityProps = Pick<WorkspaceBrowserProps, 'useSessionStatus' | 'usePanelI
  * @returns attention and date sections, including an explicit empty state.
  */
 export function ActivityList({ list, workspaces, rowState, useSessionStatus, usePanelInfo, open,
-  requestSessionRename, acknowledgeCompletions, renderSlot, t }: ActivityProps) {
+  requestSessionRename, acknowledgeCompletions, renderSlot, useSessionAccess, openSessionMenu,
+  useContextMenu, useContextMenuTarget, t }: ActivityProps) {
   const statuses = useSessionStatus(s => s)
   const panelActive = usePanelInfo(info => info.activePanelId !== null)
   const currentId = panelActive ? undefined : Object.values(list.byId).find(row => (row.retainedBy.mainView ?? 0) > 0)?.id
@@ -37,6 +38,8 @@ export function ActivityList({ list, workspaces, rowState, useSessionStatus, use
   const renderRow = (node: ActivityRow) => (
     <SessionNodeItem key={node.id} node={node} currentId={currentId} now={now} onOpen={open}
       onRenameRequest={requestSessionRename} renderSlot={renderSlot} t={t}
+      useSessionAccess={useSessionAccess} openSessionMenu={openSessionMenu}
+      useContextMenu={useContextMenu} useContextMenuTarget={useContextMenuTarget}
       activity={{ project: node.project, preview: node.preview || t(node.pendingInteraction !== undefined
         ? 'activity.waiting' : node.running || node.runningSubagentCount > 0 ? 'activity.running'
           : node.completed ? 'activity.unread' : 'activity.noPreview') }} />
