@@ -6,6 +6,8 @@ Read [W1](docs/W1-Harness.md), [versions](docs/版本与发布.md) and [releases
 
 Model API/reasoning-effort failures: [diagnostics](docs/模型接口与思考强度排查.md).
 
+Upstream updates start with the [W1 feature/problem comparison](docs/开发与上游维护.md#更新流程); select changes by demonstrated benefit and compatibility. Model integration includes exact provider/model pricing, or an explicit unpriced status.
+
 For [startup diagnosis](docs/启动性能排查.md), isolate diagnostic launches/candidate builds from daily.
 
 **Single-workspace development:** edit the canonical W1 workspace, run checks for the changed behavior, and apply prepared updates when W1 exits and restarts. Do not provision or require a separate W1 Harness Test app. Preserve user work and recovery copies; GitHub release remains separately authorized. See [workflow](docs/开发与上游维护.md#w1-self-development).
