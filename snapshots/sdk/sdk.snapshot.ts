@@ -1290,12 +1290,22 @@ describe('TypeScript SDK snapshots over the jsonrpc runtime', () => {
         expect(events.filter(event => event.type === 'turn/start')).toHaveLength(4)
         expect(events.filter(event => event.type === 'step/start')).toHaveLength(6)
         expect(modelRequests).toHaveLength(6)
-        const active = modelRequests.map((request) => {
+        const systems = modelRequests.map((request) => {
           const messages = request.messages as JsonObject[]
           const system = messages.filter(message => message.role === 'system').at(-1)
-          return JSON.stringify(system).includes('You are in plan mode.')
+          return JSON.stringify(system)
         })
+        const active = systems.map(system => system.includes('You are in plan mode.'))
         expect(active).toEqual([false, true, true, false, true, false])
+        expect(systems.map(system => system.includes('Tool availability does not authorize mutation in plan mode.')))
+          .toEqual(active)
+        expect(systems.some(system => system.includes('The tool catalog stays the same across modes'))).toBe(false)
+        for (const request of modelRequests) {
+          const runtimeContexts = (request.messages as JsonObject[])
+            .filter(message => (message.source as JsonObject | undefined)?.kind === 'runtime-context')
+          expect(JSON.stringify(runtimeContexts)).toContain('Current working directory: the scenario workspace.')
+          expect(JSON.stringify(runtimeContexts)).not.toContain('sdk-snapshot-plan-review-')
+        }
         expect(modelRequests.map(request => (request.tools as JsonObject[]).some(tool => tool.name === 'exit_plan_mode')))
           .toEqual([false, true, true, true, true, true])
         const toolResults = events.filter(event => event.type === 'tool/result')
