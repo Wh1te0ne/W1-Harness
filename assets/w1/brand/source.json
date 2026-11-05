@@ -1,25 +1,34 @@
 {
   "repository": "https://github.com/Wh1te0ne/W1-Brand",
-  "tag": "v1.1.0",
-  "commit": "60262c669a3833aec8b5214b841833e847585e58",
-  "version": "1.1.0",
+  "tag": "v2.0.0-preview.2",
+  "commit": "895ac9e7f1afde19aefa722ac76e037f97c25cf2",
+  "version": "2.0.0-preview.2",
   "product": "harness",
+  "appIconSelection": {
+    "family": "fold-flat",
+    "status": "provisional",
+    "selectedOn": "2026-11-05",
+    "tint": false
+  },
   "files": {
-    "brand.json": "42c75c9e53e21cc395e6bc8a6bf18eeb018e8d1c708eedbcb0642d296ea83b53",
+    "brand.json": "ceb36f215b9ca1647172d2672f438ba444ef2931ee5c89a8aa3fa28d2d9f8a61",
     "LICENSE": "6d58baba2316ce8a49d31deb8b4ecb896c9a192809b2b0fad9a0714a740a0bce",
     "src/brand/w1-fold.svg": "2e604a577cbdccd48942cc688a0f78c1fb78168294a0c47d972d9f13c65f3530",
     "dist/brand/light/w1-mark.svg": "9f344eeab052baa1277491b8720138c219b24f7f083e5592c33134fc6e30dccd",
     "dist/brand/dark/w1-mark.svg": "53633894c4e444dd23e583cf1ccf370cb090204e5b5d0456d10508de903dd812",
     "dist/products/harness/light/interface-logo.svg": "aa89ffa3a036deaeb05b482c34f2d3ed1ec5a13117cb2ac73cc8f33f3f15b98d",
     "dist/products/harness/light/wordmark.svg": "232a77d40cacd3f769a184f063ea0cde69b2d05fddcfff1e268b9f35b65b9dab",
-    "dist/products/harness/light/app-icon.svg": "1f4f26fda8a0db37c6dc1fd26ed7ed81b7235027692bcc3f5adfec69e5a0d252",
-    "dist/products/harness/light/app-icon.png": "534b1bf7ff1a32027def339433ca0b35039870d24aa05137ced2fa3628d1613f",
-    "dist/products/harness/light/app-icon-foreground.svg": "e5ca7ad64cd4195bd39042aa9cf4b2e68f3b0512ee7a2500845e75942d153cd6",
+    "dist/products/harness/light/app-icon.svg": "367a3fd505321b20b806af2a6291b40461886f2cd9089564fe4042986ceb3ce3",
+    "dist/products/harness/light/app-icon.png": "8b16370f36ceff2308d79bc54d54e8f63d39ddcd44bd7ca81566160da92b940e",
+    "dist/products/harness/light/app-icon-foreground.svg": "70174eca982beafe9d6a96de8d268d542d319a3237fa7f5d8077d48f2b2ce56b",
     "dist/products/harness/dark/interface-logo.svg": "50607638eb49d2abe0f34e6babfbdfc1beeb5c432d66abcd0c62571c721bf23d",
     "dist/products/harness/dark/wordmark.svg": "894c390fc967eb67accf465b5c0141ef6d0328cb4b9756d5dfebce985de3eb62",
-    "dist/products/harness/dark/app-icon.svg": "efeeeefad1d8e9b9f632aacc5984b03c8de1c4458677a40075ea044609c40477",
-    "dist/products/harness/dark/app-icon.png": "1e74ee48f9093511c037ebe5ecfffbdaa5b0807f2cba623a9f456c91892a0952",
-    "dist/products/harness/dark/app-icon-foreground.svg": "770271f274093b0d3e2e7c30338bb8bf48761009db991077f7d4bcdbe9aa3d12",
-    "dist/previews/harness-light-dark.png": "3b76efa76dd7cc0b64d74c71507e52366eea460f7ec2abe61ea6d9d3fd12126b"
+    "dist/products/harness/dark/app-icon.svg": "092bace7bb099241587f8d0d9a195691d5e152b50e7af59338dea2488fb96a52",
+    "dist/products/harness/dark/app-icon.png": "4c2eb7d9387c9c58f0f374611f5e02985ed5c5f5d632c3bba66ce5cb85ffd5a0",
+    "dist/products/harness/dark/app-icon-foreground.svg": "5ceaba597e994911285622d9013200f11a6bf1367f1a208d3633c6b6348f7af3",
+    "dist/previews/harness-light-dark.png": "e072c5ebc688bf6b515d482fa13076275a24860e5f0128132e06f74b09608bee",
+    "products/harness.json": "7c7c1c853f5668e8279d4b7e167927809e5db34f4632697aff3927f54d72a50a",
+    "dist/products/harness/light/app-icon-background.svg": "03462d0048bcbfad094498b19685bd2bed8805d09f45d5701454af3c498a6245",
+    "dist/products/harness/dark/app-icon-background.svg": "838c47273833b7fe1493af71b86cdd272d6e9abc89f4a5a584e155c6bac00e70"
   }
 }

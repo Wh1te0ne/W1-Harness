@@ -5,10 +5,18 @@ import { expect, it } from 'vitest'
 import { chromium, type Page } from 'playwright'
 import {
   APP_ICON_VARIANTS, ICON_OUTPUT_DIRECTORY, MASKABLE_ARTWORK_SCALE, MASKABLE_SAFE_RADIUS_RATIO,
-  TILE_SOURCE, renderAppIcons, tileDocument,
+  TILE_SOURCE, renderAppIcons, tileDocument, maskableDocument,
 } from '../scripts/render-app-icons.ts'
 
 const DIST_ROOT = fileURLToPath(new URL('../dist', import.meta.url))
+
+it('rejects layered product icons without their source scale or background', async () => {
+  const source = await readFile(TILE_SOURCE, 'utf8')
+  for (const marker of ['<g transform="scale(2)">', '<g data-layer="background">']) {
+    expect(source).toContain(marker)
+    expect(() => maskableDocument(source.replace(marker, '<g>'))).toThrow('512-unit source and background')
+  }
+})
 
 async function pixels(page: Page, url: string, size: number) {
   return page.evaluate(async ({ url, size }) => {
@@ -117,7 +125,7 @@ it('ships fixed-color favicons selected by document media queries', async () => 
   expect(light).not.toContain('<style>')
   expect(light).toContain('color="#252A33"')
   expect(dark).toContain('color="#F5F6F8"')
-  const geometry = (value: string) => value.replace(/(?:color|fill)="#[\dA-Fa-f]+"/gu, 'color="theme"')
+  const geometry = (value: string) => value.replace(/(?:color|fill|stroke)="#[\dA-Fa-f]+"/gu, 'color="theme"')
     .replace(/harness-(?:light|dark)/gu, 'harness-theme')
   expect(geometry(dark)).toBe(geometry(light))
 })

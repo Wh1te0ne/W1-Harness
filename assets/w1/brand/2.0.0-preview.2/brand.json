@@ -1,0 +1,24 @@
+{
+  "name": "W1 Brand",
+  "version": "2.0.0-preview.2",
+  "logoApprovedOn": "2026-11-04",
+  "updatedOn": "2026-11-05",
+  "repository": "https://github.com/Wh1te0ne/W1-Brand",
+  "master": {
+    "source": "src/brand/w1-fold.svg",
+    "sourceVersion": "W1 Fold 1.1.0",
+    "sha256": "2e604a577cbdccd48942cc688a0f78c1fb78168294a0c47d972d9f13c65f3530",
+    "artFrame": [47, 95, 395, 308]
+  },
+  "themes": {
+    "light": { "foreground": "#252A33", "background": "#FFFFFF" },
+    "dark": { "foreground": "#F5F6F8", "background": "#17191F" }
+  },
+  "roles": { "interface": "horizontal", "appIcon": "independent-product-symbol" },
+  "appIconSelection": { "family": "fold-flat", "status": "provisional", "selectedOn": "2026-11-05", "tint": false },
+  "layout": {
+    "interface": { "canvas": [1200, 360], "markX": 94, "markY": 70, "markWidth": 280, "gap": 92, "wordWidth": 640, "wordCenterY": 180 },
+    "appIcon": { "canvas": [1024, 1024], "sourceCanvas": [512, 512] }
+  },
+  "policy": { "clearSpaceRatio": 0.125, "interfaceMinimumWidthPx": 160, "interfacePreferredWidthPx": 200 }
+}

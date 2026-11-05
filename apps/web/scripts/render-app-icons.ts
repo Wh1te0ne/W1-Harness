@@ -1,6 +1,6 @@
 /**
- * Render Web install icons from the approved W1 product tile. The maskable
- * variant scales the complete mark/wordmark group together and preserves its
+ * Render Web install icons from the selected W1 product tile. The maskable
+ * variant scales the complete foreground together and preserves its
  * opaque background; the canonical brand asset remains unchanged.
  * Run scripts/w1/export-brand.mjs to refresh the pinned exports, favicons and
  * these PNGs together. The document helpers also accept the legacy shadowed tile.
@@ -12,7 +12,7 @@ import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { assertNever } from '@deepseek-ai/dsh-util-values'
 
-/** Approved W1 product tile exported from the pinned brand assets. */
+/** Selected W1 product tile exported from the pinned brand assets. */
 export const TILE_SOURCE = fileURLToPath(new URL('../../../assets/w1/exports/app-icon-light.svg', import.meta.url))
 
 /** Directory the generated PNGs are committed to. */
@@ -34,8 +34,8 @@ const SOURCE_DENSITY = 72
 const RENDER_SCALE = 4
 
 /**
- * Uniform foreground scale for a platform mask; both product rows keep their
- * shared centre and proportions. The PWA check verifies the complete ink radius.
+ * Uniform foreground scale for a platform mask, preserving the artwork's
+ * centre and proportions. The PWA check verifies the complete ink radius.
  */
 export const MASKABLE_ARTWORK_SCALE = 0.82
 
@@ -116,6 +116,13 @@ export function tileDocument(source: string): string {
 export function maskableDocument(source: string): string {
   if (/^<svg\b[^>]*\bviewBox="0 0 1024 1024"/u.test(source.trim())) {
     const document = source.trim()
+    if (document.includes('<g data-layer="foreground">')) {
+      if (!document.includes('<g transform="scale(2)">') || !document.includes('<g data-layer="background">')) {
+        throw new Error('app icons: the layered W1 tile requires its 512-unit source and background')
+      }
+      return document.replace('<g data-layer="foreground">',
+        `<g data-layer="foreground" transform="translate(256 256) scale(${String(MASKABLE_ARTWORK_SCALE)}) translate(-256 -256)">`)
+    }
     const background = /<rect width="1024" height="1024" fill="#[\dA-Fa-f]+"\/>/u.exec(document)
     if (background === null) throw new Error('app icons: the W1 tile requires an opaque background')
     const prefixEnd = background.index + background[0].length

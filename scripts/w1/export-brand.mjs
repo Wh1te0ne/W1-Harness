@@ -11,7 +11,7 @@ const root = new URL('../../assets/w1/', import.meta.url)
 const output = new URL('exports/', root)
 await mkdir(output, { recursive: true })
 const pinned = JSON.parse(await readFile(new URL('brand/source.json', root), 'utf8'))
-if (!/^\d+\.\d+\.\d+$/.test(pinned.version) || pinned.product !== 'harness') throw new Error('Invalid W1 Brand pin')
+if (!/^\d+\.\d+\.\d+(?:-[0-9A-Za-z]+(?:\.[0-9A-Za-z]+)*)?$/.test(pinned.version) || pinned.product !== 'harness') throw new Error('Invalid W1 Brand pin')
 async function asset(name) {
   const bytes = await readFile(new URL(`brand/${pinned.version}/${name}`, root))
   if (createHash('sha256').update(bytes).digest('hex') !== pinned.files[name]) throw new Error(`Pinned brand asset changed: ${name}`)
