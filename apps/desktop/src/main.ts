@@ -2,7 +2,7 @@ import { markW1Startup } from './w1-startup.ts'
 import { installFileActions } from './file-actions.ts'
 import type { ProductEventMap, ProductEvent } from '@deepseek-ai/dsh-client-product-analytics/types'
 import { configureW1Identity, configureW1Taskbar, configureW1StartMenu, isW1Development, relaunchW1 } from './w1-identity.ts'
-import { applyW1SystemIcons, w1SystemIconPath } from './w1-system-icons.ts'
+import { applyW1SystemIcons, prepareW1SystemIcon, w1SystemIconPath } from './w1-system-icons.ts'
 import { W1UpstreamUpdates } from './w1-upstream.ts'
 import { W1SessionLinks } from './w1-session-links.ts'
 import { W1Notifications } from './w1-notifications.ts'
@@ -299,7 +299,7 @@ function createWindow(preload: string, show = false, primary = false): BrowserWi
   })
   configureW1Taskbar(app, window, w1Product)
   if (process.platform === 'win32') {
-    const icon = w1SystemIconPath(w1IconResources())
+    const icon = prepareW1SystemIcon(w1IconResources(), app.getPath('userData'), nativeTheme.shouldUseDarkColorsForSystemIntegratedUI)
     window.setIcon(icon)
     window.setAppDetails({ appIconPath: icon, appIconIndex: 0 })
   }
@@ -1081,7 +1081,9 @@ async function main(): Promise<void> {
     tray?.relabel()
   }
   refreshApplicationMenu()
-  const trayIconPath = w1SystemIconPath(w1IconResources())
+  const trayIconPath = process.platform === 'win32'
+    ? prepareW1SystemIcon(w1IconResources(), app.getPath('userData'), nativeTheme.shouldUseDarkColorsForSystemIntegratedUI)
+    : w1SystemIconPath(w1IconResources(), false)
   if (process.platform === 'win32') {
     // The tray is the way back to a hidden window; without it, relaunching the application still focuses it.
     try {
@@ -1093,7 +1095,7 @@ async function main(): Promise<void> {
     } catch (error) { console.warn('desktop tray: unavailable', error) }
   }
   if (process.platform === 'win32') {
-    const disposeSystemIcons = applyW1SystemIcons({ app, shell,
+    const disposeSystemIcons = applyW1SystemIcons({ app, shell, theme: nativeTheme,
       shortcuts: !w1Testing,
       resources: w1IconResources(),
       appId: development ? `${w1Product.appId}.dev` : w1Product.appId,

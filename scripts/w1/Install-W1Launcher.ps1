@@ -40,5 +40,6 @@ $shortcuts = Get-Content -LiteralPath (Join-Path $output 'shortcuts.json') -Raw 
 foreach ($shortcut in $shortcuts.shortcuts) {
   [W1ShortcutIconRefresh]::SHChangeNotify(0x2000,0x1005,$shortcut.path,[IntPtr]::Zero)
 }
+[W1ShortcutIconRefresh]::SHChangeNotify(0x08000000,0,$null,[IntPtr]::Zero)
 Write-Output "W1 launcher installed: $executable"
 Write-Output 'Desktop and Start Menu shortcuts are ready. Pin W1 Harness from its shortcut or running window.'

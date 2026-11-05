@@ -1,0 +1,17 @@
+{
+  "id": "harness",
+  "name": "W1 Harness",
+  "word": "HARNESS",
+  "status": "approved",
+  "wordmark": "src/products/harness/wordmark.svg",
+  "source": "HARNESS geometric Fold wordmark and paired light/dark preview approved by the W1 owner on 2026-11-04",
+  "iosCatalog": "W1HarnessBrand.xcassets",
+  "approvedOn": "2026-11-04",
+  "appIcon": {
+    "family": "fold-flat",
+    "status": "provisional",
+    "selectedOn": "2026-11-05",
+    "mark": { "x": 122, "y": 184, "width": 184 },
+    "sources": { "light": "src/products/harness/app-icon-light.svg", "dark": "src/products/harness/app-icon-dark.svg" }
+  }
+}

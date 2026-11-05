@@ -16,6 +16,8 @@ W1 conversation links use `w1-harness://session/<encoded-id>`; Test exclusively 
 
 W1 product identity and its separate product-update and DSH-release menu labels apply to all eight shell and installer languages. W1 release-summary text uses English outside Chinese; download and install failure summaries use the selected shell language. Rejected operations stop the confirmation flow and display their failure. Release-note links remain restricted to the active sanitized notes in the window-owned update overlay. Host operation diagnostics and file drag use separate IPC messages alongside W1 browser and remote-device requests.
 
+W1 Windows native entries use transparent product foregrounds selected by the Windows system theme. Content-named ICO copies in the user-data directory prevent stale taskbar caches; older copies stay available for existing shortcuts. The application theme does not choose the native foreground. See the [W1 brand reference](../../docs/W1品牌规范.md).
+
 ## Table of Contents
 
 - [Application overview](#application-overview)

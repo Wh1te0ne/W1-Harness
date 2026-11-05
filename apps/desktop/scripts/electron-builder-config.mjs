@@ -175,7 +175,7 @@ export function createElectronBuilderConfig(
       })) : []),
       ...(packagesWindows ? [
         { from: fileURLToPath(new URL('../../../assets/w1/exports/app-icon-light.ico', import.meta.url)), to: 'w1-app-light.ico' },
-        { from: fileURLToPath(new URL('../../../assets/w1/exports/app-icon.ico', import.meta.url)), to: 'w1-app-dark.ico' },
+        { from: fileURLToPath(new URL('../../../assets/w1/exports/app-icon-dark.ico', import.meta.url)), to: 'w1-app-dark.ico' },
       ] : []),
     ],
     mac: {

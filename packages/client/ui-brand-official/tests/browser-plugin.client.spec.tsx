@@ -90,7 +90,7 @@ describe('W1 browser-brand plugin', () => {
     const images = sidebar.container.querySelectorAll('img')
     expect(images).toHaveLength(2)
     expect(images[0]?.getAttribute('src')).not.toBe(images[1]?.getAttribute('src'))
-    expect(images[0]?.getAttribute('width')).toBe('160')
+    expect(images[0]?.getAttribute('width')).toBe('184.4')
     expect(images[0]?.getAttribute('height')).toBe('48')
     sidebar.rerender(<OfficialSidebarBrandMark size={24} />)
     expect(sidebar.container.querySelector('img')).toBeNull()
