@@ -53,7 +53,7 @@ Mount this plugin beside the W1 Web services. The shipped W1 composition explici
 <details>
 <summary>Implementation internals</summary>
 
-The plugin filters the final scoped `system-prompt/assemble` tool list. Runtime-only MCP origin metadata preserves the real server and raw operation name, independent of public-name normalization. `w1_tool_catalog` searches that permitted directory; load records exact identities and schema fingerprints before returning. The existing loop logs declarations in request headers and tool history. Disconnects, schema changes and permission changes are revalidated; failed persistence withholds the pending declaration.
+The plugin acquires its durable projection before activation and filters executor declarations through `tools.filterDeclarations`. The filter only changes model disclosure, preserving execution admission and permission checks. Runtime-only MCP origin metadata preserves the real server and raw operation name, independent of public-name normalization. `w1_tool_catalog` searches that permitted directory; load records exact identities and schema fingerprints before returning. The existing loop logs declarations in request headers and tool history. Disconnects, schema changes and permission changes are revalidated; failed persistence withholds the pending declaration.
 
 [The implementation](src/index.ts) owns reversible registrations and [composition tests](tests/composition.spec.ts) exercise the Loader and real services with external model or network fixtures.
 

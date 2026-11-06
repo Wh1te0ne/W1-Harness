@@ -1,3 +1,4 @@
+import * as NativeToolExecutor from '@deepseek-ai/dsh-tool-executor-native'
 import { describe, expect, it, onTestFinished, vi } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
 import Loader from '@deepseek-ai/cordis-plugin-loader'
@@ -18,6 +19,7 @@ import ToolRuntime, { defineTool } from '@deepseek-ai/dsh-tools'
 import GoalService from '@deepseek-ai/dsh-goal'
 import * as toolGoal from '@deepseek-ai/dsh-tool-goal'
 import * as review from '../src/index.ts'
+import { reviewProjection } from '../src/projection.ts'
 import { reviewPrompt } from '../src/evidence.ts'
 
 async function load(settings: {
@@ -34,7 +36,7 @@ async function load(settings: {
   onTestFinished(async () => { await ctx.fiber.dispose(); await rm(directory, { recursive: true, force: true }) })
   const modules = new Map<string, unknown>([
     ['llm', LlmRuntime], ['sessions', SessionStore], ['projections', SessionProjectionRegistry],
-    ['agents', AgentRegistry], ['loop', AgentLoop], ['prompt', SystemPrompt], ['tools', ToolRuntime],
+    ['agents', AgentRegistry], ['loop', AgentLoop], ['prompt', SystemPrompt], ['tools', ToolRuntime], ['native', NativeToolExecutor],
     ['goals', GoalService], ['goal-tools', toolGoal], ['review', review], ['persistence', JsonlPersistence],
   ])
   const file = join(directory, 'cordis.yml')
@@ -44,6 +46,7 @@ async function load(settings: {
 - name: agents
 - name: prompt
 - name: tools
+- name: native
 - name: loop
   config: { agents: [] }
 - name: goals
@@ -128,6 +131,7 @@ describe('W1 goal review through Loader and the real agent loop', () => {
     const request = h.agent.session.snapshotEvents().find(event => event.type === 'w1/goal-review-request')
     expect(request?.type === 'w1/goal-review-request' && request.data.messages).toEqual(h.adapter.requests.find(item => item.system === reviewPrompt)?.messages)
     expect(h.adapter.requests.find(item => item.system === reviewPrompt)?.tools).toEqual([])
+    expect(h.adapter.requests.find(item => item.system === reviewPrompt)).toMatchObject({ sessionId: h.agent.session.id, purpose: 'goal-review' })
     expect(JSON.stringify(h.agent.session.deriveMessages())).not.toContain(reviewPrompt)
   })
   it.each(['needs-work', 'insufficient-evidence', 'invalid'])('rejects %s and deduplicates repeated proposals', async (verdict) => {
@@ -160,7 +164,8 @@ describe('W1 goal review through Loader and the real agent loop', () => {
     h.send(); await h.agent.whenIdle()
     expect(h.count()).toBe(0)
     expect(h.ctx.goals.get(h.agent)?.phase).toBe('active')
-    const state = h.ctx.sessionProjections.stateOf(h.agent.session, 'w1GoalReview')!
+    const projection = await h.ctx.sessionProjections.register(reviewProjection(128))
+    const state = projection.stateOf(h.agent.session)
     expect(state.overflow).toBe(true)
     expect(state.bytes).toBeLessThanOrEqual(128)
     expect(state.view?.status).toBe('insufficient-evidence')

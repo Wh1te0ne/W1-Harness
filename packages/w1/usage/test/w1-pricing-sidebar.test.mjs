@@ -121,3 +121,19 @@ test('sidebar keeps the daily summary and removes peak strips with and without a
 })
 
 test('a late snapshot cannot overwrite a price save or synchronization result',()=>{const state=revision=>({state:{config:{prices:{book:{revision}}}}});const store=client.makeStore(state(1));store.set(state(3));store.set(state(2));assert.equal(store.getSnapshot().state.config.prices.book.revision,3);store.set(state(4));assert.equal(store.getSnapshot().state.config.prices.book.revision,4)})
+
+
+test('daily KPI values are distinct, round only their display, and keep tiny or unpriced charges visible', () => {
+  const config = { ...defaultConfig(), activeLocale: 'zh-CN', symbol: '¥', exchangeRate: 1, decimals: 4 }
+  for (const [apiCost, expected] of [[12.6686, '¥12.67'], [0.0004, '<¥0.01'], [0, '¥0']]) {
+    const today = { input: 86_200_000, output: 0, cacheRead: 0, cacheWrite: 0, apiCost, byProviderModel: {} }
+    const view = client.TodayUsageSummary({ state: { config, today }, wide: true, api: { openUsage() {} } })
+    const values = all(view).filter(node => node.props.className === 'cm-kv cm-num')
+    assert.equal(values.length, 2)
+    assert.equal(text(values[0]), expected)
+    assert.equal(text(values[1]), '86.2M')
+    assert.equal(today.apiCost, apiCost)
+  }
+  const view = client.TodayUsageSummary({ state: { config, today: { apiCost: 0, unpricedCalls: 1 } }, wide: true, api: {} })
+  assert.match(text(view), /费用未知/)
+})

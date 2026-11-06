@@ -1,13 +1,30 @@
 [
   {
-    "label": "检查更新…"
+    "label": "关于 W1 Harness",
+    "role": "about"
   },
   {
-    "label": "管理 dsh 命令…"
+    "type": "separator"
+  },
+  {
+    "label": "检查 W1H 更新…"
+  },
+  {
+    "label": "DSH 上游更新…"
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "role": "toggleDevTools",
+    "label": "开发者工具"
+  },
+  {
+    "type": "separator"
   },
   {
     "role": "hide",
-    "label": "隐藏 DeepSeek Harness"
+    "label": "隐藏 W1 Harness"
   },
   {
     "role": "hideOthers",
@@ -18,7 +35,10 @@
     "label": "显示全部"
   },
   {
+    "type": "separator"
+  },
+  {
     "role": "quit",
-    "label": "退出 DeepSeek Harness"
+    "label": "退出 W1 Harness"
   }
 ]

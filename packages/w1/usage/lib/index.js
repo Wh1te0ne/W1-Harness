@@ -42,7 +42,7 @@ import { readScnetSnapshot } from './scnet-snapshot.js'
 import { readExternalUsageSnapshot, externalTodayCostForReconcile } from './external-usage.js'
 import { queryQwenCli } from './qwen-cli.js'
 import { queryBailianCli, loginBailianCli, checkBailianAuth } from './bailian-cli.js'
-import { getSessionCost as readSessionCost, sessionCostIds, readSessionHeaders, conversationRows } from './session-tree.js'
+import { getSessionCost as readSessionCost, sessionCostIds, readSessionHeaders, conversationRows, hydrateSessionTitles } from './session-tree.js'
 import {enableBillingReceipts} from './billing-receipts.js'
 import { getTurnCost, getSessionBilling } from './turn-cost.js'
 import { getContextCosts, getContextIntegration } from './context-costs.js'
@@ -2583,7 +2583,7 @@ function createService(ctx, ledger, openRouterPrices, priceSync) {
       }
       ledger.refresh()
       const day = ledger.days[date]
-      return day === undefined ? zeroDay(date) : { ...ledger.copyDay(day), sessions: conversationRows({ [date]: day }, await readSessionHeaders(ctx), true) }
+      return day === undefined ? zeroDay(date) : { ...ledger.copyDay(day), sessions: await hydrateSessionTitles(ctx, conversationRows({ [date]: day }, await readSessionHeaders(ctx), true)) }
     },
 
     // 跨全部日期返回前 N 个会话(issue #22 按会话视角,不分日期)。
@@ -2599,7 +2599,9 @@ function createService(ctx, ledger, openRouterPrices, priceSync) {
       ledger.refresh()
       const ids = query?.sessionId ? await sessionCostIds(ledger, ctx, query.sessionId) : null
       const headers = await readSessionHeaders(ctx)
-      return billingStatistics(ledger, query, ids, headers)
+      const result = billingStatistics(ledger, query, ids, headers)
+      await hydrateSessionTitles(ctx, result.sessions)
+      return result
     },
     async getSessionBilling(query) { ledger.refresh(); return getSessionBilling(ledger, ctx, query) },
     async getTurnInspection(query) { return getTurnInspection(ctx, query) },
@@ -2620,7 +2622,7 @@ function createService(ctx, ledger, openRouterPrices, priceSync) {
       else if (sortKey === 'time') all.sort((a, b) => direction * ((a.at ?? (asc ? Infinity : 0)) - (b.at ?? (asc ? Infinity : 0))))
       else all.sort((a, b) => direction * (a.recent - b.recent))
       for (const row of all) delete row.recent
-      return { sessions: all.slice(0, n) }
+      return { sessions: await hydrateSessionTitles(ctx, all.slice(0, n)) }
     },
   }
   Object.defineProperty(service, 'typertRemote', {
@@ -3319,8 +3321,8 @@ export function apply(ctx) {
   // usageManagerUsage 投影:向会话历史页/推送帧提供 token 桶(客户端计价)。
   installNativeSearchBilling(ctx, ledger)
 
-  ctx.inject(['sessionProjections'], (projectionCtx) => {
-    projectionCtx.sessionProjections.register(makeCostUsageProjection(ledger))
+  ctx.inject(['sessionProjections'], async (projectionCtx) => {
+    await projectionCtx.sessionProjections.register(makeCostUsageProjection(ledger))
   })
 
   // RPC 服务:客户端经 remote.usageManager.* 调用(./typert 清单由 typert-loader 注册)。

@@ -1,9 +1,11 @@
-param([ValidateRange(0,65532)][int]$DebugPortBase = 0, [switch]$RefreshProject, [switch]$PrepareOnly)
+param([string]$SessionLink, [ValidateRange(0,65532)][int]$DebugPortBase = 0, [switch]$RefreshProject, [switch]$PrepareOnly)
 $ErrorActionPreference = 'Stop'
 $env:W1_LAUNCH_STARTED_AT = [string][DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
 $node = if ($env:W1_NODE) { $env:W1_NODE } else { (Get-Command node -CommandType Application | Select-Object -First 1).Source }
 $launcher = Join-Path $env:USERPROFILE '.w1-harness-app/W1 Harness.exe'
 if (-not $env:W1_DESKTOP_LAUNCHER -and (Test-Path -LiteralPath $launcher)) { $env:W1_DESKTOP_LAUNCHER = $launcher }
+$env:W1_SESSION_LINK_LAUNCHER = $PSCommandPath
+$env:W1_DESKTOP_POWERSHELL = Join-Path $PSHOME 'pwsh.exe'
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 $localLogs = Join-Path $root '.work/local-dev'
 New-Item -ItemType Directory -Path $localLogs -Force | Out-Null
@@ -26,7 +28,7 @@ $env:W1_DESKTOP_EXECUTABLE = & $node (Join-Path $PSScriptRoot 'prepare-windows-s
 if ($LASTEXITCODE -ne 0) { throw 'W1 desktop runtime missing; run Install-W1Launcher.ps1 once.' }
 $w1Home = Join-Path $env:USERPROFILE '.w1-harness'
 $w1Data = Join-Path $env:APPDATA 'W1 Harness'
-foreach ($name in @('ELECTRON_RUN_AS_NODE','ELECTRON_OVERRIDE_DIST_PATH','DSH_DESKTOP_DSH_DIR','DSH_DESKTOP_PNPM_ENTRY','DSH_DESKTOP_PRIMARY_RUNTIME_DIR','DSH_DESKTOP_MANDATORY_UPDATE_CONFIG')) {
+foreach ($name in @('W1_TEST_MODE','W1_TEST_LAUNCHER','W1_TEST_POWERSHELL','ELECTRON_RUN_AS_NODE','ELECTRON_OVERRIDE_DIST_PATH','DSH_DESKTOP_DSH_DIR','DSH_DESKTOP_PNPM_ENTRY','DSH_DESKTOP_PRIMARY_RUNTIME_DIR','DSH_DESKTOP_MANDATORY_UPDATE_CONFIG')) {
   Remove-Item -LiteralPath ("Env:" + $name) -ErrorAction SilentlyContinue
 }
 $env:W1_HOME = $w1Home
@@ -60,15 +62,11 @@ if (-not $PrepareOnly -and -not $RefreshProject -and $DebugPortBase -eq 0) {
     $env:DSH_DESKTOP_PRIMARY_RUNTIME_DIR = Join-Path $root 'apps/desktop/.desktop-build/targets/win-x64/runtime/primary-runtime'
     $env:ELECTRON_ENABLE_LOGGING = '1'
     "W1 existing instance: forwarding activation to PID $($owner.ProcessId)" | Set-Content -LiteralPath $launchLog
-    & $node (Join-Path $PSScriptRoot 'run-logged.mjs') $launchLog $env:W1_DESKTOP_EXECUTABLE "--user-data-dir=$w1Data" (Join-Path $root 'apps/desktop') --w1-activate-only
+    & $node (Join-Path $PSScriptRoot 'run-logged.mjs') $launchLog $env:W1_DESKTOP_EXECUTABLE "--user-data-dir=$w1Data" (Join-Path $root 'apps/desktop') --w1-activate-only $SessionLink
     if ($LASTEXITCODE -eq 0) { return }
     if ($LASTEXITCODE -ne 75) { throw "W1 activation failed. See $launchLog" }
     # The owner exited during activation. Continue through the publisher before taking over.
   }
-}
-if (-not $PrepareOnly) {
-  & $node (Join-Path $PSScriptRoot 'resume-promotion.mjs') $root
-  if ($LASTEXITCODE -ne 0) { throw 'W1 待更新交接未完成，请检查 .work/daily-updates 中的状态和备份。' }
 }
 New-Item -ItemType Directory -Path $w1Home -Force | Out-Null
 $projectStore = Join-Path $w1Home 'storages/workspace.json'
@@ -108,6 +106,7 @@ try {
   $launchArgs = @('scripts/w1/start-prepared.mjs')
   if ($RefreshProject) { $launchArgs += '--refresh-project' }
   if ($PrepareOnly) { $launchArgs += '--prepare-only' }
+  if ($SessionLink) { $launchArgs += @('--session-link', $SessionLink) }
   $projectRuntime = Join-Path $root 'apps/desktop/.desktop-build/development/project/desktop-runtime.json'
   if (-not $RefreshProject -and (Test-Path -LiteralPath $projectRuntime)) {
     $cachedVersion = (Get-Content -LiteralPath $projectRuntime -Raw | ConvertFrom-Json).release.version

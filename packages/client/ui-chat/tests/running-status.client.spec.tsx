@@ -18,12 +18,12 @@ beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(5_000) })
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks(); vi.unstubAllGlobals() })
 
 function statusHarness(startTime?: number) {
-  const view = render(<RunningStatus turn={undefined} useChatTurnAssistants={noOutput} startTime={startTime} t={t} />)
+  const view = render(<RunningStatus turn={undefined} useChatTurnAssistants={noOutput} startTime={startTime} paused={false} t={t} />)
   return {
     ...view,
     content: () => view.container.querySelector('[data-chat-running] > :last-child'),
-    set: (nextStartTime?: number) => {
-      view.rerender(<RunningStatus turn={undefined} useChatTurnAssistants={noOutput} startTime={nextStartTime} t={t} />)
+    set: (nextStartTime?: number, paused = false) => {
+      view.rerender(<RunningStatus turn={undefined} useChatTurnAssistants={noOutput} startTime={nextStartTime} paused={paused} t={t} />)
     },
   }
 }
@@ -34,7 +34,7 @@ describe('RunningStatus', () => {
     const useValue = bindSnapshotSelector(source)
     const useChatTurnAssistants = ((_key: string, selector?: (value: readonly AssistantChatData[] | undefined) => unknown) =>
       useValue(selector ?? (value => value))) as ChatFlowSlotProps['useChatTurnAssistants']
-    const view = render(<RunningStatus turn={1} startTime={1_000} useChatTurnAssistants={useChatTurnAssistants} t={t} />)
+    const view = render(<RunningStatus paused={false} turn={1} startTime={1_000} useChatTurnAssistants={useChatTurnAssistants} t={t} />)
     const label = () => view.container.querySelector('[data-live-output]')!
     expect(label().textContent).toBe('已生成 0 tokens')
     const message: AssistantChatData = { status: 'running', turn: 1, step: 1, time: 0,
@@ -48,7 +48,7 @@ describe('RunningStatus', () => {
     act(() => { vi.advanceTimersByTime(3_000) })
     expect(label().textContent).toBe('已生成 10 tokens')
     act(() => { source.set([]) })
-    view.rerender(<RunningStatus turn={2} startTime={8_000} useChatTurnAssistants={useChatTurnAssistants} t={t} />)
+    view.rerender(<RunningStatus paused={false} turn={2} startTime={8_000} useChatTurnAssistants={useChatTurnAssistants} t={t} />)
     expect(label().textContent).toBe('已生成 0 tokens')
   })
   it('waits for an open Turn start before allocating its clock', () => {
@@ -95,4 +95,15 @@ describe('RunningStatus', () => {
     expect(view.content()?.textContent).not.toContain('-')
   })
 
+  it('freezes the duration while paused and resumes from the Turn start', () => {
+    const view = statusHarness(1_000)
+    expect(view.content()?.textContent).toBe('4秒 · 处理中')
+    view.set(1_000, true)
+    expect(vi.getTimerCount()).toBe(0)
+    act(() => { vi.advanceTimersByTime(5_000) })
+    expect(view.content()?.textContent).toBe('4秒 · 处理中')
+    view.set(1_000)
+    expect(view.content()?.textContent).toBe('9秒 · 处理中')
+    expect(vi.getTimerCount()).toBe(1)
+  })
 })

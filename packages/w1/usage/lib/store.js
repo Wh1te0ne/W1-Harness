@@ -154,7 +154,7 @@ export function defaultConfig() {
     statisticsBasis: 'auto', // 未选择时沿用全局 API / 含 Plan 口径。
     sidebarTodayMetric: 'cost',
     showTotalWithPlan: false, // 「含 Plan 总额」全局开关(v1.6.0):开启后全部金额展示按总等值(cost)计;默认按真金白银(apiCost)
-    includeSubagentCost: false, // 本会话展示可合并连续子代理后代;不重复写入每日账本。
+    includeSubagentCost: true, // 默认合并连续子代理后代;不重复写入每日账本。
     codexQuotaEnabled: false, // Codex 额度按需开启,避免未使用 Codex 时显示卡片或查询。
     codexQuotaSidebar: true, // 独立控制侧栏卡片，保留会话额度条。
     sidebarSimple: false,
@@ -1529,7 +1529,7 @@ export function sanitizeConfig(raw) {
   out.sidebarTodayMetric = oneOf(out.sidebarTodayMetric, ['cost', 'tokens'], 'cost')
   out.statisticsBasis = ['api', 'plan', 'total'].includes(out.statisticsBasis) ? out.statisticsBasis : 'auto'
   out.showTotalWithPlan = out.showTotalWithPlan === true
-  out.includeSubagentCost = out.includeSubagentCost === true
+  out.includeSubagentCost = out.includeSubagentCost !== false
   out.codexQuotaEnabled = out.codexQuotaEnabled === true
   out.codexQuotaSidebar = out.codexQuotaSidebar !== false
   out.sidebarSimple = out.sidebarSimple === true
@@ -1957,6 +1957,7 @@ export function stripSecrets(cfg) {
  * 只处理「旧版本无对应配置项、行为与新版本语义不符」的场景;迁移在 sanitizeConfig 之前对原始配置执行。
  */
 const CONFIG_MIGRATIONS = [
+  { id: 'w1-conversation-cost-includes-subagents-20261023', apply: cfg => { cfg.includeSubagentCost = true } },
   { id: 'provider-catalog-2026-10-03', apply: upgradeProviderPriceDefaults },
   {
     id: 'v1.5.26-coding-plan-sidebar-display',

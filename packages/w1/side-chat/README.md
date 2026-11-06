@@ -29,7 +29,7 @@ Side-chat calls declare their billing purpose; the shared usage service persists
 
 ## Implementation
 
-`SideChatService` owns detached in-memory Session logs. Exact requests and settled responses are recorded there; the logs never join the Session store or parent log. A Remote stream retains each tab and closes its log on cancellation. Separate request signals cancel only that tab's response. All methods authorize the parent session resource; opening a cold session reads it without activating its Agent.
+`SideChatService` owns detached in-memory Session logs. Exact requests and settled responses are recorded there; the logs never join the Session store or parent log. A Remote stream retains each tab and closes its log on cancellation. Separate request signals cancel only that tab's response. All methods authorize the parent session resource; opening a cold session uses a session-query observation without activating its Agent. The observation is released after capturing the opening context, including on cancellation or failure.
 
 The W1 web bundle configures input bytes, maximum output tokens and concurrent tab capacity. Oversized input is rejected explicitly; it is not silently truncated. The sidebar registration uses the existing guide, tab lifetime and injected keyed state. Components reuse the product Markdown renderer, icons and theme tokens.
 

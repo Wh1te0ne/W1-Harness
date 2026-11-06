@@ -118,9 +118,7 @@ const ProcessGroupHeader = memo(function ProcessGroupHeader({ groupKey, useChatG
           {open ? <IconChevronUpOutlineRegular /> : <IconChevronDownOutlineRegular />}
         </span>
       </span>
-      <TextShimmer active={!data.closed}>
-        <TextShimmer className={css.label}>{title}</TextShimmer>
-      </TextShimmer>
+      <TextShimmer active={!data.closed} className={css.label}>{title}</TextShimmer>
     </button>
   )
 })

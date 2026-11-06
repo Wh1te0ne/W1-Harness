@@ -25,9 +25,11 @@ Use `@deepseek-ai/dsh-llm` to stream model calls through configured provider ada
 <a id="use-this-package"></a>
 ## Use this package
 
-`listModels` describes models offered by catalog-driven interfaces. Core resolution and streaming can still accept unlisted ids. The GUI requires catalog membership for selection and submission; adapters intended for GUI use must implement `listModels` and advertise their available models. The base implementation returns an empty list and therefore offers no GUI models.
+`listModels` describes models offered by catalog-driven interfaces. Core resolution and streaming can still accept unlisted ids. The GUI requires catalog membership for selection and submission; adapters intended for GUI use must implement `listModels` and advertise their available models. The base implementation returns an empty list and therefore offers no GUI models. An entry's optional `badge` holds selector text (one literal, or translations keyed by lowercase language id that include `en`) and a `neutral`, `info`, `success`, or `warning` tone; `resolveModelInfo` omits it, and no model request carries it. Providers publish `llm/models-updated(provider)` when their advertised catalog changes; clients reload the complete catalog, including omitted badges.
 
-Any composition that calls a model provider — an agent loop, a session-title generator, a compaction summarizer — streams its requests through this service. Mount it together with at least one provider adapter; the service itself has no configuration and no provider wire code.
+Any composition that calls a model provider — an agent loop, a session-title generator, a compaction summarizer — streams its requests through this service. Mount it together with at least one provider adapter. The service contains no provider wire code.
+
+`requestTransportByPurpose` optionally maps exact request purposes to `{ isolated, headers }` transport policies. Unclassified calls receive no policy. `isolated: true` asks HTTP adapters to use the host transport outside mutable global-fetch wrappers, retaining the installed network proxy policy. Headers are deployment metadata, not model input; adapters preserve their own authentication and attribution. The policy never changes prompts, output budgets, session IDs, billing or review decisions. The `llm/stream` waterfall still observes every request. Configure only one-shot utilities that must not enter a conversation-rewriting interceptor; ordinary conversation, side-chat and compaction keep their normal route unless explicitly configured.
 
 ### When to choose it
 
@@ -57,6 +59,8 @@ for await (const chunk of ctx.llm.stream({
 ```
 
 After a successful mount, `ctx.llm.listProviders()` reports the registered routes in registration order.
+
+Auxiliary request producers declare their `purpose` in `LlmRequestPurposeMap` through module augmentation of `@deepseek-ai/dsh-llm/types`; each key maps to `true`. `GenerateOptions.purpose` accepts the declared keys, while ordinary conversation requests omit it. Import the producer package or its public types before constructing that auxiliary request. Adapters carry the purpose as model-hidden transport metadata and handle unfamiliar purposes without rejecting the request.
 
 `GenerateOptions.messages` accepts durable `Message` values and request-only `RequestUserInput` values. Request-only inputs carry user-role content with no `id` or `source`; Session writes and Agent delivery still require durable messages. Callers keep auxiliary inputs unchanged until the stream settles. A caller that records its exact request, such as session-title generation, must use durable messages.
 

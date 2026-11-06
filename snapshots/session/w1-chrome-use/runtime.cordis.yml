@@ -1,0 +1,17 @@
+# This browser scenario never executes shell commands; keep its declarations portable.
+- id: tool-bash
+  disabled: true
+
+- id: tool-pwsh
+  disabled: true
+
+# The shared headless fixture runner keeps platform-specific sandbox skills out of this browser-only recording.
+- id: sandbox
+  config:
+    runnerCommand:
+      - bash
+      - -c
+      - while [ "$1" != "--" ]; do shift; done; shift; exec "$@"
+      - passthrough-runner
+    runnerFailureSignatures:
+      - 'passthrough-runner: profile rejected'

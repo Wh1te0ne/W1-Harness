@@ -16,7 +16,7 @@ import { selectStartupRuntime } from './startup-runtime.mjs'
 const root = fileURLToPath(new URL('../..', import.meta.url))
 const app = join(root, 'apps/desktop')
 const require = createRequire(join(app, 'package.json'))
-const { values } = parseArgs({ options: { 'prepare-only': { type: 'boolean' }, 'refresh-project': { type: 'boolean' } } })
+const { values } = parseArgs({ options: { 'session-link': { type: 'string' }, 'prepare-only': { type: 'boolean' }, 'refresh-project': { type: 'boolean' } } })
 const runtime = developmentRuntimeDirectory()
 const report = startupReporter()
 function run(command, args, env = process.env) {
@@ -53,7 +53,7 @@ if (!values['prepare-only']) {
   const args = [...inspect ? [
     `--inspect=127.0.0.1:${process.env.DSH_DESKTOP_MAIN_INSPECT_PORT ?? '9229'}`,
     `--remote-debugging-port=${process.env.DSH_DESKTOP_RENDERER_DEBUG_PORT ?? '9222'}`,
-  ] : [], `--user-data-dir=${userData}`, app]
+  ] : [], `--user-data-dir=${userData}`, app, ...values['session-link'] ? [values['session-link']] : []]
   await run(executable, args, { ...process.env, DSH_DESKTOP_PRIMARY_RUNTIME_DIR: runtime,
     DSH_DESKTOP_DSH_DIR: archivedRuntime,
     DSH_DESKTOP_HOST_INSPECT_PORT: inspect ? process.env.DSH_DESKTOP_HOST_INSPECT_PORT ?? '9230' : undefined,

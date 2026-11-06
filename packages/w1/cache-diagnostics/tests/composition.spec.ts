@@ -1,3 +1,4 @@
+import * as NativeToolExecutor from '@deepseek-ai/dsh-tool-executor-native'
 import { describe, expect, it, onTestFinished } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
 import Loader from '@deepseek-ai/cordis-plugin-loader'
@@ -25,7 +26,7 @@ async function load(wire = false) {
   onTestFinished(async () => { await ctx.fiber.dispose(); await rm(directory, { recursive: true, force: true }) })
   const modules = new Map<string, unknown>([
     ['llm', LlmRuntime], ['sessions', SessionStore], ['projections', SessionProjectionRegistry],
-    ['agents', AgentRegistry], ['loop', AgentLoop], ['prompt', SystemPrompt], ['tools', ToolRuntime], ['diagnostics', diagnostics],
+    ['agents', AgentRegistry], ['loop', AgentLoop], ['prompt', SystemPrompt], ['tools', ToolRuntime], ['native', NativeToolExecutor], ['diagnostics', diagnostics],
   ])
   const file = join(directory, 'cordis.yml')
   await writeFile(file, `- name: llm
@@ -34,6 +35,7 @@ async function load(wire = false) {
 - name: agents
 - name: prompt
 - name: tools
+- name: native
 - name: loop
   config: { agents: [] }
 - id: diagnostics

@@ -1,5 +1,6 @@
 // Register W1 shortcuts with the same Windows identity as the running application.
-const { app, shell } = require('electron')
+const { app, shell, nativeTheme } = require('electron')
+const { createHash } = require('node:crypto')
 const { existsSync, mkdirSync, readFileSync, copyFileSync, writeFileSync } = require('node:fs')
 const { join, resolve } = require('node:path')
 
@@ -13,8 +14,13 @@ app.whenReady().then(async () => {
   if (!directory) throw new Error('Launcher installation directory is required')
   const target = join(directory, 'W1 Harness.exe')
   if (!existsSync(target)) throw new Error('Build the W1 launcher before installing shortcuts')
-  const icon = join(directory, 'w1-app.ico')
-  copyFileSync(join(root, 'assets/w1/exports/app-icon.ico'), icon)
+  const theme = nativeTheme.shouldUseDarkColorsForSystemIntegratedUI ? 'dark' : 'light'
+  const sourceIcon = join(root, `assets/w1/exports/app-icon-${theme}.ico`)
+  const digest = createHash('sha256').update(readFileSync(sourceIcon)).digest('hex').slice(0, 16)
+  const icon = join(directory, 'icons', `w1-app-${digest}.ico`)
+  mkdirSync(join(directory, 'icons'), { recursive: true })
+  if (!existsSync(icon)) copyFileSync(sourceIcon, icon)
+  copyFileSync(sourceIcon, join(directory, 'w1-app.ico'))
   const product = JSON.parse(readFileSync(join(root, 'apps/desktop/w1-product.json'), 'utf8'))
   const appId = `${product.appId}.dev`
   const programs = join(app.getPath('appData'), 'Microsoft/Windows/Start Menu/Programs')
@@ -42,7 +48,7 @@ app.whenReady().then(async () => {
       mkdirSync(backup, { recursive: true })
       copyFileSync(path, join(backup, `${index}.lnk`))
     }
-    const details = { target, args: '', cwd: root, description: 'W1 Harness · 本机日用开发版',
+    const details = { target, args: '', cwd: root, description: 'W1 Harness',
       icon, iconIndex: 0, appUserModelId: appId }
     if (!shell.writeShortcutLink(path, existsSync(path) ? 'update' : 'create', details)) throw new Error(`Cannot write shortcut: ${path}`)
     const actual = shell.readShortcutLink(path)

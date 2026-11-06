@@ -3,6 +3,6 @@
   "version": "0.2.0",
   "appId": "local.w1.harness",
   "protocol": "w1-harness",
-  "upstreamTag": "dsh-v0.2.1-rc.2",
-  "upstreamPublishedAt": "2026-10-17T08:16:33Z"
+  "upstreamTag": "dsh-v0.2.2-alpha.3",
+  "upstreamPublishedAt": "2026-11-03T07:56:48Z"
 }

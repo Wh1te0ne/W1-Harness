@@ -22,7 +22,7 @@ function props() {
     newChat: vi.fn(), t: (key: string) => zh[key as keyof typeof zh] ?? key,
     renderFactorySlot: (name, input) => {
       expect(name).toBe('model.selector')
-      return <ModelSelect {...input as ModelPickerOwner} renderSlot={(_name, _owner, options) => options?.fallback ?? null}
+      return <ModelSelect {...input as ModelPickerOwner} resolveText={text => typeof text === 'string' ? text : text.en} renderSlot={(_name, _owner, options) => options?.fallback ?? null}
         t={(key, values) => {
           const template = (modelZh as Record<string, string>)[key] ?? (commonZh as Record<string, string>)[key] ?? key
           return Object.entries(values ?? {}).reduce((text, [name, value]) => text.replaceAll('{' + name + '}', String(value)), template)

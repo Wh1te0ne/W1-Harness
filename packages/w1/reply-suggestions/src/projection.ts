@@ -35,8 +35,8 @@ function textOf(blocks: readonly ContentBlock[]): string {
  * @param maxMessages - maximum retained user and assistant messages.
  * @returns host fold and composer-only wire view.
  */
-export function createReplyProjection(maxCharacters: number, maxMessages: number): ProjectionDefinition<'w1ReplySuggestion'> & {
-  wire: NonNullable<ProjectionDefinition<'w1ReplySuggestion'>['wire']>
+export function createReplyProjection(maxCharacters: number, maxMessages: number): ProjectionDefinition<'w1ReplySuggestion', ReplyContext> & {
+  wire: NonNullable<ProjectionDefinition<'w1ReplySuggestion', ReplyContext>['wire']>
 } {
   return {
     key: 'w1ReplySuggestion', stateVersion: 2,

@@ -682,7 +682,7 @@ window.__ModuleLoader__.load({
       useEffect(() => { if (result.value?.offset === offset) setPages(previous => offset === 0 ? result.value.steps : [...new Map([...previous, ...result.value.steps].map(row => [row.key, row])).values()]) }, [result.value, offset])
       const value = result.value
       const names = { input: text('输入', 'Input'), cacheRead: text('缓存读取', 'Cache read'), cacheWrite: text('缓存写入', 'Cache write'), cacheWrite1h:text('缓存写入（1h）','Cache write (1h)'), output: text('输出', 'Output'), reasoning: text('推理', 'Reasoning'),legacy:text('历史汇总（费用未拆分）','Historical aggregate (unsplit cost)') }
-      const kindName = kind => ({ model: text('模型调用', 'Model calls'), compaction: text('上下文压缩', 'Compaction'), search: text('原生搜索', 'Native search'),legacy:text('历史汇总','Historical aggregate'),'reply-selection':text('回复建议选模','Suggestion model selection'),'reply-suggestion':text('回复建议','Reply suggestion'),'session-title':text('标题生成','Title generation'),'side-chat':text('旁路对话','Side chat') })[kind] ?? kind
+      const kindName = kind => ({ model: text('模型调用', 'Model calls'), compaction: text('上下文压缩', 'Compaction'), search: text('原生搜索', 'Native search'),legacy:text('历史汇总','Historical aggregate'),'reply-selection':text('回复建议选模','Suggestion model selection'),'reply-suggestion':text('回复建议','Reply suggestion'),'session-title':text('标题生成','Title generation'),'side-chat':text('旁路对话','Side chat'),'auto-review':text('自动审查','Auto review'),'goal-review':text('目标复核','Goal review') })[kind] ?? kind
       const selectedRows = row => row.rows.filter(r => basis === 'total' || (basis === 'plan' ? r.plan : !r.plan))
       const bucketCost = (row, buckets) => {
         if(row.kind==='legacy')return '—'
@@ -753,7 +753,7 @@ window.__ModuleLoader__.load({
       }, [result.loading, result.value, offset, selected, view])
       const detail = result.value, basis = query.basis
       const names = { input: text('非缓存输入', 'Uncached input'), output: text('输出', 'Output'), cacheRead: text('缓存读取', 'Cache read'), cacheWrite: text('缓存写入', 'Cache write'), cacheWrite1h:text('缓存写入（1h）','Cache write (1h)'), reasoning: text('推理', 'Reasoning'),legacy:text('历史汇总（费用未拆分）','Historical aggregate (unsplit cost)') }
-      const kinds = { model: text('模型调用', 'Model call'), compaction: text('上下文压缩', 'Compaction'), search: text('原生搜索', 'Native search'),legacy:text('历史汇总','Historical aggregate'),'reply-selection':text('回复建议选模','Suggestion model selection'),'reply-suggestion':text('回复建议','Reply suggestion'),'session-title':text('标题生成','Title generation'),'side-chat':text('旁路对话','Side chat') }
+      const kinds = { model: text('模型调用', 'Model call'), compaction: text('上下文压缩', 'Compaction'), search: text('原生搜索', 'Native search'),legacy:text('历史汇总','Historical aggregate'),'reply-selection':text('回复建议选模','Suggestion model selection'),'reply-suggestion':text('回复建议','Reply suggestion'),'session-title':text('标题生成','Title generation'),'side-chat':text('旁路对话','Side chat'),'auto-review':text('自动审查','Auto review'),'goal-review':text('目标复核','Goal review') }
       const turnName = turn => turn == null ? text('未标明轮次', 'Turn not recorded') : text('轮次 ', 'Turn ') + turn
       if (showsPlaceholder(result)) return result.loading
         ? el('p', { className: 'cm-stat-empty', role: 'status' }, text('正在读取本对话的用量明细…', 'Loading this conversation’s usage records…'))

@@ -2,6 +2,8 @@
 
 W1 Mobile 0.1.1 与中继 0.1.1 兼容，实时思考与执行阶段需要配套电脑端 presentation.mjs；仅升级 APK 时仍可查看旧电脑端提供的文字和工具结果，但不会凭空补出思考事件。手机客户端是本机自用 Android 客户端，和电脑 W1 的同一 Host 通信。任务、历史记录、模型 Key 与文件操作留在电脑；NAS 只转发加密消息，不运行模型。默认关闭远程连接，在电脑「设置 → 远程连接」启用、配对和管理设备，不再使用独立窗口或侧栏入口。
 
+页面标题与 Android 图标源使用固定的 [W1 Brand HARNESS 资产](../../docs/W1品牌规范.md)。页面通过两份正式 SVG 跟随系统明暗主题；资源同步不表示手机 APK 已重装。
+
 ## 部署参数
 
 应用中已有的中继地址属于维护者自用部署；公开源码不表示提供共享中继服务，其他使用者应自行部署并填写自己的 HTTPS 地址。
@@ -60,6 +62,8 @@ location / {
 ## 开发与验证
 
 远程连接入口位于电脑设置页，经受限 IPC 调用 Host；build-desktop-ui.mjs 生成客户端模块，桌面构建会自动执行。`host.mjs` 是连接管理器；`crypto.mjs` 与 `client.mjs` 由 Node 测试和手机共用；`relay.mjs` 是独立 NAS 转发基础设施，不启动 Harness；`mobile/` 保存手机界面；`android/` 保存原生壳、相机扫码及 Keystore；电脑适配位于 `apps/desktop-host/src/w1-remote.ts`，设备管理窗口位于 `apps/desktop/src/w1-remote-window.ts`。
+
+历史分页在 `sessionController.events` 上使用固定截止序号和 20 条消息预算，保留手机端 `page` 操作及 `messages`/`hasMore` 响应。
 
 ```powershell
 # 在 W1 仓库根目录执行

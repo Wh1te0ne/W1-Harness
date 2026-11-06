@@ -1,8 +1,9 @@
 /** Direct Messages transport with one cancellable lifecycle per model request. */
 
 import { attributionHeaders, LlmAdapter, LlmError } from '@deepseek-ai/dsh-llm'
+import { isolatedFetch } from '@deepseek-ai/dsh-http-proxy'
 import type { GenerateOptions, ImageAttachmentAccessResolver, PreparedAdapterCall, StreamChunk } from '@deepseek-ai/dsh-llm'
-import type { DeepSeekLlmApiJson } from '@deepseek-ai/dsh-deepseek-llm-api-extensions'
+import type { DeepSeekLlmApiExtensionRequest, DeepSeekLlmApiJson } from '@deepseek-ai/dsh-deepseek-llm-api-extensions'
 import { idleWatchdog, timeoutOf } from '@deepseek-ai/dsh-timeout'
 import { modelInfo } from './model-info.ts'
 import type { DeepSeekAdapterOptions, DeepSeekConnectionOptions as Connection } from './types.ts'
@@ -53,7 +54,7 @@ export class DeepSeekAdapter<C extends Connection = Connection> extends LlmAdapt
     this.dependencies.admit?.(connection, model)
     return { model: modelInfo(connection, provider, model), stream: options => this.generate(options, connection) }
   }
-  stream(options: GenerateOptions): AsyncIterable<StreamChunk> {
+  stream(options: GenerateOptions<string>): AsyncIterable<StreamChunk> {
     const connection = this.dependencies.options()
     this.dependencies.admit?.(connection, options.model)
     return this.generate(options, connection)
@@ -63,7 +64,7 @@ export class DeepSeekAdapter<C extends Connection = Connection> extends LlmAdapt
     return this.dependencies.connect?.(signal) ?? Promise.resolve(this.dependencies.options())
   }
 
-  private async * generate(options: GenerateOptions, connection: C): AsyncGenerator<StreamChunk> {
+  private async * generate(options: GenerateOptions<string>, connection: C): AsyncGenerator<StreamChunk> {
     const consumer = new AbortController()
     const signal = options.signal === undefined ? consumer.signal : AbortSignal.any([consumer.signal, options.signal])
     using watchdog = idleWatchdog(signal, connection.streamIdleTimeoutMs, 'MESSAGES_IDLE')
@@ -90,7 +91,7 @@ export class DeepSeekAdapter<C extends Connection = Connection> extends LlmAdapt
   }
 
   private async * request(
-    options: GenerateOptions, connection: C, signal: AbortSignal, activity: () => void,
+    options: GenerateOptions<string>, connection: C, signal: AbortSignal, activity: () => void,
   ): AsyncGenerator<StreamChunk> {
     signal.throwIfAborted()
     const { messages, versions } = await prepareImages(
@@ -120,15 +121,19 @@ export class DeepSeekAdapter<C extends Connection = Connection> extends LlmAdapt
         const body = serialize(options, connection, history, versions, this.imageAccess, (reason) => {
           this.dependencies.onReplayDegrade?.({ provider: options.provider, model: options.model, reason })
         }, fileIds)
-        const extensions = await prepareRequestExtensions(body as Readonly<Record<string, DeepSeekLlmApiJson>>, {
+        const requestIdentity: Omit<DeepSeekLlmApiExtensionRequest, 'body'> = {
           signal,
           ...options.sessionId === undefined ? {} : { sessionId: String(options.sessionId) },
           ...options.purpose === undefined ? {} : { purpose: options.purpose },
-        }, this.dependencies.prepareExtensions, (fields, error) => {
-          this.dependencies.onExtensionsOmitted?.({ provider: options.provider, model: options.model, fields, error })
-        }, (error) => {
-          this.dependencies.onExtensionsUnaccepted?.({ provider: options.provider, model: options.model, error })
-        })
+        }
+        const extensions = await prepareRequestExtensions(
+          body as Readonly<Record<string, DeepSeekLlmApiJson>>, requestIdentity,
+          this.dependencies.prepareExtensions, (fields, error) => {
+            this.dependencies.onExtensionsOmitted?.({ provider: options.provider, model: options.model, fields, error })
+          }, (error) => {
+            this.dependencies.onExtensionsUnaccepted?.({ provider: options.provider, model: options.model, error })
+          },
+        )
         signal.throwIfAborted()
         const betas = [
           ...fileIds !== undefined && fileIds.size > 0 ? [MESSAGES_FILES_BETA] : [],
@@ -138,19 +143,23 @@ export class DeepSeekAdapter<C extends Connection = Connection> extends LlmAdapt
         ]
         try {
           this.dependencies.onRequestPrepared?.({ options, summarize: maxMessages => requestStructure(extensions.payload, maxMessages) })
-        } catch { /* Diagnostics must not affect transport or request bytes. */ }
-        const response = await fetch(`${messagesApiRoot(connection.baseURL)}/messages`, {
+        } catch (_error) { /* Diagnostics must not affect transport or request bytes. */ }
+        const headers = new Headers(options.transport?.headers)
+        for (const name of ['authorization', 'x-api-key', 'api-key', 'anthropic-beta', 'x-deepseek-harness-session-id', 'x-deepseek-harness-compact']) headers.delete(name)
+        for (const [name, value] of Object.entries({
+          ...attributionHeaders(),
+          'content-type': 'application/json', 'accept': 'text/event-stream',
+          ...auth.headers,
+          'anthropic-version': '2023-06-01',
+          ...betas.length === 0 ? {} : { 'anthropic-beta': betas.join(',') },
+          'x-deepseek-harness-user-id': this.dependencies.resolveUserId(),
+          ...options.sessionId === undefined ? {} : { 'x-deepseek-harness-session-id': String(options.sessionId) },
+          ...requestIdentity.purpose === 'compaction' ? { 'x-deepseek-harness-compact': '1' } : {},
+        })) headers.set(name, value)
+        const fetcher = options.transport?.isolated ? isolatedFetch : globalThis.fetch
+        const response = await fetcher(`${messagesApiRoot(connection.baseURL)}/messages`, {
           method: 'POST', signal, body: extensions.payload, redirect: 'error',
-          headers: {
-            ...attributionHeaders(),
-            'content-type': 'application/json', 'accept': 'text/event-stream',
-            ...auth.headers,
-            'anthropic-version': '2023-06-01',
-            ...betas.length === 0 ? {} : { 'anthropic-beta': betas.join(',') },
-            'x-deepseek-harness-user-id': this.dependencies.resolveUserId(),
-            ...options.sessionId === undefined ? {} : { 'x-deepseek-harness-session-id': String(options.sessionId) },
-            ...options.purpose === 'compaction' ? { 'x-deepseek-harness-compact': '1' } : {},
-          },
+          headers,
         })
         if (!response.ok) {
           const text = await response.text()

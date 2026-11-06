@@ -72,6 +72,63 @@ test('a cold launch resumes a persisted handoff after its waiting process is gon
   assert.equal(readFileSync(join(f.root, f.file), 'utf8'), 'new source')
 })
 
+test('stages only the two explicit root build metadata files with the same backup and conflict checks', async t => {
+  const f = fixture(t)
+  const manifestFile = join(f.directory, 'manifest.json')
+  const manifest = JSON.parse(readFileSync(manifestFile, 'utf8'))
+  for (const file of ['tsconfig.base.json', 'pnpm-lock.yaml']) {
+    f.put(join(f.root, file), 'previous metadata')
+    f.put(join(f.directory, 'backup', file), 'previous metadata')
+    f.put(join(f.directory, 'sources', file), 'candidate metadata')
+    manifest.sources.push({ file, before: hash('previous metadata'), sha256: hash('candidate metadata') })
+  }
+  f.put(manifestFile, JSON.stringify(manifest))
+  f.put(join(f.root, 'pnpm-lock.yaml'), 'another update')
+  await assert.rejects(applyPreparedPromotion(f.directory, () => false), /Daily source changed/)
+  assert.equal(readFileSync(join(f.root, 'tsconfig.base.json'), 'utf8'), 'previous metadata')
+  f.put(join(f.root, 'pnpm-lock.yaml'), 'previous metadata')
+  assert.equal(await applyPreparedPromotion(f.directory, () => false), 1)
+  assert.equal(readFileSync(join(f.root, 'pnpm-lock.yaml'), 'utf8'), 'candidate metadata')
+  assert.equal(readFileSync(join(f.directory, 'backup/tsconfig.base.json'), 'utf8'), 'previous metadata')
+})
+
+test('does not extend root metadata publication to arbitrary root files', async t => {
+  const f = fixture(t)
+  const manifestFile = join(f.directory, 'manifest.json')
+  const manifest = JSON.parse(readFileSync(manifestFile, 'utf8'))
+  manifest.sources.push({ file: '.env', before: null, sha256: null })
+  f.put(manifestFile, JSON.stringify(manifest))
+  await assert.rejects(applyPreparedPromotion(f.directory, () => false), /Unsupported source destination/)
+  assert.equal(readFileSync(join(f.root, f.file), 'utf8'), 'old source')
+})
+
+test('publishes W1 artwork with source backups and conflict checks', async t => {
+  const f = fixture(t)
+  const manifestFile = join(f.directory, 'manifest.json')
+  const manifest = JSON.parse(readFileSync(manifestFile, 'utf8'))
+  const file = 'assets/w1/exports/app-icon.ico'
+  f.put(join(f.root, file), 'old artwork')
+  f.put(join(f.directory, 'backup', file), 'old artwork')
+  f.put(join(f.directory, 'sources', file), 'centered artwork')
+  manifest.sources.push({ file, before: hash('old artwork'), sha256: hash('centered artwork') })
+  f.put(manifestFile, JSON.stringify(manifest))
+  f.put(join(f.root, file), 'concurrent artwork')
+  await assert.rejects(applyPreparedPromotion(f.directory, () => false), /Daily source changed/)
+  f.put(join(f.root, file), 'old artwork')
+  assert.equal(await applyPreparedPromotion(f.directory, () => false), 1)
+  assert.equal(readFileSync(join(f.root, file), 'utf8'), 'centered artwork')
+  assert.equal(readFileSync(join(f.directory, 'backup', file), 'utf8'), 'old artwork')
+})
+
+test('does not publish unrelated asset directories', async t => {
+  const f = fixture(t)
+  const manifestFile = join(f.directory, 'manifest.json')
+  const manifest = JSON.parse(readFileSync(manifestFile, 'utf8'))
+  manifest.sources.push({ file: 'assets/other/mark.svg', before: null, sha256: null })
+  f.put(manifestFile, JSON.stringify(manifest))
+  await assert.rejects(applyPreparedPromotion(f.directory, () => false), /Unsupported source destination/)
+})
+
 test('a cold launch refuses an interrupted publication instead of overwriting its recovery state', async t => {
   const f = fixture(t)
   f.put(join(f.root, '.work/local-dev/pending-promotion.json'), JSON.stringify({ id: f.id }))

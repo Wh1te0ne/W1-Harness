@@ -1,5 +1,7 @@
-/** Export W1 Fold artwork from the canonical SVG using the desktop's locked Sharp dependency. */
-import { readFile, writeFile, mkdir } from 'node:fs/promises'
+/** Derive platform sizes from the pinned W1 Brand product assets. */
+import { readFile, writeFile, mkdir, copyFile } from 'node:fs/promises'
+import { createHash } from 'node:crypto'
+import { execFileSync } from 'node:child_process'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 
@@ -8,25 +10,44 @@ const sharp = require('sharp')
 const root = new URL('../../assets/w1/', import.meta.url)
 const output = new URL('exports/', root)
 await mkdir(output, { recursive: true })
-const master = await readFile(new URL('mark.svg', root), 'utf8')
-const content = master.match(/<g fill="currentColor">([\s\S]*)<\/g>\s*<\/svg>/)[1]
-const svg = (body) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">\n${body}\n</svg>\n`
-const dark = svg(`<g fill="#17191F">${content}</g>`)
-const light = svg(`<g fill="#FFFFFF">${content}</g>`)
-const app = svg(`<rect x="16" y="16" width="480" height="480" rx="104" fill="#17191F"/>\n<g fill="#FFFFFF" transform="translate(51.2 51.2) scale(.8)">${content}</g>`)
-const appLight = svg(`<rect x="16" y="16" width="480" height="480" rx="104" fill="#FFFFFF"/>\n<g fill="#17191F" transform="translate(51.2 51.2) scale(.8)">${content}</g>`)
-const variants = { 'mark-dark': dark, 'mark-light': light, 'app-icon': app, 'app-icon-light': appLight }
+const pinned = JSON.parse(await readFile(new URL('brand/source.json', root), 'utf8'))
+if (!/^\d+\.\d+\.\d+(?:-[0-9A-Za-z]+(?:\.[0-9A-Za-z]+)*)?$/.test(pinned.version) || pinned.product !== 'harness') throw new Error('Invalid W1 Brand pin')
+async function asset(name) {
+  const bytes = await readFile(new URL(`brand/${pinned.version}/${name}`, root))
+  if (createHash('sha256').update(bytes).digest('hex') !== pinned.files[name]) throw new Error(`Pinned brand asset changed: ${name}`)
+  return bytes
+}
+const master = await asset('src/brand/w1-fold.svg')
+await writeFile(new URL('mark.svg', root), master)
+const dark = (await asset('dist/brand/light/w1-mark.svg')).toString()
+const light = (await asset('dist/brand/dark/w1-mark.svg')).toString()
+const appLight = (await asset('dist/products/harness/light/app-icon.svg')).toString()
+const appDark = (await asset('dist/products/harness/dark/app-icon.svg')).toString()
+const appPng = { light: await asset('dist/products/harness/light/app-icon.png'), dark: await asset('dist/products/harness/dark/app-icon.png') }
+const foreground = { light: await asset('dist/products/harness/light/app-icon-foreground.svg'), dark: await asset('dist/products/harness/dark/app-icon-foreground.svg') }
+const variants = { 'mark-dark': dark, 'mark-light': light, 'app-icon': appLight, 'app-icon-light': appLight, 'app-icon-dark': appDark }
 for (const [name, source] of Object.entries(variants)) {
   await writeFile(new URL(`${name}.svg`, output), source)
   for (const size of [16, 20, 24, 32, 48, 64, 128, 256, 512, 1024]) {
-    await sharp(Buffer.from(source)).resize(size, size).png().toFile(fileURLToPath(new URL(`${name}-${size}.png`, output)))
+    const input = name.startsWith('app-icon') ? appPng[name === 'app-icon-dark' ? 'dark' : 'light'] : Buffer.from(source)
+    const destination = new URL(`${name}-${size}.png`, output)
+    if (name.startsWith('app-icon') && size === 1024) await writeFile(destination, input)
+    else await sharp(input).resize(size, size).png().toFile(fileURLToPath(destination))
   }
+}
+
+// Render the transparent delivery images directly from vectors at their target density.
+for (const [name, source] of [['mark-dark', dark], ['mark-light', light]]) {
+  await sharp(Buffer.from(source), { density: 1152 }).resize(8192, 8192).png()
+    .toFile(fileURLToPath(new URL(`${name}-8192.png`, output)))
 }
 
 // ICO stores lossless PNG frames; 0 in each dimension byte means 256 pixels.
 const sizes = [16, 20, 24, 32, 48, 64, 128, 256]
 for (const name of Object.keys(variants)) {
-const frames = await Promise.all(sizes.map((size) => readFile(new URL(`${name}-${size}.png`, output))))
+const frames = await Promise.all(sizes.map((size) => name.startsWith('app-icon')
+  ? sharp(foreground[name === 'app-icon-dark' ? 'dark' : 'light']).resize(size, size).ensureAlpha().png().toBuffer()
+  : readFile(new URL(`${name}-${size}.png`, output))))
 const header = Buffer.alloc(6 + 16 * sizes.length)
 header.writeUInt16LE(1, 2)
 header.writeUInt16LE(sizes.length, 4)
@@ -44,17 +65,49 @@ frames.forEach((frame, i) => {
 await writeFile(new URL(`${name}.ico`, output), Buffer.concat([header, ...frames]))
 }
 
-const panel = (x, background, foreground) => `<rect x="${x}" y="100" width="360" height="370" rx="24" fill="${background}"/><g transform="translate(${x + 24} 120) scale(.61)" fill="${foreground}">${content}</g>`
-let preview = `<rect width="1200" height="760" fill="#F1F2F4"/><text x="40" y="55" font-family="Arial" font-size="28" fill="#17191F">W1 / FOLD — v1.0</text>`
-preview += panel(40, '#FFFFFF', '#17191F') + panel(420, '#17191F', '#FFFFFF')
-preview += `<g transform="translate(820 130) scale(.64)">${app.replace(/<svg[^>]*>|<\/svg>/g, '')}</g>`
-preview += `<text x="40" y="525" font-family="Arial" font-size="18" fill="#17191F">Actual pixel sizes / 16 · 20 · 24 · 32 · 48 · 64 · 128</text>`
-let x = 55
-for (const size of sizes.slice(0, -1)) {
-  preview += `<g transform="translate(${x} 560) scale(${size / 512})">${app.replace(/<svg[^>]*>|<\/svg>/g, '')}</g>`
-  preview += `<text x="${x}" y="720" font-family="Arial" font-size="14" fill="#555">${size}</text>`
-  x += size + 48
+// Product copies share the canonical artwork; immutable release directories are not touched.
+for (const [source, target] of [
+  ['mark-dark.ico', '../../apps/desktop/resources/w1-mark-dark.ico'],
+  ['mark-light.ico', '../../apps/desktop/resources/w1-mark-light.ico'],
+  ['app-icon-dark.ico', '../../apps/desktop/resources/w1-app-dark.ico'],
+  ['app-icon-light.ico', '../../apps/desktop/resources/w1-app-light.ico'],
+  ['mark-dark.svg', '../../packages/w1/chrome-use/extension/mark.svg'],
+]) {
+  if (process.argv.includes('--skip-desktop-icons') && target.includes('/apps/desktop/')) continue
+  await copyFile(new URL(source, output), new URL(target, root))
 }
-const board = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760">${preview}</svg>`
-await sharp(Buffer.from(board)).png().toFile(fileURLToPath(new URL('preview.png', root)))
-console.log('Exported W1 Fold: 4 SVG variants, 40 PNGs, four 8-frame ICOs, preview.')
+for (const size of [16, 32, 48, 128]) {
+  await copyFile(new URL(`app-icon-dark-${size}.png`, output), new URL(`../../packages/w1/chrome-use/extension/app-icon-${size}.png`, root))
+}
+for (const size of [16, 32, 128]) {
+  await copyFile(new URL(`app-icon-dark-${size}.png`, output), new URL(`../../packages/w1/chrome-use/extension/icon-${size}.png`, root))
+}
+await writeFile(new URL('../../apps/w1-remote/mobile/mark.svg', root), master)
+await copyFile(new URL('app-icon-dark-1024.png', output), new URL('../../apps/w1-remote/android/app/src/main/res/drawable/w1_icon.png', root))
+
+const logos = {}
+for (const theme of ['light', 'dark']) {
+  const logo = await asset(`dist/products/harness/${theme}/interface-logo.svg`)
+  logos[theme] = 'data:image/svg+xml;base64,' + logo.toString('base64')
+  await writeFile(new URL(`interface-logo-${theme}.svg`, output), logo)
+  await writeFile(new URL(`wordmark-${theme}.svg`, output), await asset(`dist/products/harness/${theme}/wordmark.svg`))
+  await writeFile(new URL(`../../apps/w1-remote/mobile/interface-logo-${theme}.svg`, root), logo)
+}
+const config = JSON.parse((await asset('brand.json')).toString())
+const logoSvg = (await asset('dist/products/harness/light/interface-logo.svg')).toString()
+const logoViewBox = /viewBox="0 0 ([\d.]+) ([\d.]+)"/.exec(logoSvg)
+if (!logoViewBox || !Number.isFinite(config.policy.interfaceMinimumHeightPx)) throw new Error('Pinned interface logo needs a viewBox and minimum height')
+const height = config.policy.interfaceMinimumHeightPx
+const width = height * Number(logoViewBox[1]) / Number(logoViewBox[2])
+await writeFile(new URL('../../packages/client/ui-brand-official/src/client/brand-assets.ts', root),
+  `/** W1 Brand ${pinned.version}; generated by scripts/w1/export-brand.mjs from the pinned SVGs. */\n\n/** Paired interface assets and their minimum display dimensions. */\nexport const harnessLogo = {\n  light: '${logos.light}',\n  dark: '${logos.dark}',\n  width: ${width},\n  height: ${height},\n} as const\n`)
+await writeFile(new URL('preview.png', root), await asset('dist/previews/harness-light-dark.png'))
+await writeFile(new URL('../../apps/web/public/favicon.svg', root), appLight)
+await writeFile(new URL('../../apps/web/public/favicon-dark.svg', root), appDark)
+const webManifestUrl = new URL('../../apps/web/public/manifest.webmanifest', root)
+const webManifest = JSON.parse(await readFile(webManifestUrl, 'utf8'))
+Object.assign(webManifest, { name: 'W1 Harness', short_name: 'W1 Harness' })
+await writeFile(webManifestUrl, JSON.stringify(webManifest, null, 2) + '\n')
+execFileSync(process.execPath, ['--import', 'tsx/esm', fileURLToPath(new URL('../../apps/web/scripts/render-app-icons.ts', root))],
+  { cwd: fileURLToPath(new URL('../..', root)), stdio: 'inherit', windowsHide: true })
+console.log(`Exported W1 Harness from W1 Brand ${pinned.version}: paired logos, platform PNG/ICO sizes and product copies.`)

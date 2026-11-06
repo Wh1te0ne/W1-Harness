@@ -50,9 +50,9 @@ kind: "package-reference"
 
 客户端不重写主请求前缀，侧聊前缀由 Host 管理；选择另一模型可能改变侧聊请求的缓存行为。
 
-<a id="known-limitations-and-deferred-work"></a>
-
 ## 已知限制与后续工作
+
+<a id="known-limitations-and-deferred-work"></a>
 
 - 真实桌面呈现及供应商可用性需单独验证。
 

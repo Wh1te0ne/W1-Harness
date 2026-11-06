@@ -42,7 +42,7 @@ window.__ModuleLoader__.load({ id: 'dsh-usage-manager', chunk: 'client.custom.js
       const choose=v=>{setPeriod(v);setOffset(0);setOpen({})}
       const metric=(label,value,hint,accent=false)=>el('div',{className:'um-metric'+(accent?' accent':'')},el('div',{className:'um-muted'},label),el('div',{className:'um-value',title:label==='总 Token'?exact(tokenTotal(data?.totals)):undefined},value),el('div',{className:'um-muted'},hint))
       const select=(label,value,change,options)=>el('label',{className:'um-muted'},label,el('select',{className:'um-select',value,'aria-label':label,onChange:e=>{change(e.target.value);setOffset(0)}},options.map(([value,label])=>el('option',{key:value,value},label))))
-      const rowName=row=>row.title&&row.title!==row.id?row.title:'未命名会话 · '+row.id.slice(0,8)
+      const rowName=row=>row.title&&row.title!==row.id?row.title:'未命名会话 · '+row.id.replace(/^session-/,'').slice(0,8)
       const amount=row=>row.unpriced ? (row.apiCost>0?money(row.apiCost)+' + 未定价':'未定价') : money(row.apiCost)
       const childRow=(row,name)=>el('div',{key:row.id,className:'um-row um-child'},el('div',null,el('span',{title:row.title||name},name),el('small',{className:'um-muted'},row.calls+' 次调用')),el('span',{title:exact(tokenTotal(row))},formatTokens(tokenTotal(row))),el('span',null,amount(row)))
       const top=data?.totals

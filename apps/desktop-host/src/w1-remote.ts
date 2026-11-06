@@ -47,7 +47,7 @@ export function createW1RemoteAdapter(ctx: Context): RemoteAdapter {
       if (action === 'cancel') return sessions.cancel({ sessionId })
       if (action === 'page') {
         if (!Number.isSafeInteger(args.throughSeq) || Number(args.throughSeq) < 0 || !Number.isSafeInteger(args.beforeSeq) || Number(args.beforeSeq) < 0) throw new Error('历史游标无效')
-        const value = await sessions.page({ address: { kind: 'session', sessionId }, throughSeq: Number(args.throughSeq), beforeSeq: Number(args.beforeSeq), maxMessages: 20 }, signal)
+        const value = await sessions.events({ address: { kind: 'session', sessionId }, throughSeq: Number(args.throughSeq), beforeSeq: Number(args.beforeSeq), maxMessages: 20 }, signal)
         return { messages: value.records.map(record => projectEvent(record.event)).filter(Boolean), hasMore: value.hasMore }
       }
       throw new Error('手机端不支持此操作')

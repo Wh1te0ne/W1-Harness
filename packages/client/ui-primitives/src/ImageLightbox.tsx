@@ -1,3 +1,4 @@
+import type { HTMLAttributes } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { IconCloseOutlineRegular } from './icons/index.tsx'
@@ -24,14 +25,16 @@ export interface ImageLightboxLabels {
  * @param props.src - the original image URL.
  * @param props.alt - the image's alt text.
  * @param props.labels - dialog and close-control strings.
+ * @param props.contextMenuProps - optional original-image gesture bindings.
  * @param props.onClose - dismiss callback owned by the opener.
  * @returns the modal preview dialog.
  */
-export function ImageLightbox({ src, alt, labels, onClose }: {
+export function ImageLightbox({ src, alt, labels, onClose, contextMenuProps }: {
   src: string
   alt: string
   labels: ImageLightboxLabels
   onClose: () => void
+  contextMenuProps?: Pick<HTMLAttributes<HTMLElement>, 'onContextMenu' | 'onKeyDown' | 'tabIndex'> | undefined
 }) {
   const closeRef = useRef<HTMLButtonElement | null>(null)
   const restoreRef = useRef<HTMLElement | null>(null)
@@ -65,10 +68,12 @@ export function ImageLightbox({ src, alt, labels, onClose }: {
     restoreRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
     closeRef.current?.focus()
     const onKeyDown = (event: globalThis.KeyboardEvent): void => {
+      // A portaled image menu owns Escape and Tab until it returns focus.
+      if (event.defaultPrevented || document.activeElement?.closest('[role="menu"]')) return
       if (event.key === 'Escape') { event.stopPropagation(); onClose() }
       if (event.key === 'Tab') {
-        const controls = [...(dialogRef.current?.querySelectorAll<HTMLButtonElement>('button') ?? [])]
-        const index = controls.indexOf(document.activeElement as HTMLButtonElement)
+        const controls = [...(dialogRef.current?.querySelectorAll<HTMLElement>('button, [tabindex]:not([tabindex="-1"])') ?? [])]
+        const index = controls.indexOf(document.activeElement as HTMLElement)
         event.preventDefault()
         controls[(index + (event.shiftKey ? -1 : 1) + controls.length) % controls.length]?.focus()
       }
@@ -90,7 +95,7 @@ export function ImageLightbox({ src, alt, labels, onClose }: {
     >
       <div className={css.stage} ref={stageRef}>
         <div className={css.mask} aria-hidden="true" onMouseDown={onClose} />
-        <img className={css.image} src={src} alt={alt} draggable={false}
+        <img className={css.image} src={src} alt={alt} {...contextMenuProps} draggable={false}
           data-zoomed={view.scale > 1 || undefined}
           style={{ transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})` }}
           onDoubleClick={reset}

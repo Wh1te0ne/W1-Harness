@@ -1,13 +1,25 @@
-.wordmark {
-  display: inline-flex;
-  align-items: center;
-  height: 24px;
-  white-space: nowrap;
-  font-family: var(--dsw-font-family-brand);
-  font-size: 15px;
-  font-weight: 500;
-  line-height: 1;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: inherit;
+.logo {
+  display: inline-block;
+  flex: none;
+  line-height: 0;
+}
+
+.logo img {
+  max-width: none;
+}
+
+.light {
+  display: block;
+}
+
+.dark {
+  display: none;
+}
+
+:global(body[data-ds-dark-theme]) .light {
+  display: none;
+}
+
+:global(body[data-ds-dark-theme]) .dark {
+  display: block;
 }

@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" color="#252A33" fill="currentColor" role="img"><title>W1 Harness</title><rect width="1024" height="1024" fill="#FFFFFF"/><g transform="translate(224 155) scale(1.4582278481012658) translate(-47 -95)">
+<g fill="currentColor">  <g transform="translate(-692 -585)">
+    <path d="M739 717H805Q808 717 810 722L858 853L814 925Z"/>
+    <path d="M914 783Q916 783 918 788L945 850L863 982Q860 988 854 988H840Q835 988 833 982L817 935L907 790Q911 783 914 783Z"/>
+    <path d="M925 783H989Q996 783 1000 790L1086 974Q1090 983 1082 987Q1080 988 1076 988H1026Q1020 988 1017 982Z"/>
+    <path d="M1027 752Q1027 748 1031 745L1068 722L1067 774L1027 798Z"/>
+    <path d="M1076 717L1125 686Q1134 680 1134 689L1132 860Q1132 880 1121 900L1092 965L1074 928L1076 905Z"/>
+  </g></g>
+</g><g transform="translate(224 701.4598540145985) scale(1.051094890510949) translate(0 0)">
+
+  <defs>
+    <mask id="harness-light-s-word-harness-cuts" maskUnits="userSpaceOnUse" x="-1" y="-1" width="550" height="130">
+      <rect x="-1" y="-1" width="550" height="130" fill="white"/>
+      <path d="M10 87L54 52L57 55L13 90Z M171 87L218 48L221 51L174 90Z M273 57L301 0L305 2L277 60Z" fill="black"/>
+    </mask>
+  </defs>
+  <g mask="url(#harness-light-s-word-harness-cuts)">
+    <path d="M0 0H20V50H44V0H64V128H44V78H20V128H0Z"/>
+    <path fill-rule="evenodd" transform="translate(76 0)" d="M0 128L25 0H47L72 128H50L45 100H27L22 128ZM36 30L30 77H42Z"/>
+    <path fill-rule="evenodd" transform="translate(160 0)" d="M0 0H49L72 22V58L56 75L76 128H51L32 82H20V128H0ZM20 23V59H43L51 51V31L43 23Z"/>
+    <path transform="translate(248 0)" d="M0 128V0H20L52 78V0H72V128H52L20 50V128Z"/>
+    <path transform="translate(332 0)" d="M0 0H60L50 24H20V51H57L46 77H20V104H60L50 128H0Z"/>
+    <path transform="translate(404 0)" d="M18 0H66L56 24H27L20 31V44L27 51H47L66 70V108L46 128H0L10 104H39L46 97V84L39 77H20L0 56V20Z"/>
+    <path transform="translate(482 0)" d="M18 0H66L56 24H27L20 31V44L27 51H47L66 70V108L46 128H0L10 104H39L46 97V84L39 77H20L0 56V20Z"/>
+  </g>
+</g></svg>

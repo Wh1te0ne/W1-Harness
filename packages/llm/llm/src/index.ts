@@ -7,10 +7,12 @@
  */
 
 import { Context } from '@deepseek-ai/cordis'
+import z from '@deepseek-ai/schemastery'
 import { Remote, RemoteError, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
 import { deepFreeze } from '@deepseek-ai/dsh-util-values'
 import type {
   GenerateOptions,
+  LlmRequestTransport,
   RequestMessage,
   LlmConfigurableProvider,
   LlmDiscoveredModel,
@@ -347,11 +349,30 @@ export interface DirectoryRegistrationHandle {
   replace(entries: readonly LlmConfigurableProvider[]): void
 }
 
+/** Deployment-owned transport metadata for explicitly classified model requests. */
+export interface Config {
+  /** Transport policy applied only to the exact purpose key; unclassified calls receive no policy. */
+  requestTransportByPurpose?: Readonly<Record<string, LlmRequestTransport>>
+}
+
+export const Config: z<Config> = z.object({
+  requestTransportByPurpose: z.dict(z.object({
+    isolated: z.boolean().default(false),
+    headers: z.dict(z.string()).default({}),
+  })).default({}),
+})
+
+/** Resolve policy for an optional purpose contributed by a consuming plugin. */
+function resolveRequestTransport(config: Config, purpose: string | undefined): LlmRequestTransport | undefined {
+  return purpose === undefined ? undefined : config.requestTransportByPurpose?.[purpose]
+}
+
 /**
  * The abstract `llm` service: an adapter registry plus a streaming model-call
  * API, interceptable via the `llm/stream` waterfall.
  */
 export class LlmRuntime extends TypertRemoteService {
+  static Config = Config
   private adapters = new Map<string, AdapterRegistration>()
   private directory = new Map<string, LlmConfigurableProvider>()
   private discoveries = new Map<
@@ -359,7 +380,7 @@ export class LlmRuntime extends TypertRemoteService {
     (request: LlmModelDiscoveryRequest, signal?: AbortSignal) => Promise<readonly LlmDiscoveredModel[]>
   >()
 
-  constructor(ctx: Context) {
+  constructor(ctx: Context, public config: Config = {}) {
     super(ctx, 'llm')
   }
 
@@ -734,12 +755,16 @@ export class LlmRuntime extends TypertRemoteService {
       }
       seen.add(model.id)
       const inputModalities = this.detachedModalities(model.inputModalities)
+      const badge = model.badge
       return {
         provider: model.provider,
         id: model.id,
         name: model.name,
         ...model.description === undefined ? {} : { description: model.description },
         ...inputModalities === undefined ? {} : { inputModalities },
+        ...badge === undefined ? {} : {
+          badge: { text: typeof badge.text === 'string' ? badge.text : { ...badge.text }, tone: badge.tone },
+        },
       }
     })
   }
@@ -1171,11 +1196,18 @@ export class LlmRuntime extends TypertRemoteService {
     options: GenerateOptions,
     prepared?: PreparedDispatch,
   ): AsyncIterable<StreamChunk> {
+    const transport = resolveRequestTransport(this.config, options.purpose)
+    const request = transport === undefined ? options : Object.freeze({
+      ...options, transport: Object.freeze({
+        ...options.transport, ...transport,
+        headers: Object.freeze({ ...options.transport?.headers, ...transport.headers }),
+      }),
+    })
     return this.ctx.waterfall(
       this,
       'llm/stream',
-      options,
-      () => this.adapterStream(options, prepared),
+      request,
+      () => this.adapterStream(request, prepared),
     )
   }
 }

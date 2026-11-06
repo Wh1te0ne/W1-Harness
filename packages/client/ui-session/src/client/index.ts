@@ -12,7 +12,7 @@ import type {
 } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type {} from '@deepseek-ai/dsh-api-remotes/client'
-import type { RemoteEndpoint } from '@deepseek-ai/dsh-api-remote-access/client'
+import type { AccessEffect, RemoteEndpoint } from '@deepseek-ai/dsh-api-remote-access/client'
 import { notifySubscribers } from '@deepseek-ai/dsh-client-store'
 import { WeakMapWithValues } from '@deepseek-ai/dsh-util-values'
 import { standardHookPropName } from '@deepseek-ai/dsh-client-ui-slots'
@@ -290,6 +290,9 @@ export class UiSession extends Service {
   private pendingSnapshot: ReadonlyMap<SessionId, SessionPendingInteractionBase> = new Map()
   private readonly running = new Map<SessionId, boolean>()
   private readonly completionUnread = new Set<SessionId>()
+  private unreadStorageKey = ''
+  private savedUnread = ''
+  private unreadLoaded = false
   private statusSnapshot: SessionStatusSnapshot = new Map()
   private readonly statusListeners = new Set<() => void>()
   private mainRetainId: SessionId | undefined
@@ -358,6 +361,24 @@ export class UiSession extends Service {
       throw new Error('ui-session: Session reference is not active in this Controller')
     }
     return this.sourceFor(owner)
+  }
+
+  /**
+   * Keep `callback`'s effects installed while the current Peer may call
+   * `action` on one Session resource, with the semantics of
+   * `ctx.remoteAccess.whenAccess`: `useSessionAccess` answers the same
+   * question during render.
+   * @param sessionId - the Session resource the guarded effects depend on.
+   * @param action - endpoint action the guarded effects depend on.
+   * @param callback - creates one disposer or an iterable of disposers.
+   * @returns idempotent disposer owned by the caller's Cordis fiber.
+   */
+  whenAccess(sessionId: SessionId, action: RemoteEndpoint, callback: () => AccessEffect): () => void {
+    // `ctx.get` traces the service to the caller's Context, which then owns the controller.
+    const access = this.ctx.get('remoteAccess')
+    /* v8 ignore next -- this plugin injects remoteAccess, so the service is active while uiSession is reachable. */
+    if (access === undefined) throw new Error('ui-session: whenAccess requires the remoteAccess service')
+    return access.whenResourceAccess('session', sessionId, action, callback)
   }
 
   /**
@@ -499,6 +520,16 @@ export class UiSession extends Service {
 
   private reconcileStatus(): void {
     const list = this.sessions.list.getSnapshot()
+    if (!this.unreadLoaded && list.phase === 'ready') {
+      this.unreadStorageKey = 'w1.session.unread.v1:' + (this.ctx.remote.$host.home ?? 'local')
+      try {
+        const stored: unknown = JSON.parse(localStorage.getItem(this.unreadStorageKey) ?? '[]')
+        if (Array.isArray(stored)) for (const id of stored) {
+          if (typeof id === 'string') this.completionUnread.add(id as SessionId)
+        }
+      } catch { /* Restricted or invalid storage leaves reminders in memory. */ }
+      this.unreadLoaded = true
+    }
     const present = new Set(Object.keys(list.byId) as SessionId[])
     // Subagent catalog rows and retained subagent fallback rows do not establish Host running state.
     for (const id of list.ids) {
@@ -524,7 +555,21 @@ export class UiSession extends Service {
     return (this.sessions.list.getSnapshot().byId[sessionId]?.retainedBy.mainView ?? 0) > 0
   }
 
+  /**
+   * Acknowledge completion reminders without changing running or pending-interaction state.
+   * @param ids - Session identities explicitly marked read by the user.
+   */
+  acknowledgeCompletions(ids: readonly SessionId[]): void {
+    for (const id of ids) this.completionUnread.delete(id)
+    this.publishStatus()
+  }
+
   private publishStatus(): void {
+    const stored = JSON.stringify([...this.completionUnread])
+    if (this.unreadLoaded && stored !== this.savedUnread) {
+      try { localStorage.setItem(this.unreadStorageKey, stored); this.savedUnread = stored }
+      catch { /* Reminders remain available for this client lifetime. */ }
+    }
     const ids = new Set<SessionId>([
       ...(Object.keys(this.sessions.list.getSnapshot().byId) as SessionId[]),
       ...this.running.keys(),

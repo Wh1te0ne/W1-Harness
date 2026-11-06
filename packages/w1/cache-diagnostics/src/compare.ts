@@ -5,7 +5,7 @@ import type { RequestStructure } from '@deepseek-ai/dsh-llm-deepseek'
 import type { CacheDiagnostic } from './types.ts'
 const hash = (value: unknown) => createHash('sha256').update(value === undefined ? 'null' : JSON.stringify(value)).digest('hex')
 
-export function normalizedStructure(options: GenerateOptions, maxMessages: number): RequestStructure {
+export function normalizedStructure(options: GenerateOptions<string>, maxMessages: number): RequestStructure {
   const messages = options.messages.map(({ id: _id, source, ...message }) => ({ ...message,
     ...source?.kind === 'model' && 'replayState' in source && source.replayState !== undefined ? { replayState: source.replayState } : {} }))
   return {

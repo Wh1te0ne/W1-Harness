@@ -64,7 +64,7 @@ window.__ModuleLoader__.load({
       '.cm-go-time{font-size:11px;color:var(--dsw-alias-label-tertiary)}',
       '.cm-go-row.main .cm-go-label{font-weight:600;color:var(--dsw-alias-label-primary)}',
       '.cm-corner{display:inline-flex;flex:0 1 auto;flex-wrap:wrap;justify-content:center;align-items:center;gap:6px;min-width:0;max-width:100%}',
-      '.cm-today-summary{display:flex;justify-content:space-between;gap:8px;width:100%;padding:7px 8px;border:0;border-radius:6px;background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-secondary);font:inherit;font-size:11px;cursor:pointer;text-align:left}.cm-today-summary:hover{color:var(--dsw-alias-label-primary)}.cm-today-summary:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary)}.cm-today-summary.rail{justify-content:center}',
+      '.cm-today-summary{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;width:100%;padding:11px 12px;border:1px solid var(--dsw-alias-border-l1);border-radius:10px;background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary);font:inherit;cursor:pointer;text-align:left}.cm-today-summary:hover{background:var(--dsw-alias-interactive-bg-hover)}.cm-today-summary:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary);outline-offset:-2px}.cm-today-summary.rail{display:flex;justify-content:center;padding:8px;border:0;background:transparent}.cm-kpi{display:flex;flex-direction:column;gap:4px;min-width:0}.cm-kpi+.cm-kpi{padding-left:12px;border-left:1px solid var(--dsw-alias-border-l1)}.cm-kl{font-size:11px;color:var(--dsw-alias-label-secondary)}.cm-kv{font-size:18px;font-weight:600;line-height:24px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.cm-kn{grid-column:1/-1;font-size:11px;color:var(--dsw-alias-label-secondary)}',
       '.cm-corner-chip{display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:6px;background:var(--dsw-alias-bg-layer-2);font-size:11px;line-height:20px;color:var(--dsw-alias-label-secondary);white-space:nowrap;font-variant-numeric:tabular-nums}',
       // 输入框上方额度横条(issue #31 后续):横排 chips,每片 = 短标签 + 迷你进度条 + 百分比;
       // 可点击刷新(issue #52):action 态带手型/焦点环,厂商多窗口融合为段(.cm-qseg 竖线分隔)。
@@ -154,8 +154,8 @@ window.__ModuleLoader__.load({
       '.cm-price-row input{width:100%}',
       '.cm-buttons{display:flex;flex-wrap:wrap;gap:10px;align-items:center}',
       '.cm-btn{font:inherit;font-size:13px;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-button-elevated-fill);border:1px solid var(--dsw-alias-border-l1);border-radius:8px;padding:6px 14px;cursor:pointer}',
-      '.cm-btn.cm-stat-entry{font-size:12px;line-height:20px;padding:0 6px;min-width:0;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0}',
-      '@media(max-width:640px){.cm-stat-header{display:none}}',
+      '.cm-stat-entry{font-size:12px;min-width:28px;white-space:nowrap;flex-shrink:0}',
+      '@media(max-width:640px){.cm-stat-entry-label{display:none}.cm-stat-entry{padding-inline:6px}}',
       '.cm-btn.primary{background:var(--dsw-alias-state-business-primary);border-color:transparent;color:var(--dsw-alias-label-primary-inverted)}',
       '.cm-btn.primary:hover{opacity:0.88;background:var(--dsw-alias-state-business-primary)}',
       '.cm-btn.danger,.cm-msg.err,.cm-bal-line.err,.cm-bal-err{color:var(--dsw-alias-state-error-primary)}',

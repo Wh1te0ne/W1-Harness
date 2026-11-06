@@ -35,9 +35,10 @@ export const Config: z<Config> = z.object({
  * Restore saved drafts, backfill unattempted completed turns and cancel superseded work.
  * @param ctx - host services for live sessions and model calls.
  * @param config - bounded generation policy.
+ * @returns when projection readers and dependent listeners are ready.
  */
-export function apply(ctx: Context, config: Config): void {
-  ctx.sessionProjections.register(createReplyProjection(config.maxContextCharacters, config.maxMessages))
+export async function apply(ctx: Context, config: Config): Promise<void> {
+  const projection = await ctx.sessionProjections.register(createReplyProjection(config.maxContextCharacters, config.maxMessages))
   const active = new Map<Session, { controller: AbortController; done: Promise<void> }>()
   const pending = new Set<Promise<void>>()
   const cancel = (session: Session): void => { active.get(session)?.controller.abort() }
@@ -54,8 +55,7 @@ export function apply(ctx: Context, config: Config): void {
     const done = Promise.resolve().then(async () => {
       const { signal } = controller
       signal.throwIfAborted()
-      const state = ctx.sessionProjections.stateOf(session, 'w1ReplySuggestion')
-      if (state === undefined) throw new Error('Reply suggestion projection is unavailable')
+      const state = projection.stateOf(session)
       const turn = state.turn
       if (state.route === null || state.completedTurn !== turn || state.lastAssistantTurn !== turn
         || state.attemptedTurn === turn || state.suggestion !== null || state.messages.at(-1)?.role !== 'assistant') return
@@ -64,7 +64,7 @@ export function apply(ctx: Context, config: Config): void {
       await ctx.get('sessionPersistence')?.flush()
       signal.throwIfAborted()
       const main = state.route
-      const policy = ctx.get('subagentModelSelection')?.current()
+      const policy = ctx.get('subagentModelSelection')?.readPreference()
       const routes = policy?.enabled === true ? policy.allowedModels : []
       const key = JSON.stringify({ main, routes })
       let route: ReplyRoute = state.cached?.key === key ? state.cached.route : main
@@ -86,7 +86,7 @@ export function apply(ctx: Context, config: Config): void {
         }
       }
       signal.throwIfAborted()
-      const currentPolicy = ctx.get('subagentModelSelection')?.current()
+      const currentPolicy = ctx.get('subagentModelSelection')?.readPreference()
       if ((route.provider !== main.provider || route.model !== main.model)
         && (currentPolicy?.enabled !== true || !currentPolicy.allowedModels.some(
           item => item.provider === route.provider && item.model === route.model,
@@ -96,7 +96,7 @@ export function apply(ctx: Context, config: Config): void {
         suggestionPrompt, JSON.stringify(state.messages), config, signal), config.maxSuggestionCharacters)
       signal.throwIfAborted()
       if (text !== '' && ctx.sessions.get(session.id) === session
-        && ctx.sessionProjections.stateOf(session, 'w1ReplySuggestion')?.turn === turn) {
+        && projection.stateOf(session).turn === turn) {
         session.append('w1/reply-suggestion', { turn, text, route })
         await ctx.get('sessionPersistence')?.flush()
       }

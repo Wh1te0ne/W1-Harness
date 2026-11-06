@@ -1,10 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-<rect x="16" y="16" width="480" height="480" rx="104" fill="#FFFFFF"/>
-<g fill="#17191F" transform="translate(51.2 51.2) scale(.8)">  <g transform="translate(-680 -580)">
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" color="#252A33" fill="currentColor" role="img"><title>W1 Harness app icon</title><g transform="scale(2)"><defs><mask id="harness-light-full-harness-light-knockout" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512"><rect width="512" height="512" fill="#FFF"/><g data-w1-master="unchanged-paths" fill="#000" transform="translate(122 184) scale(0.46582278481012657) translate(-47 -95)"><g transform="translate(-692 -585)">
     <path d="M739 717H805Q808 717 810 722L858 853L814 925Z"/>
     <path d="M914 783Q916 783 918 788L945 850L863 982Q860 988 854 988H840Q835 988 833 982L817 935L907 790Q911 783 914 783Z"/>
     <path d="M925 783H989Q996 783 1000 790L1086 974Q1090 983 1082 987Q1080 988 1076 988H1026Q1020 988 1017 982Z"/>
     <path d="M1027 752Q1027 748 1031 745L1068 722L1067 774L1027 798Z"/>
     <path d="M1076 717L1125 686Q1134 680 1134 689L1132 860Q1132 880 1121 900L1092 965L1074 928L1076 905Z"/>
-  </g></g>
-</svg>
+  </g></g></mask></defs><g data-layer="background"><rect width="512" height="512" fill="#F4F5F6"/></g><g data-layer="foreground"><g mask="url(#harness-light-full-harness-light-knockout)"><path d="M214 73L397 256L214 439L31 256Z" fill="#252A33" stroke="#252A33" stroke-width="10" stroke-linejoin="round"/><path d="M308 80L484 256L308 432L282 406L432 256L282 106Z" fill="#252A33" stroke="#252A33" stroke-width="10" stroke-linejoin="round"/></g></g></g></svg>

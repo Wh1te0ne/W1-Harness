@@ -1,3 +1,4 @@
+import * as NativeToolExecutor from '@deepseek-ai/dsh-tool-executor-native'
 import { describe, expect, it, onTestFinished, vi } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
 import Loader from '@deepseek-ai/cordis-plugin-loader'
@@ -25,8 +26,10 @@ class Adapter extends LlmAdapter {
   selection = '{"provider":"mock","model":"small"}'
   hold = false
   failSuggestion = false
+  beforeSelection?: () => Promise<void>
   override async * stream(options: GenerateOptions): AsyncIterable<StreamChunk> {
     this.requests.push(options)
+    if (options.system?.startsWith('Choose one') === true) await this.beforeSelection?.()
     const suggest = options.system === suggestionPrompt
     if (suggest && this.failSuggestion) throw new Error('Test provider unavailable')
     if (suggest && this.hold) await new Promise<void>((resolve) => {
@@ -52,7 +55,7 @@ async function load(enabled = true, options: {
   onTestFinished(async () => { await ctx.fiber.dispose(); await rm(root, { recursive: true, force: true }) })
   const modules = new Map<string, unknown>([
     ['llm', LlmRuntime], ['sessions', SessionStore], ['projections', SessionProjectionRegistry],
-    ['agents', AgentRegistry], ['loop', AgentLoop], ['prompt', SystemPrompt], ['tools', ToolRuntime],
+    ['agents', AgentRegistry], ['loop', AgentLoop], ['prompt', SystemPrompt], ['tools', ToolRuntime], ['native', NativeToolExecutor],
     ['policy', SubagentModelSelectionConfig], ['replies', replies],
     ['persistence', JsonlPersistence],
   ])
@@ -65,6 +68,7 @@ async function load(enabled = true, options: {
 - name: agents
 - name: prompt
 - name: tools
+- name: native
 - name: loop
   config: { agents: [] }
 - name: policy
@@ -108,6 +112,18 @@ async function load(enabled = true, options: {
 }
 
 describe('W1 reply suggestions in a Loader-composed conversation', () => {
+  it('does not send a suggestion after its selected route is revoked during selection', async () => {
+    const h = await load()
+    const preference = vi.spyOn(h.ctx.subagentModelSelection, 'readPreference')
+    h.adapter.beforeSelection = async () => {
+      const policy = [...h.ctx.loader.entries()].find(entry => entry.options.name === 'policy')!
+      await policy.update({ config: { enabled: false, allowedModels: [] } })
+    }
+    h.send('准备下一句建议')
+    await vi.waitFor(() => { expect(preference).toHaveBeenCalledTimes(2) })
+    expect(h.adapter.requests.map(request => request.model)).toEqual(['main', 'main'])
+    expect(h.suggestion()).toBeNull()
+  })
   it('flushes suggestions to JSONL and reuses them after the Host is rebuilt from disk', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'w1-reply-durable-'))
     onTestFinished(async () => { await rm(directory, { recursive: true, force: true }) })

@@ -1,5 +1,7 @@
 /** Real Loader composition preserves retrievable source text outside the bounded preview. */
+import { executeToolFixture } from '@deepseek-ai/dsh-tool-testkit'
 
+import * as NativeToolExecutor from '@deepseek-ai/dsh-tool-executor-native'
 import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
@@ -23,6 +25,7 @@ import * as referencePlugin from '@deepseek-ai/dsh-session-reference'
 import * as spillPlugin from '@deepseek-ai/dsh-spill-local'
 import { sessionDir } from '@deepseek-ai/dsh-spill-local'
 import * as sourcePlugin from './fixtures/source-session.ts'
+import { encodeSessionLink } from '../src/link.ts'
 
 let context: Context | undefined
 let root: string | undefined
@@ -35,12 +38,13 @@ afterEach(async () => {
 })
 
 describe('session-reference real Loader composition', () => {
-  it('logs a bounded preview and reads the full immutable spill owned by the target', async () => {
+  it.each(['mention', 'link'] as const)('logs a bounded preview and reads the full immutable spill owned by the target: %s', async (mode) => {
     root = await mkdtemp(join(tmpdir(), 'reference-loader-'))
     const spillRoot = join(root, 'spills')
     const fixture = await readFile(new URL('./fixtures/cordis.yml', import.meta.url), 'utf8')
     const configPath = join(root, 'cordis.yml')
-    await writeFile(configPath, fixture.replace('{{spillRoot}}', spillRoot.replaceAll('\\', '/')))
+    await writeFile(configPath, fixture.replace('{{spillRoot}}', spillRoot.replaceAll('\\', '/'))
+      .replace('maxReferenceBytes: 360', 'maxReferenceBytes: 360\n    deepLinkScheme: w1-harness-test'))
     const ctx = context = new Context()
     ctx.baseUrl = pathToFileURL(root).href + '/'
     await ctx.plugin(Loader)
@@ -51,6 +55,7 @@ describe('session-reference real Loader composition', () => {
       ['@deepseek-ai/dsh-working-directory', workingDirectoryPlugin],
       ['@deepseek-ai/dsh-system-prompt', systemPromptPlugin],
       ['@deepseek-ai/dsh-tools', toolsPlugin],
+      ['@deepseek-ai/dsh-tool-executor-native', NativeToolExecutor],
       ['@deepseek-ai/dsh-fs-local', fsPlugin],
       ['@deepseek-ai/dsh-tool-fs', toolFsPlugin],
       ['@deepseek-ai/dsh-session-query-sqlite', queryPlugin],
@@ -71,12 +76,13 @@ describe('session-reference real Loader composition', () => {
     const target = ctx.sessions.create(SessionId('reference-target'))
     const agent = { id: target.id, ctx, session: target } as Agent
     const direct = createUserMessage({
-      content: [{ type: 'text', text: 'Use ' + referencePlugin.formatSessionReferenceMention({
+      content: [{ type: 'text', text: 'Use ' + (mode === 'link' ? encodeSessionLink('reference-source', 'w1-harness-test') : referencePlugin.formatSessionReferenceMention({
         sessionId: SessionId('reference-source'), label: 'Research',
-      }) }],
+      })) }],
       source: { kind: 'user' },
     })
     const decision = await agentEvents(ctx, agent).waterfall('agent/pre-step', {
+      modelSelection: { provider: 'mock', model: 'mock' },
       messages: [direct], turn: 1, step: 1, signal: new AbortController().signal,
     }, () => Promise.resolve({ kind: 'enter' as const, messages: [direct] }))
     expect(decision.kind).toBe('enter')
@@ -110,7 +116,7 @@ describe('session-reference real Loader composition', () => {
     const readLines: string[] = []
     let totalLines = Infinity
     for (let offset = 1; offset <= totalLines; offset += 7) {
-      const read = await ctx.tools.execute({
+      const read = await executeToolFixture(ctx, {
         name: 'read', callId: ToolCallId(`read-${offset}`),
         arguments: { file_path: notice.fullSnapshot.locator, offset, limit: 7 },
         signal: new AbortController().signal,

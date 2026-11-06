@@ -142,7 +142,7 @@
         sidebarModels: Object.fromEntries(Object.entries(MODEL_SIDEBAR_DEFAULTS).map(([k, v0]) => [k, v.sidebarModels?.[k] ?? v0])),
         codexQuotaEnabled: v.codexQuotaEnabled === true,
         codexQuotaSidebar: v.codexQuotaSidebar !== false,
-        includeSubagentCost: v.includeSubagentCost === true,
+        includeSubagentCost: v.includeSubagentCost !== false,
         sidebarStyle: v.sidebarStyle === 'compact' ? 'compact' : 'standard',
         priceMatchDismissed: Array.isArray(v.priceMatchDismissed) ? v.priceMatchDismissed.filter(key => typeof key === 'string') : [],
         // 官方价格币种(issue #47):读侧白名单缺失会导致下拉选择保存后读不回。
@@ -1404,16 +1404,16 @@
           pending = true
           try {
             const value = await props.api.getSessionCost(props.sessionId)
-            if (active) setSnapshot({ id: props.sessionId, include: config?.includeSubagentCost === true, value })
+            if (active) setSnapshot({ id: props.sessionId, include: config?.includeSubagentCost !== false, value })
           } catch { /* 旧服务无 RPC 时保留投影显示。 */ }
           finally { pending = false }
         }
         void refresh()
-        const timer = config?.includeSubagentCost === true ? setInterval(refresh, 10000) : null
+        const timer = config?.includeSubagentCost !== false ? setInterval(refresh, 10000) : null
         return () => { active = false; if (timer !== null) clearInterval(timer) }
       }, [props.sessionId, state?.meta?.now, projection, config?.includeSubagentCost])
-      const saved = snapshot && snapshot.id === props.sessionId && snapshot.include === (config?.includeSubagentCost === true) ? snapshot.value : null
-      return { usage: mergeSessionUsage(projection, saved, config?.includeSubagentCost === true, config), config }
+      const saved = snapshot && snapshot.id === props.sessionId && snapshot.include === (config?.includeSubagentCost !== false) ? snapshot.value : null
+      return { usage: mergeSessionUsage(projection, saved, config?.includeSubagentCost !== false, config), config }
     }
 
     function sessionCostParts(usage, config) {
@@ -3020,6 +3020,12 @@
       useEffect(()=>{if(key&&key!==previous.current)setNotice('价格或汇率同步需要关注，正在保留旧值；请到模型价格页查看。');else if(!key&&previous.current)setNotice('价格与汇率同步已恢复。');previous.current=key},[key])
       return notice&&primitives.Toast?el(primitives.Toast,{text:notice,onDone:()=>setNotice(null)}):null
     }
+    function compactTodayMoney(row, config) {
+      const rate = Number(config.exchangeRate)
+      const value = (row.apiCost ?? row.cost ?? 0) * (rate > 0 ? rate : 1), tiny = value > 0 && value < 0.01
+      return (tiny ? '<' : '') + formatMoneyValue(tiny ? 0.01 : value, { ...config, decimals: 2 })
+    }
+
     function TodayUsageSummary({ state, wide, api }) {
       const config = state.config, t = makeT(resolveLocale(config)), today = state.today
       const tokens = row => (row.input ?? 0) + (row.cacheRead ?? 0) + (row.cacheWrite ?? 0) + (row.output ?? 0)
@@ -3031,8 +3037,10 @@
       const needsAttention=config.prices?.book?.fxStatus?.status==='error'||Object.values(config.prices?.book?.sync??{}).some(s=>s.status==='error'||s.status==='partial')
       return el(Fragment,null,el(PricingSyncNotice,{config}),el(Tooltip, { label: el('span', { style: { whiteSpace: 'pre-line' } }, detail+(needsAttention?'\n价格同步需要关注，暂用旧价或部分费用未知。':'')), side: 'right', delayMs: 300 },
         el('button', { type: 'button', className: 'cm-today-summary' + (wide ? '' : ' rail'), onClick: api.openUsage, 'aria-label': detail },
-          wide ? el(Fragment, null, el('span', null, t('todayCostShort') + ' ', el('span', { className: 'cm-num' }, money(today))),
-            el('span', null, t('todayTokenShort') + ' ', el('span', { className: 'cm-num' }, formatTokens(tokens(today)))),needsAttention?el('span',{'aria-label':'价格同步需要关注'},' ⚠'):null) : el(WalletIcon, { size: 16 }))))
+          wide ? el(Fragment, null,
+            el('span', { className: 'cm-kpi' }, el('span', { className: 'cm-kl' }, t('todayCostShort')), el('span', { className: 'cm-kv cm-num' }, compactTodayMoney(today, config))),
+            el('span', { className: 'cm-kpi' }, el('span', { className: 'cm-kl' }, t('todayTokenShort')), el('span', { className: 'cm-kv cm-num' }, formatTokens(tokens(today)))),
+            today.unpricedCalls > 0 ? el('span', { className: 'cm-kn' }, t('priceUnknown')) : needsAttention ? el('span', { className: 'cm-kn', 'aria-label': '价格同步需要关注' }, '价格同步需要关注') : null) : el(WalletIcon, { size: 16 }))))
     }
 
     function SidebarFooter(props) {

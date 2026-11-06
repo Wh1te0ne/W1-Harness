@@ -1,5 +1,6 @@
 /** Canonical session URI and inline mention encoding. */
 
+import { decodeSessionLink, type SessionLinkScheme } from './link.ts'
 import { brandString } from '@deepseek-ai/dsh-brand'
 import type { SessionId as SessionIdType } from '@deepseek-ai/dsh-session'
 import { SessionReferenceError } from './config.ts'
@@ -64,12 +65,20 @@ export interface ParsedSessionReferenceText {
  * as a reference only when it has a non-empty base64url-shaped payload, then
  * still fails if that candidate is not canonical.
  * @param text - host text to normalize.
+ * @param deepLinkScheme - optional W1 environment whose canonical desktop links are accepted.
  * @returns readable text and structured references in appearance order.
  */
-export function parseSessionReferenceText(text: string): ParsedSessionReferenceText {
+export function parseSessionReferenceText(text: string, deepLinkScheme?: SessionLinkScheme): ParsedSessionReferenceText {
   const references: SessionReferenceInput[] = []
   const pattern = /@\[((?:\\.|[^\\\]])*)\]\((dsh-session:[^\s)]*)\)|(dsh-session:[A-Za-z0-9_-]+)/gu
-  const rendered = text.replace(pattern, (
+  const links = /w1-harness(?:-test)?:\/\/session\/[^\s<>"`.,!;，。！？、；）\])]+/gu
+  // Convert only explicitly enabled W1 links before the existing reference parser.
+  // A link for the other environment fails instead of resolving the same ID locally.
+  const input = deepLinkScheme === undefined ? text : text.replace(links, (link) => {
+    try { return encodeSessionReferenceUri(brandString<SessionIdType>(decodeSessionLink(link, deepLinkScheme))) }
+    catch (error) { throw invalidUri(link, error) }
+  })
+  const rendered = input.replace(pattern, (
     _match,
     rawLabel: string | undefined,
     markdownUri: string | undefined,

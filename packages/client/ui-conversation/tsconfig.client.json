@@ -9,6 +9,7 @@
     "src"
   ],
   "references": [
+    {"path":"../../w1/reply-suggestions"},
     {
       "path": "../../../vendor/schemastery"
     },
@@ -106,7 +107,7 @@
       "path": "../product-analytics/tsconfig.client.json"
     },
     {
-      "path": "../../w1/reply-suggestions"
+      "path": "../ui-context-menu"
     }
   ],
   "exclude": [

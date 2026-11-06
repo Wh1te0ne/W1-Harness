@@ -1,0 +1,29 @@
+- id: llm-deepseek-account
+  disabled: true
+
+# This scenario exercises plan review without shell execution.
+- id: tool-bash
+  disabled: true
+
+- id: tool-pwsh
+  disabled: true
+
+- id: sandbox
+  config:
+    runnerCommand:
+      - bash
+      - -c
+      - while [ "$1" != "--" ]; do shift; done; shift; exec "$@"
+      - passthrough-runner
+    runnerFailureSignatures:
+      - 'passthrough-runner: profile rejected'
+
+- insert:
+    - id: plan-request-capture
+      name: '../manual-compact/capture-requests.mjs'
+      config:
+        path: !!js dshHomePath('plan-requests.jsonl')
+        expectedProvider: deepseek-official
+        expectedModel: deepseek-v4-flash
+    - id: plan-runtime-context-fixture
+      name: './runtime-context-fixture.mjs'

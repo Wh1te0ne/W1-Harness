@@ -9,8 +9,8 @@ export const viewSchema = z.object({ goalId: z.string(), revision: z.number(), k
 const itemSchema = z.object({ seq: z.number(), type: z.string(), data: z.string() })
 const digest = (previous: string, item: ReviewEvidenceItem) => createHash('sha256').update(previous).update(JSON.stringify(item)).digest('hex')
 
-export function reviewProjection(maxBytes: number): ProjectionDefinition<'w1GoalReview'> & {
-  wire: NonNullable<ProjectionDefinition<'w1GoalReview'>['wire']>
+export function reviewProjection(maxBytes: number): ProjectionDefinition<'w1GoalReview', GoalReviewState> & {
+  wire: NonNullable<ProjectionDefinition<'w1GoalReview', GoalReviewState>['wire']>
 } {
   const fresh = (): GoalReviewState => ({ view: null, goalId: null, lastHuman: null, lastHumanOverflow: false,
     evidence: [], answers: [], evidenceHash: '', answerHash: '', hasToolResult: false, bytes: 0, overflow: false, pendingGoalCalls: [], route: null })

@@ -116,6 +116,26 @@ async function collect(stream: AsyncIterable<StreamChunk>): Promise<StreamChunk[
 }
 
 describe('LlmRuntime', () => {
+  it('selects immutable transport policy by exact purpose without changing billing identity or model options', async () => {
+    const ctx = new Context()
+    try {
+      await ctx.plugin(LlmRuntime, { requestTransportByPurpose: {
+        'auto-review': { isolated: true, headers: { 'x-utility': '1' } },
+      } })
+      const adapter = new RecordingAdapter(SCRIPT)
+      ctx.llm.registerAdapter(['any-provider'], adapter)
+      const original: GenerateOptions = Object.freeze({ provider: 'any-provider', model: 'any-model', messages: [], maxTokens: 8192, purpose: 'auto-review', transport: { headers: { 'x-other': 'kept' } } })
+      await collect(ctx.llm.stream(original))
+      expect(adapter.lastOptions).toMatchObject({ provider: original.provider, model: original.model, maxTokens: 8192, purpose: 'auto-review', transport: { isolated: true, headers: { 'x-utility': '1', 'x-other': 'kept' } } })
+      expect(original.transport).toEqual({ headers: { 'x-other': 'kept' } })
+      expect(Object.isFrozen(adapter.lastOptions?.transport)).toBe(true)
+      for (const purpose of [undefined, 'compaction', 'side-chat'] as const) {
+        await collect(ctx.llm.stream({ provider: 'any-provider', model: 'any-model', messages: [], ...purpose === undefined ? {} : { purpose } }))
+        expect(adapter.lastOptions?.transport).toBeUndefined()
+      }
+    } finally { await ctx.fiber.dispose() }
+  })
+
   it('recognizes structured and model-capacity context-window overflow details', () => {
     expect(isContextWindowExceededError('context_length_exceeded maximum context length')).toBe(true)
     expect(isContextWindowExceededError('context-window-overflowed')).toBe(true)
@@ -694,6 +714,22 @@ describe('LlmRuntime', () => {
     await expect(ctx.llm.listModels('catalog')).resolves.toEqual([{
       provider: 'catalog', id: 'fast', name: 'source mutated', description: 'Low latency', inputModalities: ['text'],
     }])
+  })
+
+  it('detaches advertised model badges, including their translations', async () => {
+    const ctx = new Context()
+    await ctx.plugin(LlmRuntime)
+    const translated = { text: { en: 'New', zh: '新' }, tone: 'info' as const }
+    const literal = { text: '1017', tone: 'neutral' as const }
+    ctx.llm.registerAdapter(['catalog'], new CatalogAdapter({ id: 'catalog', name: 'Catalog' }, [
+      { provider: 'catalog', id: 'new', name: 'New', badge: translated },
+      { provider: 'catalog', id: 'dated', name: 'Dated', badge: literal },
+    ]))
+    const [first, second] = await ctx.llm.listModels('catalog')
+    expect(first?.badge).toEqual(translated)
+    expect(first?.badge).not.toBe(translated)
+    expect(first?.badge?.text).not.toBe(translated.text)
+    expect(second?.badge).toEqual(literal)
   })
 
   it('defaults adapters to their route name and an empty advisory model list', async () => {

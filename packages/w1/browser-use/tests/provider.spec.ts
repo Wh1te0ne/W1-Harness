@@ -1,3 +1,5 @@
+import * as NativeToolExecutor from '@deepseek-ai/dsh-tool-executor-native'
+import { executeToolFixture } from '@deepseek-ai/dsh-tool-testkit'
 /** Real Cordis tool registration with a synthetic transport, without desktop access. */
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
@@ -16,6 +18,7 @@ beforeEach(async () => {
   await ctx.plugin(BrowserUseRegistry)
   await ctx.plugin(SystemPrompt)
   await ctx.plugin(ToolRuntime)
+  await ctx.plugin(NativeToolExecutor)
 })
 afterEach(async () => { await ctx.fiber.dispose() })
 const options = { timeoutMs: 1000, maxTextChars: 100, maxElements: 10 }
@@ -25,7 +28,7 @@ it('registers a single browser tool and releases the provider on unload', async 
   expect(ctx.browserUse.providerName).toBe('w1-built-in')
   expect(ctx.tools.schemas().map(tool => tool.name)).toEqual(['w1_browser'])
   expect(renderPrompt(await ctx.systemPrompt.assemble())).toContain('## Built-in browser workflow')
-  const result = await ctx.tools.execute({ name: 'w1_browser', callId: ToolCallId('test'), arguments: { action: 'list' }, signal: new AbortController().signal })
+  const result = await executeToolFixture(ctx, { name: 'w1_browser', callId: ToolCallId('test'), arguments: { action: 'list' }, signal: new AbortController().signal })
   expect(result.isError).toBe(true)
   expect(request).not.toHaveBeenCalled()
   expect(result.content).toMatchInlineSnapshot(`
@@ -68,7 +71,7 @@ it('registers Chrome inside the existing provider and removes its workflow when 
   await ctx.plugin(Object.assign((inner: Context) => { scope = createScope(inner, key) }, { inject: ['tools', 'systemPrompt'] }))
   scope.ctx.tools.restrict({ deny: ['w1_chrome'] })
   expect(renderPrompt(await ctx.systemPrompt.assemble({ scope: key }))).not.toContain('## External Chrome workflow')
-  const refused = await ctx.tools.execute({ name: 'w1_chrome', callId: ToolCallId('chrome'), arguments: { action: 'connect' }, signal: new AbortController().signal })
+  const refused = await executeToolFixture(ctx, { name: 'w1_chrome', callId: ToolCallId('chrome'), arguments: { action: 'connect' }, signal: new AbortController().signal })
   expect(refused.isError).toBe(true)
   expect(chromeRequest).not.toHaveBeenCalled()
   await fiber.dispose()

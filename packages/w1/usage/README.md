@@ -9,9 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Usage is a W1 application feature beside Plugins and Scheduled tasks in the sidebar. Its full-page overview, usage details, model prices and settings reuse the existing token, cost, budget, Session and historical-ledger services. Official DeepSeek wallet queries remain disabled. Model API keys remain in W1's credential store.
-
-The sidebar shows today's estimated API cost and total tokens together. Clicking opens Usage; hovering or focusing shows up to eight provider/model totals. Session cost details have one entry in the conversation header.
+Use Usage beside Plugins and Scheduled tasks in the sidebar to review estimated API costs, tokens, Session usage, and historical charges, and manage model prices and budget settings. The overview, usage details, model prices, and settings pages reuse the existing accounting services. Official DeepSeek wallet queries remain disabled, and model API keys remain in W1’s credential store.
 
 ## Table of Contents
 
@@ -20,7 +18,15 @@ The sidebar shows today's estimated API cost and total tokens together. Clicking
 - [Known Limitations and Deferred Work](#known-limitations-and-deferred-work)
 - [Dev Note](#dev-note)
 
+<a id="prices-and-recorded-charges"></a>
+
 ## Prices and recorded charges
+
+The sidebar shows today's estimated API cost and total tokens together. Clicking opens Usage; hovering or focusing shows up to eight provider/model totals. Session cost details have one entry in the conversation header.
+
+Conversation costs include subagent descendants by default, with each call counted once. Auto review, goal review, title generation and other session-owned auxiliary calls retain their originating session and purpose. Titles come from the public session-title API for the displayed rows and refresh after renaming. Historical attribution uses only an unambiguous billing-call ID recorded in an own-session event; it preserves daily/provider totals and saved CNY prices. Missing or conflicting evidence stays unassigned.
+
+The daily sidebar summary uses two equally prominent cost and Token metrics; display rounding leaves recorded amounts unchanged and keeps nonzero amounts below one cent visible. The conversation usage entry sits in the right header utilities as a borderless icon and label, retaining its icon in narrow windows. Both surfaces retain their existing drill-down behavior.
 
 All recorded amounts and displayed prices use CNY. Manual prices bind an exact provider/model key and take precedence over official synchronization. OpenRouter's official model API supplies prices only for configured OpenRouter routes with exact model IDs; it is not a price directory for other channels. Known DeepSeek, Volcengine and VX routes bind their own price sources; unfamiliar providers require an explicit source choice. VX Default, High (GPT/Claude高档货) and Enterprise use distinct exact groups. Untouched VX records imported by the previous setup switch to their corresponding source; subsequent manual edits remain locked. Sources refresh every six hours, retry failures with bounded backoff, retain the last valid model price and expose status, timestamps, per-model issues and a retry button. Empty or unsupported responses cannot clear prices. Official pages are parsed when no public price API exists; an unsupported model remains manual or unpriced. Unknown prices retain token and call counts and mark the cost incomplete.
 
@@ -32,6 +38,8 @@ An explicitly authorized one-time history correction is available through `scrip
 
 Recorded estimates are retained as settled historical amounts without recurring review prompts in the sidebar or usage details. Archiving a model price removes its current synchronization issue immediately, preserves dated tariffs and all consumption, and prevents late synchronization results from restoring either the price or its warning. Actual unavailable prices and current source failures retain their explicit status.
 
+<a id="model-experience"></a>
+
 ## Model Experience
 
 None, as this feature displays local notifications or recorded usage without initiating model requests.
@@ -42,7 +50,11 @@ This feature adds no model prompt or tool declaration and does not alter the mod
 
 ## Known Limitations and Deferred Work
 
+<a id="known-limitations-and-deferred-work"></a>
+
 - Estimates are not provider invoices. Cache storage by duration, batch/Flex discounts and non-token surcharges are not inferred; configure a separate route with its actual tariff for a different billing mode. Incomplete old detail is retained as a labeled aggregate, not fabricated per-call prices.
+
+<a id="dev-note"></a>
 ### Dev Note
 
 The web-app composition loads this module by default. It does not declare dsh.bundle and is not installed as an optional profile plugin. The dsh-usage-manager package name, usageManager service, usageManagerUsage projection and DSH_HOME/storages/cost-meter-custom ledger location remain unchanged. There is one billing listener and one observable ledger source. UI registrations dispose with the module.

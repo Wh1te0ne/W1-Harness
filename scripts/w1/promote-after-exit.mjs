@@ -15,6 +15,8 @@ export const BOOTSTRAP_SOURCES = new Set([
 ])
 
 const digest = file => existsSync(file) ? createHash('sha256').update(readFileSync(file)).digest('hex') : null
+// Build metadata travels with its source changes and receives the same preimage and rollback checks.
+const ROOT_BUILD_METADATA = new Set(['tsconfig.base.json', 'pnpm-lock.yaml'])
 function inside(root, name) {
   const path = resolve(root, name)
   if (!path.startsWith(resolve(root) + sep)) throw new Error('Promotion path escapes its root')
@@ -64,7 +66,7 @@ export async function applyPreparedPromotion(directory, isRunning) {
   const previous = existsSync(join(directory, 'status.json')) ? JSON.parse(readFileSync(join(directory, 'status.json'), 'utf8')) : {}
   if (previous.phase === 'applied') return 0
   const sources = manifest.sources.map(entry => {
-    if (!/^(?:packages|apps|scripts)\//u.test(entry.file)) throw new Error('Unsupported source destination')
+    if (!/^(?:(?:packages|apps|scripts)\/|assets\/w1\/)/u.test(entry.file) && !ROOT_BUILD_METADATA.has(entry.file)) throw new Error('Unsupported source destination')
     const target = inside(root, entry.file)
     const payload = inside(join(directory, 'sources'), entry.file)
     const backup = inside(join(directory, 'backup'), entry.file)

@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-<g fill="#FFFFFF">  <g transform="translate(-680 -580)">
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" color="#F5F6F8" fill="currentColor" role="img"><title>W1 · dark</title>
+<g fill="currentColor">  <g transform="translate(-692 -585)">
     <path d="M739 717H805Q808 717 810 722L858 853L814 925Z"/>
     <path d="M914 783Q916 783 918 788L945 850L863 982Q860 988 854 988H840Q835 988 833 982L817 935L907 790Q911 783 914 783Z"/>
     <path d="M925 783H989Q996 783 1000 790L1086 974Q1090 983 1082 987Q1080 988 1076 988H1026Q1020 988 1017 982Z"/>

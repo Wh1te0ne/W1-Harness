@@ -42,5 +42,5 @@ const evidence = resolve(root, '.work/local-dev')
 mkdirSync(evidence, { recursive: true })
 writeFileSync(resolve(evidence, 'last-build.json'), JSON.stringify({ target, seconds, completedAt: new Date().toISOString() }, null, 2) + '\n')
 console.log(target === 'desktop'
-  ? `W1 local build: desktop — ${seconds}s. Restart the test instance to load it; the running UI is not hot-reloaded.`
-  : `W1 local build: ${target} — ${seconds}s. Queued for the next launch from this worktree; restart the test instance to apply it.`)
+  ? `W1 local build: desktop — ${seconds}s. Start W1 Harness to load it.`
+  : `W1 local build: ${target} — ${seconds}s. Queued for the next W1 Harness launch; fully exit and reopen to apply it.`)

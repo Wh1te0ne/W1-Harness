@@ -9,7 +9,7 @@ export function RunningMark() {
   return (
     <svg className={css.runningIcon} aria-hidden="true" viewBox="0 0 512 512" fill="currentColor">
       <g className={css.runningFold}>
-        <g transform="translate(-680 -580)">
+        <g transform="translate(-692 -585)">
           <path d="M739 717H805Q808 717 810 722L858 853L814 925Z" />
           <path d="M914 783Q916 783 918 788L945 850L863 982Q860 988 854 988H840Q835 988 833 982L817 935L907 790Q911 783 914 783Z" />
           <path d="M925 783H989Q996 783 1000 790L1086 974Q1090 983 1082 987Q1080 988 1076 988H1026Q1020 988 1017 982Z" />

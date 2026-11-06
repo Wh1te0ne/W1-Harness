@@ -40,20 +40,21 @@ const diagnosticSchema: schema.ZodType<CacheDiagnostic> = schema.object({
   observedInputTokens: schema.number().optional(), messageCount: schema.number(), requestBytes: schema.number(),
 })
 interface Baseline { normalized: RequestStructure; wire?: RequestStructure }
-interface Observation { options: GenerateOptions; wire?: RequestStructure }
+interface Observation { options: GenerateOptions<string>; wire?: RequestStructure }
 
 /**
  * Observe main-loop calls and publish content-free diagnostics outside model history.
  * @param ctx - LLM stream and session projection owner.
  * @param config - validated observation bounds.
+ * @returns when projection readers and dependent listeners are ready.
  */
-export function apply(ctx: Context, config: Config): void {
-  ctx.sessionProjections.register({ key: 'w1CacheDiagnostics', stateVersion: 1, stateSchema: schema.array(diagnosticSchema), init: () => [],
+export async function apply(ctx: Context, config: Config): Promise<void> {
+  await ctx.sessionProjections.register({ key: 'w1CacheDiagnostics', stateVersion: 1, stateSchema: schema.array(diagnosticSchema), init: () => [],
     apply: (state, event) => event.type === 'w1/cache-diagnostic' ? [...state, event.data].slice(-config.maxReports) : state,
     wire: { viewSchema: schema.array(diagnosticSchema), view: state => state },
   })
   if (!config.enabled) return
-  ctx.sessionProjections.register({ key: 'w1CachePosition', stateVersion: 1,
+  const positionProjection = await ctx.sessionProjections.register({ key: 'w1CachePosition', stateVersion: 1,
     stateSchema: schema.object({ turn: schema.number(), step: schema.number() }), init: () => ({ turn: 0, step: 0 }),
     apply: (state, event) => event.type === 'step/start' ? { turn: event.data.turn, step: event.data.step } : state,
   })
@@ -97,9 +98,9 @@ export function apply(ctx: Context, config: Config): void {
         const status: CacheDiagnostic['status'] = !stopped || usage?.cacheReadTokens === undefined || causes.includes('comparison-limit') ? 'unknown'
           : causes.length > 0 ? 'expected-rebuild' : prior === undefined ? 'cold'
             : usage.cacheReadTokens === 0 && usage.inputTokens > 0 ? 'suspected-miss' : 'stable'
-        const position = ctx.sessionProjections.stateOf(session, 'w1CachePosition')
+        const position = positionProjection.stateOf(session)
         const report: CacheDiagnostic = {
-          turn: position?.turn ?? 0, step: position?.step ?? 0,
+          turn: position.turn, step: position.step,
           provider: options.provider, model: options.model, channel: wire === undefined ? 'normalized' : 'deepseek-wire', status, causes,
           messageCount: current.messageCount, requestBytes: current.payloadBytes,
           ...usage === undefined ? {} : { inputTokens: usage.inputTokens,

@@ -1,3 +1,4 @@
+import * as NativeToolExecutor from '@deepseek-ai/dsh-tool-executor-native'
 import { Context } from '@deepseek-ai/cordis'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import { createScope, type Scope } from '@deepseek-ai/dsh-scope'
@@ -11,6 +12,7 @@ it('keeps general selection guidance without advertising absent browser tools, a
   onTestFinished(async () => { await ctx.fiber.dispose() })
   await ctx.plugin(SystemPrompt)
   await ctx.plugin(ToolRuntime)
+  await ctx.plugin(NativeToolExecutor)
   const fiber = ctx.plugin(policy)
   await fiber
   const prompt = renderPrompt(await ctx.systemPrompt.assemble())
@@ -32,6 +34,7 @@ it('includes only available browser environments and identifies missing Chrome a
   onTestFinished(async () => { await ctx.fiber.dispose() })
   await ctx.plugin(SystemPrompt)
   await ctx.plugin(ToolRuntime)
+  await ctx.plugin(NativeToolExecutor)
   await ctx.plugin(policy)
   const key = {} as Agent
   let scope!: Scope

@@ -25,9 +25,11 @@ kind: "package-reference"
 <a id="use-this-package"></a>
 ## 使用本包
 
-`listModels` 描述目录驱动界面提供的模型。核心解析与流式调用仍可接受未列出的 ID。GUI 的模型选择与提交要求模型出现在目录中；供 GUI 使用的适配器必须实现 `listModels`，公布其可用模型。基类实现返回空列表，因此不向 GUI 提供模型。
+`listModels` 描述目录驱动界面提供的模型。核心解析与流式调用仍可接受未列出的 ID。GUI 的模型选择与提交要求模型出现在目录中；供 GUI 使用的适配器必须实现 `listModels`，公布其可用模型。基类实现返回空列表，因此不向 GUI 提供模型。条目可选的 `badge` 包含选择器文字（单一文字，或以小写语言 id 为键且包含 `en` 的译文）和 `neutral`、`info`、`success` 或 `warning` 语调；`resolveModelInfo` 不返回它，模型请求也不携带它。 提供方在公布的目录变化时发出 `llm/models-updated(provider)`；客户端重新加载完整目录，省略的角标也随之清除。
 
-任何调用模型提供方的组合——agent loop（智能体循环）、会话标题生成器、压缩（compaction）摘要器——都会通过本服务流式发起请求。与至少一个提供方适配器一起挂载它；服务本身没有任何配置，也不包含提供方协议代码。
+任何调用模型提供方的组合——agent loop（智能体循环）、会话标题生成器、压缩（compaction）摘要器——都会通过本服务流式发起请求。与至少一个提供方适配器一起挂载它；服务不包含提供方协议代码。
+
+可选的 `requestTransportByPurpose` 将精确请求用途映射为 `{ isolated, headers }` 传输策略。没有用途或未配置的调用不附加策略。`isolated: true` 要求 HTTP 适配器使用宿主传输，避开可变的全局 fetch 包装，同时保留已安装的网络代理策略。标头属于部署元数据，不进入模型输入；适配器保留自身的认证与归因信息。策略不修改提示、输出预算、会话 ID、计费或审查决定，所有请求仍经过 `llm/stream` 瀑布。只为不应进入会话改写拦截器的一次性辅助调用配置；普通会话、侧聊和压缩在未显式配置时保持原路由。
 
 ### 何时选择
 
@@ -57,6 +59,8 @@ for await (const chunk of ctx.llm.stream({
 ```
 
 挂载成功后，`ctx.llm.listProviders()` 会按注册顺序报告已注册路由。
+
+辅助请求的生产方通过扩展 `@deepseek-ai/dsh-llm/types` 中的 `LlmRequestPurposeMap` 声明自己的 `purpose`，每个键映射到 `true`。`GenerateOptions.purpose` 接受已声明的键，普通对话请求则省略它。构造辅助请求前，应导入生产方包或其公开类型。适配器将用途作为模型不可见的传输元数据传递，并在遇到不熟悉的用途时继续处理请求。
 
 `GenerateOptions.messages` 接受持久 `Message` 值和仅供请求使用的 `RequestUserInput` 值。仅供请求使用的输入包含 user-role 内容，不含 `id` 或 `source`；Session 写入和 Agent 投递仍然要求持久消息。调用方必须在流结束前保持辅助输入不变。会记录完整请求的调用方（例如会话标题生成）必须使用持久消息。
 

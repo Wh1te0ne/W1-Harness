@@ -29,6 +29,8 @@ kind: "package-reference"
 
 ### mention 语法
 
+W1 通过 `deepLinkScheme` 启用链接引用：日用及安装版使用 `w1-harness`，Test 使用 `w1-harness-test`。在直接用户消息中粘贴匹配的 `scheme://session/<encoded-id>` 链接，会接入现有受限快照与完整文本保留流程；拒绝其他环境的链接。快照包含当前会话上下文及保留的压缩摘要，不授予访问其他电脑的权限。浏览器安全的 `./link` 导出维护与桌面共用的会话 ID 编解码。
+
 规范 mention 是 Markdown 形式的 `@[label](dsh-session:<base64url 编码的 id>)`，或裸 `dsh-session:` URI；每个 JavaScript 字符串会话 id 都能精确往返。服务会把 mention 改写为消息中可读的 `@label` 文本，并返回结构化引用。显式 Markdown mention 会拒绝格式错误的 URI；空或只含标点符号的 scheme mention 仍是普通讨论文本。
 
 ### agent（智能体）能得到什么
@@ -50,7 +52,7 @@ kind: "package-reference"
 | `maxReferenceBytes` | 自动 | 每个来源的最大序列化 JSON 字节数；显式设置时精确覆盖自动预算 |
 | `referenceContextFraction` | `0.2` | 每个来源的上下文窗口比例，范围为 `0` 到 `1` |
 
-自动预算为每个来源 `max(65536, floor(contextWindow × 4 × referenceContextFraction))` 字节。模型上下文容量以 token 计量；每个 token 四字节是容量估算，不是精确的 token 换算。缺少路由、LLM（大语言模型）服务、适配器或容量时使用 64 KiB；其他模型元数据查询错误与取消会使准备失败。
+自动预算为每个来源 `max(65536, floor(contextWindow × 4 × referenceContextFraction))` 字节。模型上下文容量以 token 计量；每个 token 四字节是容量估算，不是精确的 token 换算。缺少 LLM（大语言模型）服务、适配器或容量时使用 64 KiB；其他模型元数据查询错误与取消会使准备失败。
 
 生成的[配置目录](../../../docs/config-catalog.zh.md#deepseek-aidsh-session-reference)是每个受支持字段及其 JSDoc 的穷尽式真源。
 
@@ -70,7 +72,7 @@ kind: "package-reference"
 
 解析器通过 `ctx.get("spillStore")` 获取可选存储，只保存被截断的引用。存储归目标会话所有；来源信息标识被引用的源会话与标签，不伪造工具调用。异步保存后会检查取消，即使产物已写入，也会阻止发布。产物过期仍遵循后端既有策略。
 
-预算使用目标 agent 的 `system-prompt/assemble` 完成后捕获的提供方与模型。首次组装前直接调用 `prepare` 时使用 agent 选项；会话头不决定预算模型。不带 agent 的诊断组装不会影响已捕获路由。
+预算使用 `agent/pre-step.modelSelection` 传入的提供方与模型，使引用大小与该步骤捕获的路由一致。直接调用 `prepare` 时必须显式提供路由；提示词变量、Agent 选项和已存储的请求头不会隐式选择路由。
 
 ### 源码地图
 

@@ -49,7 +49,7 @@ export async function readSessionHeaders(ctx) {
   const query = get('sessionQuery'), persistence = get('sessionPersistence')
   let cached = ctx && typeof ctx === 'object' ? headerReads.get(ctx) : null
   if (!cached || cached.query !== query || cached.persistence !== persistence) {
-    cached = { query, persistence, at: 0, rows: null, pending: null }
+    cached = { query, persistence, at: 0, rows: null, pending: null, titles: new Map() }
     if (ctx && typeof ctx === 'object') headerReads.set(ctx, cached)
   }
   // The badge, overview, and call page often ask for the same persisted directory
@@ -80,6 +80,35 @@ export async function readSessionHeaders(ctx) {
     try { accept(sessions.list()) } catch { /* 兼容没有会话目录服务的旧宿主。 */ }
   }
   return [...headers.values()]
+}
+
+/** Read log-backed titles for the displayed rows only; header identity has no title on current hosts. */
+export async function hydrateSessionTitles(ctx, rows) {
+  const all = rows.flatMap(row => [row, ...(row.children ?? [])])
+  const ids = [...new Set(all.map(row => row.id).filter(validId))]
+  if (!ids.length) return rows
+  if (!headerReads.has(ctx)) await readSessionHeaders(ctx)
+  const cached = headerReads.get(ctx)
+  if (typeof cached?.query?.readTitleSnapshots !== 'function') return rows
+  const stale = ids.filter(id => {
+    const entry = cached.titles.get(id)
+    return !entry?.pending && (!entry || Date.now() - entry.at >= 5000)
+  })
+  if (stale.length) {
+    const pending = Promise.resolve().then(() => cached.query.readTitleSnapshots(stale)).then(results => {
+      for (const result of results ?? []) {
+        if (result.status !== 'fulfilled') continue
+        const id = result.value?.session?.id, title = result.value?.title?.title
+        if (stale.includes(id) && typeof title === 'string' && title.trim()) cached.titles.get(id).title = title.slice(0, 512)
+      }
+    }).catch(() => { /* Retain the last known title when the title service is temporarily unavailable. */ }).finally(() => {
+      for (const id of stale) Object.assign(cached.titles.get(id), { at: Date.now(), pending: null })
+    })
+    for (const id of stale) cached.titles.set(id, { ...cached.titles.get(id), at: 0, pending })
+  }
+  await Promise.all(ids.map(id => cached.titles.get(id)?.pending))
+  for (const row of all) if (cached.titles.get(row.id)?.title) row.title = cached.titles.get(row.id).title
+  return rows
 }
 
 /** 返回确定属于目标会话的连续子代理后代;普通 fork、断链、自引用与环均不归并。 */
@@ -127,7 +156,7 @@ export function aggregateSessionCost(days, sessionId, headers = [], includeSubag
 /** 按需读取一个会话,避免 getState 广播全部历史会话明细。 */
 export async function getSessionCost(ledger, ctx, sessionId) {
   if (!validId(sessionId)) throw new Error('invalid session id')
-  const include = ledger.config?.includeSubagentCost === true
+  const include = ledger.config?.includeSubagentCost !== false
   const headers = include ? await readSessionHeaders(ctx) : []
   return aggregateSessionCost(ledger.days, sessionId, headers, include)
 }

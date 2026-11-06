@@ -33,7 +33,7 @@ Mount this plugin in the browser roster of the W1 deployment. W1 product metadat
 
 ### Replacing the brand
 
-The approved geometry and export rules are maintained in the [W1 brand reference](../../../docs/W1品牌规范.md). Sidebar and hero use the same mark component. The sidebar pairs the Fold mark with a 15px Montserrat HARNESS wordmark at 500 weight and 0.1em tracking. The icon supplies the W1 identity without duplicated text; the accessible name remains W1 Harness. Replacing presentation uses the existing slots, without changing conversation or sidebar state.
+The approved geometry and exports are pinned from W1 Brand in the [W1 brand reference](../../../docs/W1品牌规范.md). The expanded sidebar renders the complete 184.4 × 48 horizontal W1/HARNESS logo; its separate name occupant is empty. The collapsed sidebar and conversation hero keep the unaltered family mark. Explicit light/dark SVG images follow the application's resolved theme, including a manual selection; each image isolates its mask IDs. No system font redraws the HARNESS wordmark. Brand artwork remains subject to [its own license](../../../assets/w1/LICENSE).
 
 -----
 

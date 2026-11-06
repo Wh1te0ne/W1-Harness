@@ -32,6 +32,8 @@ The Web bundle supplies all limits: six messages, 12,000 context characters, a 6
 
 ## Saved suggestions and historical conversations
 
+Activation waits for its durable projection handle before scheduling or reading suggestions. Each read uses the acquired handle for the exact Session.
+
 Each session restores its latest suggestion from its durable log. Reopening a conversation or restarting the application reads the saved text without calling a model. Opening an old conversation backfills its latest completed answer only when that turn has no saved suggestion or previous attempt. The application does not scan all stored conversations to generate suggestions at startup.
 
 An attempt record is flushed before model work, and a successful suggestion is flushed after generation. Empty, failed or interrupted attempts are not automatically repeated on reopening. A new completed answer permits one new attempt and supersedes the previous suggestion. Existing suggestion and request records also count as prior attempts. Interrupted historical turns and conversations with no completed assistant text are excluded.

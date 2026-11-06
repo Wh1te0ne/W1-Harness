@@ -8,7 +8,7 @@ import { tierFor, usdFromCost } from './pricing.js'
 import { isNativeSearchUsageEvent } from './native-search-events.js'
 import { ledgerStatisticsQuery, matchesStats, selectedStats, emptyStats, STAT_FIELDS } from './billing-statistics.js'
 import { localDayKey } from './store.js'
-import { sessionCostIds } from './session-tree.js'
+import { sessionCostIds, hydrateSessionTitles } from './session-tree.js'
 
 const cache = new Map()
 const fields = { input: 'cacheMiss', output: 'output', cacheRead: 'cacheHit', cacheWrite: 'cacheWrite', cacheWrite1h:'cacheWrite1h', reasoning: 'reasoning' }
@@ -171,7 +171,7 @@ export async function getSessionBilling(ledger, ctx, raw) {
     }
   }
   // Limit transport size, not the totals or category breakdown. Every call is reachable by paging.
-  return { ...detail, agents: [...agents.values()], found: detail.found || orderedTurns.length > 0, calls: detail.calls.slice(query.offset, query.offset + 50), totalCalls: detail.calls.length, offset: query.offset, recorded,
+  return { ...detail, agents: await hydrateSessionTitles(ctx, [...agents.values()]), found: detail.found || orderedTurns.length > 0, calls: detail.calls.slice(query.offset, query.offset + 50), totalCalls: detail.calls.length, offset: query.offset, recorded,
     kinds: [...kinds.values()], turns: orderedTurns.slice(query.turnOffset, query.turnOffset + 25), totalTurns: orderedTurns.length, turnOffset: query.turnOffset,
     stepShares: { cost: share('cost'), calls: share('calls') }, callShares }
 }
