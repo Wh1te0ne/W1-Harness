@@ -300,6 +300,7 @@ vi.mock('../src/policy-test-auth.ts', () => ({ DesktopPolicyTestAuth: class {
 
 vi.mock('../src/w1-system-icons.ts', () => ({
   w1SystemIconPath: (resources: string) => join(resources, 'w1-app-light.ico'),
+  w1SystemIconDirectory: () => 'system-icons',
   prepareW1SystemIcon: (resources: string) => join(resources, 'w1-app-light.ico'),
   applyW1SystemIcons: () => () => {},
 }))

@@ -3,11 +3,12 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { BrowserWindow } from 'electron'
-import { configureW1Identity, configureW1StartMenu, configureW1Taskbar, isW1Development, relaunchW1 } from '../src/w1-identity.ts'
+import { configureW1Identity, configureW1Taskbar, isW1Development, relaunchW1 } from '../src/w1-identity.ts'
 import type { W1Product } from '../src/w1-upstream.ts'
 
 const product: W1Product = { name: 'W1 Harness', appId: 'local.w1.harness', protocol: 'w1-harness',
   version: '0.1.0-alpha.2', upstreamTag: 'dsh-v0.2.1-rc.1', upstreamPublishedAt: '2026-10-17T05:22:10Z' }
+const icon = join(tmpdir(), 'w1-app-theme.ico')
 const owned: string[] = []
 afterEach(() => { vi.unstubAllEnvs(); for (const dir of owned.splice(0)) rmSync(dir, { recursive: true, force: true }) })
 
@@ -22,7 +23,7 @@ describe.skipIf(process.platform !== 'win32')('W1 Windows taskbar relaunch', () 
     vi.stubEnv('W1_TEST_LAUNCHER', launcher)
     vi.stubEnv('W1_TEST_POWERSHELL', powershell)
     const window = { setIcon: vi.fn(), setAppDetails: vi.fn<BrowserWindow['setAppDetails']>() }
-    configureW1Taskbar({ isPackaged: false, getAppPath: () => directory }, window, { ...product, name: 'W1 Harness Test' })
+    configureW1Taskbar({ isPackaged: false }, window, { ...product, name: 'W1 Harness Test' }, icon)
     expect(window.setAppDetails.mock.calls[0]?.[0].relaunchCommand).toContain('"' + launcher + '"')
     expect(window.setAppDetails.mock.calls[0]?.[0].relaunchCommand).not.toContain('-Executable')
     const relaunch = vi.fn()
@@ -42,13 +43,13 @@ describe.skipIf(process.platform !== 'win32')('W1 Windows taskbar relaunch', () 
     vi.stubEnv('W1_DESKTOP_EXECUTABLE', undefined)
     const window = { setIcon: vi.fn(), setAppDetails: vi.fn() }
     const identity = { ...product, name: 'W1 Harness Test', appId: 'local.w1.harness.test' }
-    configureW1Taskbar({ isPackaged: true, getAppPath: () => directory }, window, identity)
-    expect(window.setAppDetails).toHaveBeenCalledWith({ appId: identity.appId, appIconPath: process.execPath,
+    configureW1Taskbar({ isPackaged: true }, window, identity, icon)
+    expect(window.setAppDetails).toHaveBeenCalledWith({ appId: identity.appId, appIconPath: icon,
       appIconIndex: 0, relaunchCommand: '"' + powershell
         + '" -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "' + launcher
         + '" -Executable "' + process.execPath + '"', relaunchDisplayName: identity.name })
   })
-  it('isolates test identity and paths even with inherited daily overrides, without touching daily shortcuts', () => {
+  it('isolates legacy test identity and paths even with inherited daily overrides', () => {
     const directory = mkdtempSync(join(tmpdir(), 'w1-identity-'))
     owned.push(directory)
     writeFileSync(join(directory, 'w1-product.json'), JSON.stringify(product))
@@ -71,12 +72,6 @@ describe.skipIf(process.platform !== 'win32')('W1 Windows taskbar relaunch', () 
     expect(process.env.BILI_ZONE_PORT).toBe('28788')
     expect(existsSync(join(home, '.w1-harness'))).toBe(false)
     expect(existsSync(join(appData, product.name))).toBe(false)
-    const window = { setIcon: vi.fn(), setAppDetails: vi.fn() }
-    const desktopShell = { readShortcutLink: vi.fn(), writeShortcutLink: vi.fn(() => true) }
-    configureW1Taskbar(application, window, identity)
-    configureW1StartMenu(application, desktopShell, identity)
-    expect(window.setAppDetails).not.toHaveBeenCalled()
-    expect(desktopShell.writeShortcutLink).not.toHaveBeenCalled()
   })
   it('restarts development through the publisher launcher without inherited application arguments', () => {
     const directory = mkdtempSync(join(tmpdir(), 'w1-relaunch-'))
@@ -96,26 +91,11 @@ describe.skipIf(process.platform !== 'win32')('W1 Windows taskbar relaunch', () 
     owned.push(directory)
     const launcher = join(directory, 'W1 Harness.exe')
     writeFileSync(launcher, '')
-    const icon = join(directory, 'w1-app.ico')
-    writeFileSync(icon, '')
     vi.stubEnv('W1_DESKTOP_LAUNCHER', launcher)
     const window = { setIcon: vi.fn(), setAppDetails: vi.fn() }
-    configureW1Taskbar({ isPackaged: false, getAppPath: () => directory }, window, product)
+    configureW1Taskbar({ isPackaged: false }, window, product, icon)
     expect(window.setAppDetails).toHaveBeenCalledWith({ appId: `${product.appId}.dev`, appIconPath: icon,
       appIconIndex: 0, relaunchCommand: '"' + launcher + '"', relaunchDisplayName: product.name })
-  })
-  it('registers the Start Menu in the current process context without redirecting the launcher into AppData', () => {
-    const directory = mkdtempSync(join(tmpdir(), 'w1-start-menu-'))
-    owned.push(directory)
-    const launcher = join(directory, 'W1 Harness.exe')
-    writeFileSync(launcher, '')
-    vi.stubEnv('W1_DESKTOP_LAUNCHER', launcher)
-    const desktopShell = { readShortcutLink: vi.fn(), writeShortcutLink: vi.fn(() => true) }
-    configureW1StartMenu({ isPackaged: false, getPath: () => directory }, desktopShell, product)
-    expect(desktopShell.writeShortcutLink).toHaveBeenCalledWith(
-      join(directory, 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'W1 Harness.lnk'), 'create',
-      expect.objectContaining({ target: launcher, appUserModelId: `${product.appId}.dev` }),
-    )
   })
   it('keeps a renamed W1 development executable on development runtime paths', () => {
     vi.stubEnv('W1_DESKTOP_EXECUTABLE', process.execPath)
@@ -128,14 +108,14 @@ describe.skipIf(process.platform !== 'win32')('W1 Windows taskbar relaunch', () 
   it('does not redirect packaged applications through an inherited development launcher', () => {
     vi.stubEnv('W1_DESKTOP_LAUNCHER', process.execPath)
     const window = { setIcon: vi.fn(), setAppDetails: vi.fn() }
-    configureW1Taskbar({ isPackaged: true, getAppPath: () => tmpdir() }, window, product)
-    expect(window.setAppDetails).not.toHaveBeenCalled()
+    configureW1Taskbar({ isPackaged: true }, window, product, icon)
+    expect(window.setAppDetails).toHaveBeenCalledWith({ appIconPath: icon, appIconIndex: 0 })
   })
   it('keeps ordinary development startup usable when no launcher is installed', () => {
     vi.stubEnv('W1_DESKTOP_LAUNCHER', undefined)
     const window = { setIcon: vi.fn(), setAppDetails: vi.fn() }
-    configureW1Taskbar({ isPackaged: false, getAppPath: () => tmpdir() }, window, product)
-    expect(window.setAppDetails).not.toHaveBeenCalled()
-    expect(window.setIcon).toHaveBeenCalledOnce()
+    configureW1Taskbar({ isPackaged: false }, window, product, icon)
+    expect(window.setAppDetails).toHaveBeenCalledWith({ appIconPath: icon, appIconIndex: 0 })
+    expect(window.setIcon).toHaveBeenCalledWith(icon)
   })
 })

@@ -1,7 +1,7 @@
 /** Resolve W1-owned paths before Electron takes its single-instance lock or starts a Host. */
-import { copyFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs'
-import { dirname, isAbsolute, join } from 'node:path'
-import type { App, BrowserWindow, Shell } from 'electron'
+import { existsSync, mkdirSync, readFileSync } from 'node:fs'
+import { isAbsolute, join } from 'node:path'
+import type { App, BrowserWindow } from 'electron'
 import type { W1Product } from './w1-upstream.ts'
 
 /**
@@ -17,8 +17,8 @@ export function relaunchW1(application: Pick<App, 'isPackaged' | 'relaunch'>): v
       return
     }
   }
-  const launcher = process.env.W1_DESKTOP_LAUNCHER
-  if (process.platform === 'win32' && isW1Development(application) && launcher && isAbsolute(launcher) && existsSync(launcher)) {
+  const launcher = w1DevelopmentLauncher(application)
+  if (launcher !== undefined) {
     application.relaunch({ execPath: launcher, args: [] })
   } else application.relaunch()
 }
@@ -32,6 +32,17 @@ export function isW1Development(application: Pick<App, 'isPackaged'>): boolean {
   const executable = process.env.W1_DESKTOP_EXECUTABLE
   return !application.isPackaged || (process.platform === 'win32' && executable !== undefined
     && isAbsolute(executable) && executable.toLowerCase() === process.execPath.toLowerCase())
+}
+
+/**
+ * Resolve the permanent launcher shared by the local Windows shortcuts and window relaunch metadata.
+ * @param application - Current Electron application.
+ * @returns The installed local launcher, if this launch uses it.
+ */
+export function w1DevelopmentLauncher(application: Pick<App, 'isPackaged'>): string | undefined {
+  if (process.platform !== 'win32' || process.env.W1_TEST_MODE === '1' || !isW1Development(application)) return undefined
+  const launcher = process.env.W1_DESKTOP_LAUNCHER
+  if (launcher !== undefined && isAbsolute(launcher) && existsSync(launcher)) return launcher
 }
 
 /**
@@ -75,79 +86,41 @@ export function configureW1Identity(application: Pick<App,
 }
 
 /**
- * Keep test pins on their isolated launcher and development pins on the W1 publisher.
- * Ordinary packaged apps and development without a launcher retain their default relaunch behavior.
+ * Set the window icon and the Windows relaunch metadata from the same retained ICO.
  * @param application - current Electron application.
- * @param window - newly created desktop window, before it becomes visible.
+ * @param window - Windows desktop window.
  * @param product - W1 identity shared with the installed shortcuts.
+ * @param icon - Retained system-theme ICO shared with the shortcuts.
  */
 export function configureW1Taskbar(
-  application: Pick<App, 'isPackaged' | 'getAppPath'>,
+  application: Pick<App, 'isPackaged'>,
   window: Pick<BrowserWindow, 'setIcon' | 'setAppDetails'>,
-  product: W1Product,
+  product: Pick<W1Product, 'appId' | 'name'>,
+  icon: string,
 ): void {
-  if (process.platform !== 'win32') return
+  window.setIcon(icon)
+  const details = { appIconPath: icon, appIconIndex: 0 }
   if (process.env.W1_TEST_MODE === '1') {
     const launcher = process.env.W1_TEST_LAUNCHER
     const powershell = process.env.W1_TEST_POWERSHELL
-    if (!launcher || !powershell || !isAbsolute(launcher) || !isAbsolute(powershell)
-      || !existsSync(launcher) || !existsSync(powershell)) return
-    window.setAppDetails({
-      appId: isW1Development(application) ? `${product.appId}.dev` : product.appId,
-      appIconPath: process.execPath,
-      appIconIndex: 0,
-      relaunchCommand: '"' + powershell + '" -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "'
-        + launcher + '"' + (isW1Development(application) ? '' : ' -Executable "' + process.execPath + '"'),
-      relaunchDisplayName: product.name,
-    })
-    return
+    if (launcher && powershell && isAbsolute(launcher) && isAbsolute(powershell)
+      && existsSync(launcher) && existsSync(powershell)) {
+      const development = isW1Development(application)
+      window.setAppDetails({
+        ...details,
+        appId: development ? `${product.appId}.dev` : product.appId,
+        relaunchCommand: '"' + powershell + '" -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "'
+          + launcher + '"' + (development ? '' : ' -Executable "' + process.execPath + '"'),
+        relaunchDisplayName: product.name,
+      })
+      return
+    }
   }
-  if (!isW1Development(application)) return
-  const icon = join(application.getAppPath(), 'resources', 'icon-windows.png')
-  window.setIcon(icon)
-  const launcher = process.env.W1_DESKTOP_LAUNCHER
-  if (launcher === undefined || !isAbsolute(launcher) || !existsSync(launcher)) return
-  const taskbarIcon = join(dirname(launcher), 'w1-app.ico')
-  window.setAppDetails({
+  const launcher = w1DevelopmentLauncher(application)
+  window.setAppDetails(launcher === undefined ? details : {
+    ...details,
     appId: `${product.appId}.dev`,
-    appIconPath: existsSync(taskbarIcon) ? taskbarIcon : launcher,
-    appIconIndex: 0,
     relaunchCommand: '"' + launcher + '"',
     relaunchDisplayName: product.name,
   })
-}
-
-/**
- * Register the local development entry in the running user's actual Start Menu.
- * This also repairs shortcuts written into a packaged development tool's private AppData.
- * @param application - ready Electron application; packaged releases keep their installer-owned shortcut.
- * @param desktopShell - Windows shortcut operations.
- * @param product - identity shared with the desktop shortcut and taskbar.
- */
-export function configureW1StartMenu(
-  application: Pick<App, 'isPackaged' | 'getPath'>,
-  desktopShell: Pick<Shell, 'readShortcutLink' | 'writeShortcutLink'>,
-  product: W1Product,
-): void {
-  if (process.env.W1_TEST_MODE === '1' || process.platform !== 'win32' || !isW1Development(application)) return
-  const launcher = process.env.W1_DESKTOP_LAUNCHER
-  if (launcher === undefined || !isAbsolute(launcher) || !existsSync(launcher)) return
-  const appId = `${product.appId}.dev`
-  const directory = dirname(launcher)
-  const icon = join(directory, 'w1-app.ico')
-  const programs = join(application.getPath('appData'), 'Microsoft', 'Windows', 'Start Menu', 'Programs')
-  const shortcut = join(programs, 'W1 Harness.lnk')
-  if (existsSync(shortcut)) {
-    const current = desktopShell.readShortcutLink(shortcut)
-    if (current.target === launcher && current.icon === icon && current.appUserModelId === appId) return
-    if (current.appUserModelId !== product.appId && current.appUserModelId !== appId) throw new Error('W1 Start Menu shortcut is owned by another application')
-    const backup = join(directory, 'backups', new Date().toISOString().replaceAll(':', '-'))
-    mkdirSync(backup, { recursive: true })
-    copyFileSync(shortcut, join(backup, 'start-menu.lnk'))
-  }
-  mkdirSync(programs, { recursive: true })
-  if (!desktopShell.writeShortcutLink(shortcut, 'create', {
-    target: launcher, args: '', cwd: directory, icon, iconIndex: 0, appUserModelId: appId,
-    description: product.name,
-  })) throw new Error('Windows could not update the W1 Start Menu shortcut')
 }
