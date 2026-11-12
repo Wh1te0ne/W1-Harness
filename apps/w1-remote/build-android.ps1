@@ -12,7 +12,7 @@ Get-ChildItem -LiteralPath (Join-Path $remoteRoot 'mobile') -File | Copy-Item -D
 foreach ($file in @('crypto.mjs','client.mjs')) { Copy-Item -LiteralPath (Join-Path $remoteRoot $file) -Destination $assets -Force }
 $iconDir = Join-Path $remoteRoot 'android\app\src\main\res\drawable'
 New-Item -ItemType Directory -Force -Path $iconDir | Out-Null
-Copy-Item -LiteralPath (Join-Path $repoRoot 'apps\desktop\resources\icon-windows.png') -Destination (Join-Path $iconDir 'w1_icon.png') -Force
+Copy-Item -LiteralPath (Join-Path $repoRoot 'assets\w1\exports\app-icon-dark-1024.png') -Destination (Join-Path $iconDir 'w1_icon.png') -Force
 Set-Content -LiteralPath (Join-Path $remoteRoot 'android\local.properties') -Value ('sdk.dir=' + $Sdk.Replace('\','/')) -Encoding utf8
 $env:JAVA_HOME = $Java
 $env:ANDROID_HOME = $Sdk
