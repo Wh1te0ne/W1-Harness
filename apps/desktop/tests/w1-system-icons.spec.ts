@@ -5,17 +5,35 @@ import { dirname, join } from 'node:path'
 import type { ShortcutDetails } from 'electron'
 import { afterEach, expect, it, vi } from 'vitest'
 import { applyW1SystemIcons, prepareW1SystemIcon, w1SystemIconPath } from '../src/w1-system-icons.ts'
+import { readW1WindowsSystemDark } from '../src/w1-windows-system-theme.mts'
 
 const product = { appId: 'local.w1.harness', name: 'W1 Harness' }
+const { queryTheme } = vi.hoisted(() => ({ queryTheme: vi.fn() }))
+vi.mock('node:child_process', () => ({ spawnSync: queryTheme }))
 afterEach(() => { vi.unstubAllEnvs() })
 
-it('uses transparent system-theme icons, preserves shortcut identity and removes both listeners', () => {
+it.each([
+  { status: 0, stdout: '    SystemUsesLightTheme    REG_DWORD    0x0\r\n', fallback: false, dark: true },
+  { status: 0, stdout: '    SystemUsesLightTheme    REG_DWORD    0x1\r\n', fallback: true, dark: false },
+  { status: 0, stdout: '    SystemUsesLightTheme    REG_SZ    0x0\r\n', fallback: false, dark: false },
+  { status: null, stdout: '', fallback: true, dark: true },
+])('uses the Windows shell theme or the fallback (registry status $status, dark $dark)', ({ status, stdout, fallback, dark }) => {
+  queryTheme.mockReturnValueOnce({ status, stdout })
+  expect(readW1WindowsSystemDark(fallback)).toBe(dark)
+  expect(queryTheme).toHaveBeenLastCalledWith(expect.stringMatching(/reg\.exe$/iu),
+    expect.arrayContaining(['/v', 'SystemUsesLightTheme']), expect.objectContaining({ windowsHide: true, timeout: 1_000 }))
+})
+
+it('refreshes windows, the tray and owned shortcuts together as Windows personalization changes', () => {
   const root = mkdtempSync(join(tmpdir(), 'w1-system-icons-'))
   try {
     for (const color of ['light', 'dark']) writeFileSync(join(root, `w1-app-${color}.ico`), color)
     writeFileSync(join(root, 'W1 Harness.lnk'), 'original shortcut')
     const app = Object.assign(new EventEmitter(), { isPackaged: true, getPath: () => root })
-    const window = Object.assign(new EventEmitter(), { setIcon: vi.fn(), setAppDetails: vi.fn(), isDestroyed: () => false })
+    const window = {
+      setIcon: vi.fn(), setAppDetails: vi.fn(), isDestroyed: () => false,
+      hookWindowMessage: vi.fn<(message: number, listener: () => void) => void>(), unhookWindowMessage: vi.fn(),
+    }
     const tray = { setIcon: vi.fn() }
     let shortcut: ShortcutDetails = { target: 'launcher.exe', appUserModelId: product.appId, icon: 'old.ico',
       args: '--keep', toastActivatorClsid: 'preserved-id' }
@@ -25,12 +43,13 @@ it('uses transparent system-theme icons, preserves shortcut identity and removes
         return true
       }) }
     const report = vi.fn()
-    const theme = Object.assign(new EventEmitter(), { shouldUseDarkColorsForSystemIntegratedUI: false })
+    const theme = Object.assign(new EventEmitter(), { shouldUseDarkColorsForSystemIntegratedUI: true })
+    let systemDark = false
     const cache = join(root, 'system-icons')
     const icon = prepareW1SystemIcon(root, cache, false)
     expect(w1SystemIconPath(root, false)).toBe(join(root, 'w1-app-light.ico'))
     const dispose = applyW1SystemIcons({ app, shell, theme, resources: root, product,
-      windows: () => [window], tray, report })
+      windows: () => [window], tray, report, readSystemDark: () => systemDark })
     expect(window.setIcon).toHaveBeenLastCalledWith(icon)
     expect(window.setAppDetails).toHaveBeenLastCalledWith({ appIconPath: icon, appIconIndex: 0 })
     expect(tray.setIcon).toHaveBeenLastCalledWith(icon)
@@ -42,11 +61,25 @@ it('uses transparent system-theme icons, preserves shortcut identity and removes
     const another = Object.assign(new EventEmitter(), { setIcon: vi.fn(), setAppDetails: vi.fn(), isDestroyed: () => false })
     app.emit('browser-window-created', {}, another)
     expect(another.setIcon).toHaveBeenCalledWith(icon)
-    theme.shouldUseDarkColorsForSystemIntegratedUI = true
+    systemDark = true
+    theme.shouldUseDarkColorsForSystemIntegratedUI = false
+    const [message, onSettingsChanged] = window.hookWindowMessage.mock.calls[0]!
+    expect(message).toBe(0x001a)
+    onSettingsChanged()
+    const darkIcon = prepareW1SystemIcon(root, cache, true)
+    expect(window.setIcon).toHaveBeenLastCalledWith(darkIcon)
+    expect(window.setAppDetails).toHaveBeenLastCalledWith({ appIconPath: darkIcon, appIconIndex: 0 })
+    expect(tray.setIcon).toHaveBeenLastCalledWith(darkIcon)
+    expect(shortcut.icon).toBe(darkIcon)
+    onSettingsChanged()
+    expect(window.setIcon).toHaveBeenCalledTimes(2)
+    expect(tray.setIcon).toHaveBeenCalledTimes(2)
+    systemDark = false
     theme.emit('updated')
-    expect(window.setIcon).toHaveBeenLastCalledWith(prepareW1SystemIcon(root, cache, true))
-    expect(tray.setIcon).toHaveBeenLastCalledWith(prepareW1SystemIcon(root, cache, true))
+    expect(window.setIcon).toHaveBeenLastCalledWith(icon)
+    expect(window.hookWindowMessage).toHaveBeenCalledTimes(1)
     dispose()
+    expect(window.unhookWindowMessage).toHaveBeenCalledWith(0x001a)
     expect(theme.listenerCount('updated')).toBe(0)
     expect(app.listenerCount('browser-window-created')).toBe(0)
     expect(report).not.toHaveBeenCalled()

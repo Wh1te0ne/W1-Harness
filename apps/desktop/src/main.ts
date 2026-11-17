@@ -3,6 +3,7 @@ import { installFileActions } from './file-actions.ts'
 import type { ProductEventMap, ProductEvent } from '@deepseek-ai/dsh-client-product-analytics/types'
 import { configureW1Identity, isW1Development, relaunchW1 } from './w1-identity.ts'
 import { applyW1SystemIcons, prepareW1SystemIcon, w1SystemIconDirectory, w1SystemIconPath } from './w1-system-icons.ts'
+import { readW1WindowsSystemDark } from './w1-windows-system-theme.mts'
 import { W1UpstreamUpdates } from './w1-upstream.ts'
 import { W1SessionLinks } from './w1-session-links.ts'
 import { W1Notifications } from './w1-notifications.ts'
@@ -1073,8 +1074,9 @@ async function main(): Promise<void> {
     tray?.relabel()
   }
   refreshApplicationMenu()
+  const readSystemDark = (): boolean => readW1WindowsSystemDark(nativeTheme.shouldUseDarkColorsForSystemIntegratedUI)
   const trayIconPath = process.platform === 'win32'
-    ? prepareW1SystemIcon(w1IconResources(), w1SystemIconDirectory(app), nativeTheme.shouldUseDarkColorsForSystemIntegratedUI)
+    ? prepareW1SystemIcon(w1IconResources(), w1SystemIconDirectory(app), readSystemDark())
     : w1SystemIconPath(w1IconResources(), false)
   if (process.platform === 'win32') {
     // The tray is the way back to a hidden window; without it, relaunching the application still focuses it.
@@ -1091,7 +1093,7 @@ async function main(): Promise<void> {
       shortcuts: !w1Testing,
       resources: w1IconResources(),
       product: w1Product,
-      windows: () => BrowserWindow.getAllWindows(), tray,
+      windows: () => BrowserWindow.getAllWindows(), tray, readSystemDark,
       report: (error) => { console.warn('W1 system icons:', error) } })
     app.on('will-quit', disposeSystemIcons)
   }

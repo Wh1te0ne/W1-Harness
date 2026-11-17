@@ -12,6 +12,6 @@ W1 Harness 固定使用 W1 Brand `2.0.0-preview.14` 的字高对齐 Logo 和折�
 | preview.png | 当前 HARNESS 明暗主题预览 | 从固定提交复制 |
 | reference-concepts.png | 原始母标设计选择依据 | 历史参考 |
 
-`app-icon` 与 `app-icon-light` 的 SVG/PNG 是浅色完整方图，`app-icon-dark` 是深色方图；同名前缀的 ICO 单独从透明前景生成，供 Windows 原生入口使用。`interface-logo-light/dark.svg` 是完整横向 Logo；`wordmark-light/dark.svg` 只含 HARNESS 字标；`mark-dark` 表示深色母标，`mark-light` 表示浅色母标。
+`app-icon` 与 `app-icon-light` 的 SVG/PNG 是浅色完整方图，`app-icon-dark` 是深色方图。ICO 从 `brand/source.json` 的 `windows` 条目固定的专用稿生成。`interface-logo-light/dark.svg` 是完整横向 Logo，`wordmark-light/dark.svg` 只含 HARNESS 字标。`mark-dark` 表示深色母标，`mark-light` 表示浅色母标。
 
 [旧母标素材包](../../releases/w1-brand/README.md) 和 `E:\ProjectDev\W1-Brand\assets\fold\1.1.0` 保留作历史交付，不是新的 HARNESS 品牌发布。产品内 ICO、PNG、SVG 与生成代码是实际消费副本，不能因名称相似而删除。

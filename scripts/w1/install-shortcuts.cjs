@@ -9,12 +9,13 @@ const evidence = join(root, '.work/local-dev/launcher')
 mkdirSync(evidence, { recursive: true })
 app.setPath('userData', join(evidence, 'setup-user-data'))
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   const directory = process.env.W1_LAUNCHER_INSTALL_DIRECTORY
   if (!directory) throw new Error('Launcher installation directory is required')
   const target = join(directory, 'W1 Harness.exe')
   if (!existsSync(target)) throw new Error('Build the W1 launcher before installing shortcuts')
-  const theme = nativeTheme.shouldUseDarkColorsForSystemIntegratedUI ? 'dark' : 'light'
+  const { readW1WindowsSystemDark } = await import('../../apps/desktop/src/w1-windows-system-theme.mts')
+  const theme = readW1WindowsSystemDark(nativeTheme.shouldUseDarkColorsForSystemIntegratedUI) ? 'dark' : 'light'
   const sourceIcon = join(root, `apps/desktop/resources/w1-app-${theme}.ico`)
   const digest = createHash('sha256').update(readFileSync(sourceIcon)).digest('hex').slice(0, 16)
   const icon = join(directory, 'icons', `w1-app-${digest}.ico`)
