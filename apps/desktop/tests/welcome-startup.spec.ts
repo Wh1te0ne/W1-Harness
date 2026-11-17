@@ -84,8 +84,9 @@ vi.mock('electron', () => ({
     showInactive = state.showInactiveWorkspace
     async loadURL(url: string) { state.contents = this.webContents; await state.loadWorkspace(url); this.ready?.() }
   },
-  net: { fetch: vi.fn() },
+  net: { fetch: vi.fn(async () => Response.json([])) },
   nativeTheme: state.nativeTheme,
+  shell: {},
   session: { defaultSession: {
     on: vi.fn(),
     setPermissionCheckHandler: vi.fn(), setPermissionRequestHandler: vi.fn(), webRequest: { onBeforeSendHeaders: vi.fn() },
@@ -101,6 +102,13 @@ vi.mock('electron', () => ({
 }))
 // The Windows tray relabels through Menu as well; keep the menu call counts below platform-neutral.
 vi.mock('../src/tray.ts', () => ({ DesktopTray: class { relabel() {} dispose() {} } }))
+vi.mock('../src/w1-windows-system-theme.mts', () => ({ readW1WindowsSystemDark: () => false }))
+vi.mock('../src/w1-system-icons.ts', () => ({
+  applyW1SystemIcons: () => () => {},
+  prepareW1SystemIcon: () => 'w1-app-light.ico',
+  w1SystemIconDirectory: () => '',
+  w1SystemIconPath: () => 'w1-app-light.ico',
+}))
 
 vi.mock('../src/paths.ts', () => ({ resolveDesktopPaths: () => ({ profile: '/profile' }) }))
 vi.mock('../src/settings.ts', () => ({ readDesktopSettings: () => ({ updates: { allowTestAuthPopupWindow: false } }) }))
@@ -205,8 +213,10 @@ it.each([false, true])('opens the W1 workspace without an account or API key (in
   vi.stubEnv('DSH_DESKTOP_MANDATORY_UPDATE_CONFIG', '{"untrustedInheritedPolicy":true}')
   vi.stubEnv('DSH_DESKTOP_UPDATE_JOURNAL_DIR', undefined)
   await import('../src/main.ts')
-  await vi.waitFor(() => { expect(state.showWorkspace).toHaveBeenCalled() })
-  expect(state.startHost).toHaveBeenCalledOnce()
+  await vi.waitFor(() => {
+    expect(state.showWorkspace).toHaveBeenCalled()
+    expect(state.startHost).toHaveBeenCalledOnce()
+  })
   expect(state.beforeWelcome).not.toHaveBeenCalled()
   expect(state.operations).toBeUndefined()
   expect(state.accountListener).toBeUndefined()

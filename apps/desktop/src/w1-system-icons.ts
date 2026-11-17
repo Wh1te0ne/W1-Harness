@@ -9,12 +9,18 @@ import { configureW1Taskbar, isW1Development, w1DevelopmentLauncher } from './w1
 import type { W1Product } from './w1-upstream.ts'
 
 type IconWindow = Pick<BrowserWindow, 'setIcon' | 'setAppDetails' | 'isDestroyed'>
+  & Partial<Pick<BrowserWindow, 'hookWindowMessage' | 'unhookWindowMessage'>>
+
+/** Windows broadcasts changes even if the application palette stays the same. */
+const WM_SETTINGCHANGE = 0x001a
 
 /** Inputs owned by the desktop main process; resources contain the Windows icon assets. */
 export interface W1SystemIconsOptions {
   readonly app: Pick<App, 'getPath' | 'isPackaged'> & Pick<EventEmitter, 'on' | 'off'>
   readonly shell: Pick<Shell, 'readShortcutLink' | 'writeShortcutLink'>
   readonly theme: Pick<NativeTheme, 'shouldUseDarkColorsForSystemIntegratedUI'> & Pick<EventEmitter, 'on' | 'off'>
+  /** Read the Windows shell theme. Defaults to Electron's system preference. */
+  readonly readSystemDark?: () => boolean
   readonly resources: string
   readonly product: Pick<W1Product, 'appId' | 'name'>
   readonly windows: () => IconWindow[]
@@ -74,6 +80,8 @@ export function applyW1SystemIcons(options: W1SystemIconsOptions): () => void {
   const startMenu = options.shortcuts === false ? undefined
     : join(app.getPath('appData'), 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'W1 Harness.lnk')
   let icon: string | undefined
+  let trayIcon: string | undefined
+  const watchedWindows = new WeakSet<IconWindow>()
   const shortcuts = startMenu === undefined ? [] : [
     join(app.getPath('desktop'), 'W1 Harness.lnk'),
     startMenu,
@@ -84,14 +92,25 @@ export function applyW1SystemIcons(options: W1SystemIconsOptions): () => void {
     configureW1Taskbar(app, window, product, icon)
   }
   const apply = (): void => {
+    const previous = icon
     try {
-      icon = prepareW1SystemIcon(options.resources, directory, theme.shouldUseDarkColorsForSystemIntegratedUI)
+      icon = prepareW1SystemIcon(options.resources, directory,
+        options.readSystemDark?.() ?? theme.shouldUseDarkColorsForSystemIntegratedUI)
     } catch (error) {
       options.report(error)
       return
     }
-    for (const window of options.windows()) applyWindow(window)
-    options.tray?.setIcon(icon)
+    const changed = icon !== previous
+    for (const window of options.windows()) {
+      if (changed) applyWindow(window)
+      watchWindow(window)
+    }
+    if (options.tray !== undefined && trayIcon !== icon) {
+      try {
+        options.tray.setIcon(icon)
+        trayIcon = icon
+      } catch (error) { options.report(error) }
+    }
     for (const [index, path] of shortcuts.entries()) {
       try {
         const current = existsSync(path) ? shell.readShortcutLink(path) : undefined
@@ -122,9 +141,23 @@ export function applyW1SystemIcons(options: W1SystemIconsOptions): () => void {
       } catch (error) { options.report(error) }
     }
   }
+  const watchWindow = (window: IconWindow): void => {
+    if (window.isDestroyed() || window.hookWindowMessage === undefined || watchedWindows.has(window)) return
+    window.hookWindowMessage(WM_SETTINGCHANGE, apply)
+    watchedWindows.add(window)
+  }
   apply()
-  const created = (_event: Electron.Event, window: BrowserWindow): void => { applyWindow(window) }
+  const created = (_event: Electron.Event, window: BrowserWindow): void => {
+    applyWindow(window)
+    watchWindow(window)
+  }
   app.on('browser-window-created', created)
   theme.on('updated', apply)
-  return () => { app.off('browser-window-created', created); theme.off('updated', apply) }
+  return () => {
+    app.off('browser-window-created', created)
+    theme.off('updated', apply)
+    for (const window of options.windows()) {
+      if (watchedWindows.has(window) && !window.isDestroyed()) window.unhookWindowMessage?.(WM_SETTINGCHANGE)
+    }
+  }
 }

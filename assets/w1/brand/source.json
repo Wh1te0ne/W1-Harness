@@ -49,5 +49,19 @@
     "dist/products/harness/dark/app-icon-foreground.png": "6fc9bdd3d36e57f8bd29f2d17ad0e1cb7de245f8020fa8ca7392bc986dec25ef",
     "dist/products/harness/light/app-icon-maskable.png": "4815647ea16c9f215226e462214a5ce16ce62c62aaa82707d730e5bd30cc7f5d",
     "src/reference/harness-neutral-color-2026-11-17.json": "49cc421e5174c3e2a8e6c1360952e7291437b30fe3c501fd77be6ecc194ca7d6"
+  },
+  "windows": {
+    "version": "2.0.0-preview.15",
+    "commit": "9fd4f284f5667c27a5daf61184e92d7d4365e681",
+    "tag": null,
+    "status": "provisional",
+    "source": {
+      "kind": "git-commit",
+      "manifestSha256": "b3b877482b4ee98dba73755d8ce24dfc695e990a95090f4ed6a94b86224d4111"
+    },
+    "files": {
+      "dist/products/harness/light/app-icon-windows.svg": "ffdf0ef33569ff308d797177989d1ef5fa100e846f92b757689c80bf0d7b7114",
+      "dist/products/harness/dark/app-icon-windows.svg": "bca087f55f3ac9e80696a2fb97fee068cced3f11da8631715f83bf19d6405879"
+    }
   }
 }

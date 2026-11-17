@@ -298,6 +298,9 @@ vi.mock('../src/policy-test-auth.ts', () => ({ DesktopPolicyTestAuth: class {
   readonly request: typeof fetch = (input, init) => fetch(input, init)
 } }))
 
+vi.mock('../src/w1-windows-system-theme.mts', () => ({
+  readW1WindowsSystemDark: (fallback: boolean) => fallback,
+}))
 vi.mock('../src/w1-system-icons.ts', () => ({
   w1SystemIconPath: (resources: string) => join(resources, 'w1-app-light.ico'),
   w1SystemIconDirectory: () => 'system-icons',

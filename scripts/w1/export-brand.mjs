@@ -12,9 +12,9 @@ const output = new URL('exports/', root)
 await mkdir(output, { recursive: true })
 const pinned = JSON.parse(await readFile(new URL('brand/source.json', root), 'utf8'))
 if (!/^\d+\.\d+\.\d+(?:-[0-9A-Za-z]+(?:\.[0-9A-Za-z]+)*)?$/.test(pinned.version) || pinned.product !== 'harness') throw new Error('Invalid W1 Brand pin')
-async function asset(name) {
-  const bytes = await readFile(new URL(`brand/${pinned.version}/${name}`, root))
-  if (createHash('sha256').update(bytes).digest('hex') !== pinned.files[name]) throw new Error(`Pinned brand asset changed: ${name}`)
+async function asset(name, pin = pinned) {
+  const bytes = await readFile(new URL(`brand/${pin.version}/${name}`, root))
+  if (createHash('sha256').update(bytes).digest('hex') !== pin.files[name]) throw new Error(`Pinned brand asset changed: ${name}`)
   return bytes
 }
 const master = await asset('src/brand/w1-fold.svg')
@@ -25,6 +25,12 @@ const appLight = (await asset('dist/products/harness/light/app-icon.svg')).toStr
 const appDark = (await asset('dist/products/harness/dark/app-icon.svg')).toString()
 const appPng = { light: await asset('dist/products/harness/light/app-icon.png'), dark: await asset('dist/products/harness/dark/app-icon.png') }
 const foreground = { light: await asset('dist/products/harness/light/app-icon-foreground.svg'), dark: await asset('dist/products/harness/dark/app-icon-foreground.svg') }
+const windows = pinned.windows
+if (!/^\d+\.\d+\.\d+(?:-[0-9A-Za-z]+(?:\.[0-9A-Za-z]+)*)?$/.test(windows?.version)) throw new Error('Invalid W1 Brand Windows pin')
+const windowsIcon = {
+  light: await asset('dist/products/harness/light/app-icon-windows.svg', windows),
+  dark: await asset('dist/products/harness/dark/app-icon-windows.svg', windows),
+}
 const variants = { 'mark-dark': dark, 'mark-light': light, 'app-icon': appLight, 'app-icon-light': appLight, 'app-icon-dark': appDark }
 for (const [name, source] of Object.entries(variants)) {
   await writeFile(new URL(`${name}.svg`, output), source)
@@ -46,7 +52,7 @@ for (const [name, source] of [['mark-dark', dark], ['mark-light', light]]) {
 const sizes = [16, 20, 24, 32, 48, 64, 128, 256]
 for (const name of Object.keys(variants)) {
 const frames = await Promise.all(sizes.map((size) => name.startsWith('app-icon')
-  ? sharp(foreground[name === 'app-icon-dark' ? 'dark' : 'light']).resize(size, size).ensureAlpha().png().toBuffer()
+  ? sharp(windowsIcon[name === 'app-icon-light' ? 'light' : 'dark']).resize(size, size).ensureAlpha().png().toBuffer()
   : readFile(new URL(`${name}-${size}.png`, output))))
 const header = Buffer.alloc(6 + 16 * sizes.length)
 header.writeUInt16LE(1, 2)
