@@ -1,11 +1,11 @@
 # W1 品牌资源导航
 
-W1 Harness 固定使用 W1 Brand `2.0.0-preview.11` 的字高对齐 Logo 和折面平面 App 图标。App 图标采用靛灰色明暗两版，仍为暂定稿。来源提交和逐文件摘要见 [source.json](brand/source.json)，各平台用法见[品牌规范](../../docs/W1品牌规范.md)。
+W1 Harness 固定使用 W1 Brand `2.0.0-preview.14` 的字高对齐 Logo 和折面平面 App 图标。App 图标采用石墨灰明暗两版，整体仍为暂定稿。来源提交和逐文件摘要见 [source.json](brand/source.json)，各平台用法见[品牌规范](../../docs/W1品牌规范.md)。
 
 | 位置 | 用途 | 维护方式 |
 |---|---|---|
 | [brand/source.json](brand/source.json) | 固定来源快照、版本及 SHA256 | 引入品牌版本时更新 |
-| [brand/2.0.0-preview.11/](brand/2.0.0-preview.11/) | 当前品牌资源副本 | 从固定提交复制 |
+| [brand/2.0.0-preview.14/](brand/2.0.0-preview.14/) | 当前品牌资源副本 | 从固定提交复制 |
 | [LICENSE](LICENSE) | 品牌资产的独立授权 | 随品牌源同步 |
 | mark.svg | 原始 Fold 母标副本 | 导出脚本从正式源复制 |
 | exports/ | 平台尺寸、明暗 SVG、PNG 和八帧 ICO | `node scripts/w1/export-brand.mjs` 生成 |

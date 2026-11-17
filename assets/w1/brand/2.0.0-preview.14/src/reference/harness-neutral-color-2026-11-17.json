@@ -1,0 +1,28 @@
+{
+  "requestedOn": "2026-11-17",
+  "colorApprovedOn": "2026-11-17",
+  "colorReview": "approved-color-only",
+  "status": "provisional",
+  "review": "pending-owner-review",
+  "authority": "The owner approved the proposed neutral graphite colors for W1 Harness on 2026-11-17. This confirms the color change only, not the previously provisional icon as a whole.",
+  "previousReference": "src/reference/app-icon-selection-color-2026-11-12.json",
+  "previousPalette": {
+    "light": "#505A76",
+    "dark": "#A4B0D1"
+  },
+  "palette": {
+    "light": "#56595E",
+    "dark": "#BFC1C6"
+  },
+  "scope": "App icon foreground fill and stroke colors only; unchanged W1 geometry, icon outline, background, wordmark, and horizontal logo.",
+  "files": {
+    "src/products/harness/app-icon-light.svg": {
+      "sourceSha256": "62612db9670961f65f27d2964df712db930e43a1e0d4f80f09dd10c9e43a3265",
+      "rgba1024Sha256": "8971696c5eb39365f72b991dbf5ffa421ef8cfe1b83f40d602f7693c56a22b37"
+    },
+    "src/products/harness/app-icon-dark.svg": {
+      "sourceSha256": "dead90fba160023f7f6c67aa0d1e10855e79ccebb641993a403a5e4fe4c3f04f",
+      "rgba1024Sha256": "01720be0ba0ad09a9693813172f442fe479203d0dac64c3be2a1e8afe53954e0"
+    }
+  }
+}
